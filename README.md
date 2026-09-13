@@ -38,6 +38,9 @@ temporización (que es lo relevante para Tomasulo).
 
 ```
 web/                 # aplicación web (TypeScript + Vite)
+  index.html         # simulador de Tomasulo (usa src/main.ts)
+  predictores.html   # guía interactiva de predictores de salto (standalone)
+  cache.html         # guía interactiva de jerarquía de memoria y caché (standalone)
   src/engine/        # port del motor (mainLogic.ts, parseFile.ts)
   src/               # UI: main.ts, diagram.ts, examples.ts, style.css
   public/asm/        # corpus de ejemplos .s (assets estáticos)
@@ -45,6 +48,11 @@ web/                 # aplicación web (TypeScript + Vite)
 reference-java/      # app original Java Swing (referencia, no se ejecuta en web)
 .github/workflows/   # despliegue a GitHub Pages
 ```
+
+`predictores.html` y `cache.html` son páginas HTML autocontenidas (CSS y JS
+inline, sin dependencias externas) que comparten el tema claro/oscuro del
+simulador principal. Cualquier página nueva de este tipo debe registrarse en
+`web/vite.config.ts` (`rollupOptions.input`) para que el build la incluya.
 
 ## Desarrollo
 

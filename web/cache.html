@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jerarquía de Memoria y Caché | Tomasulo Web</title>
+<meta
+  name="description"
+  content="Guía interactiva de la jerarquía de memoria: emplazamiento directo, asociativo por conjuntos y totalmente asociativo, con simulador de caché. Complemento del simulador de Tomasulo."
+/>
+<script>
+  // Aplica el tema guardado/del sistema antes del render para evitar parpadeo.
+  (function () {
+    try {
+      var t = localStorage.getItem('tw-theme');
+      if (!t) {
+        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root{
+    /* ---- Tema claro (por defecto), tokens compartidos con index.html / predictores.html ---- */
+    --bg: #f4f6fb;
+    --bg-grad: radial-gradient(1200px 520px at 50% -160px, #e9eefb 0%, var(--bg) 70%);
+    --bg-panel: #ffffff;
+    --bg-panel-2: #eef2f7;
+    --line: #d8dee6;
+    --line-soft: #e4e9f0;
+    --text: #1d2433;
+    --muted: #4a5568;
+    --accent: #1f6feb;
+    --accent-ink: #ffffff;
+    --focus: #0a4bce;
+    --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
+    --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+    /* Colores semánticos propios de esta página (tag/índice/desplazamiento) */
+    --amber: #b45309;
+    --amber-soft: #fdf2e3;
+    --teal: #0f766e;
+    --teal-soft: #e6f4f2;
+    --rust: #c0392b;
+    --rust-soft: #fbeae7;
+    --violet: #6d4fd1;
+    --violet-soft: #ede9fb;
+  }
+  html[data-theme='dark']{
+    /* ---- Tema oscuro (navy), tokens compartidos con index.html / predictores.html ---- */
+    --bg: #0d1524;
+    --bg-grad: radial-gradient(1200px 560px at 50% -160px, #172236 0%, var(--bg) 68%);
+    --bg-panel: #131d2e;
+    --bg-panel-2: #1a2942;
+    --line: #2a3a52;
+    --line-soft: #223047;
+    --text: #e7edf3;
+    --muted: #9fb0c8;
+    --accent: #4d9fff;
+    --accent-ink: #06121f;
+    --focus: #7bb8ff;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.35);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+    /* Colores semánticos propios de esta página, valores originales del diseño oscuro */
+    --amber: #e2a640;
+    --amber-soft: #3a2c17;
+    --teal: #4fc9b8;
+    --teal-soft: #163431;
+    --rust: #e2664f;
+    --rust-soft: #3a2019;
+    --violet: #9b8cf2;
+    --violet-soft: #241c3a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    background:var(--bg-grad);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height:1.55;
+    transition:background-color .2s ease, color .2s ease;
+  }
+  code, .mono, .bits, .addr{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  a{ color:var(--accent); }
+  :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+
+  /* ---------- Skip link (accesibilidad) ---------- */
+  .skip-link{
+    position:absolute; left:-999px; top:0;
+    background:var(--accent); color:var(--accent-ink); padding:8px 12px; z-index:20;
+    border-radius:0 0 6px 0;
+  }
+  .skip-link:focus{ left:8px; top:8px; }
+
+  /* ---------- Header estilo Tomasulo Web ---------- */
+  header.site{
+    padding:20px 24px;
+    background:var(--bg-panel);
+    border-bottom:1px solid var(--line);
+    box-shadow:var(--shadow-sm);
+  }
+  .site-top{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    margin-bottom:6px;
+  }
+  .backlink{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--accent); text-decoration:none; font-size:.9rem; font-weight:600;
+  }
+  .backlink:hover{ text-decoration:underline; }
+  header.site h1{ margin:10px 0 0; font-size:clamp(24px,3vw,34px); letter-spacing:-.01em; max-width:20ch; }
+  header.site .kicker{ color:var(--muted); font-size:.9rem; margin:0; }
+  header.site .lede{ color:var(--muted); font-size:1rem; max-width:72ch; margin:10px 0 22px; }
+
+  .theme-toggle{
+    flex:0 0 auto;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border:1px solid var(--line); background:var(--bg-panel-2); color:var(--text);
+    border-radius:999px; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer;
+    transition:border-color .15s ease, background-color .2s ease;
+  }
+  .theme-toggle:hover{ border-color:var(--muted); }
+  .theme-toggle .icon{ font-size:1rem; line-height:1; }
+  .theme-toggle .theme-label-dark{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-light{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-dark{ display:inline; }
+
+  /* ---------- layout shell ---------- */
+  .shell{
+    display:grid;
+    grid-template-columns: 260px 1fr;
+    min-height:100vh;
+  }
+  nav.side{
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    background:var(--bg-panel);
+    border-right:1px solid var(--line);
+    padding:22px 16px 40px;
+  }
+  nav.side .brand{
+    font-weight:700; font-size:15px; letter-spacing:.2px;
+    margin-bottom:2px;
+  }
+  nav.side .brand small{
+    display:block; color:var(--muted); font-weight:400; font-size:12px; margin-top:3px;
+  }
+  nav.side ol{
+    list-style:none; margin:22px 0 0; padding:0;
+  }
+  nav.side .grp{ margin-bottom:18px; }
+  nav.side .grp-title{
+    color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    margin:0 0 6px 2px; font-weight:600;
+  }
+  nav.side a{
+    display:block; color:var(--text); text-decoration:none; font-size:13.5px;
+    padding:5px 8px; border-radius:6px; opacity:.82;
+  }
+  nav.side a:hover{ background:var(--bg-panel-2); opacity:1; }
+  nav.side a.active{ background:var(--bg-panel-2); color:var(--accent); opacity:1; }
+
+  main{ padding: 0 0 100px; }
+
+  .addr-hero{
+    display:flex; gap:2px; align-items:stretch; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    max-width:640px; flex-wrap:wrap;
+  }
+  .addr-hero .seg{
+    padding:14px 10px; text-align:center; border-radius:8px; flex:1; min-width:70px;
+  }
+  .addr-hero .seg .lbl{ display:block; font-size:10.5px; color:var(--muted); margin-bottom:6px; letter-spacing:.06em;}
+  .addr-hero .seg .val{ font-size:15px; font-weight:600; }
+  .addr-hero .tag{ background:var(--violet-soft); border:1px solid var(--violet); }
+  .addr-hero .tag .val{ color:var(--violet); }
+  .addr-hero .idx{ background:var(--amber-soft); border:1px solid var(--amber); }
+  .addr-hero .idx .val{ color:var(--amber); }
+  .addr-hero .off{ background:var(--teal-soft); border:1px solid var(--teal); }
+  .addr-hero .off .val{ color:var(--teal); }
+
+  section.block{
+    padding:40px 48px;
+    border-bottom:1px solid var(--line);
+    max-width:1080px;
+  }
+  section.block h2{
+    font-size:22px; margin:0 0 6px; display:flex; align-items:baseline; gap:10px;
+  }
+  section.block h2 .num{ color:var(--amber); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600;}
+  section.block .sub{ color:var(--muted); font-size:14px; margin:0 0 22px; max-width:66ch; }
+
+  details.card{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    margin-bottom:10px; overflow:hidden;
+  }
+  details.card summary{
+    cursor:pointer; padding:14px 18px; font-weight:600; font-size:14.5px;
+    display:flex; align-items:center; gap:10px; list-style:none;
+  }
+  details.card summary::-webkit-details-marker{ display:none; }
+  details.card summary::before{
+    content:"+"; color:var(--amber); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; width:14px;
+  }
+  details.card[open] summary::before{ content:"–"; }
+  details.card .body{ padding:0 18px 18px; color:var(--text); font-size:14.5px; }
+  details.card .body p{ margin:0 0 12px; }
+  details.card .body ul{ margin:0 0 12px; padding-left:20px; }
+  details.card .body li{ margin-bottom:6px; }
+  details.card .body strong{ color:var(--amber); }
+
+  table.cmp{ width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:13.5px; }
+  table.cmp th, table.cmp td{ border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top; }
+  table.cmp th{ background:var(--bg-panel-2); color:var(--muted); font-weight:600; }
+  table.cmp td.hi{ color:var(--teal); }
+
+  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px;}
+  .pill{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:12.5px; color:var(--muted);}
+  .pill b{ color:var(--text); }
+
+  .formula{
+    background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
+  }
+
+  /* ---------- simulator ---------- */
+  .sim{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:24px;
+    margin-top:6px;
+  }
+  .sim .cfg{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px;
+  }
+  .sim .cfg label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;}
+  .sim select, .sim input[type=text]{
+    width:100%; background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
+    padding:9px 10px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px;
+  }
+  .sim select:focus, .sim input:focus{ outline:2px solid var(--focus); outline-offset:1px; }
+
+  .sim .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px; }
+  button.btn{
+    background:var(--accent); color:var(--accent-ink); border:none; font-weight:600; font-size:13.5px;
+    padding:10px 16px; border-radius:8px; cursor:pointer; font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  button.btn:hover{ filter:brightness(1.08); }
+  button.btn.ghost{
+    background:transparent; color:var(--text); border:1px solid var(--line);
+  }
+  button.btn.ghost:hover{ background:var(--bg-panel-2); }
+  button.btn.ghost.running{ background:var(--rust-soft); border-color:var(--rust); color:var(--rust); }
+  button.btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .breakdown{
+    display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px;
+  }
+  .breakdown .chip{
+    background:var(--bg-panel-2); border:1px solid var(--line); border-radius:8px; padding:8px 12px;
+  }
+  .breakdown .chip .k{ color:var(--muted); font-size:10.5px; text-transform:uppercase; display:block; margin-bottom:3px;}
+
+  .grid-wrap{ display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; margin-bottom:18px; overflow-x:auto; }
+  .gridcol{ min-width:200px; }
+  .col-label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
+  table.cache-grid { border-collapse:collapse; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px; }
+  table.cache-grid th{ color:var(--muted); font-weight:500; padding:6px 10px; text-align:left; }
+  table.cache-grid td{
+    border:1px solid var(--line); padding:8px 12px; min-width:64px; text-align:center; transition:background .4s, border-color .4s;
+  }
+  table.cache-grid td.frame{ background:var(--bg-panel); }
+  table.cache-grid td.frame.valid{ background:var(--bg-panel-2); }
+  table.cache-grid td.frame.flash-hit{ background:var(--teal-soft); border-color:var(--teal); }
+  table.cache-grid td.frame.flash-miss{ background:var(--rust-soft); border-color:var(--rust); }
+  table.cache-grid td.setlbl{ color:var(--amber); font-weight:600; background:transparent; border:none; text-align:right; padding-right:14px;}
+  table.cache-grid .tagv{ color:var(--violet); }
+  table.cache-grid .empty{ color:var(--muted); opacity:.4; }
+
+  .memmap-col{ max-width:380px; }
+  .memmap{ display:flex; flex-wrap:wrap; gap:5px; }
+  .memmap .blk{
+    width:30px; height:30px; border-radius:6px; display:flex; align-items:center; justify-content:center;
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:10.5px; color:#12161c; font-weight:700;
+  }
+  .memmap .blk.more{ background:transparent !important; border:1px dashed var(--line); color:var(--muted); font-weight:400; }
+  .memmap-legend{ display:flex; flex-wrap:wrap; gap:10px 14px; margin-top:12px; }
+  .memmap-legend .lg{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .memmap-legend .sw{ width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+  .memmap-caption{ font-size:12px; color:var(--muted); margin-top:12px; max-width:340px; }
+
+  .stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat{
+    background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 18px; min-width:110px;
+  }
+  .stat .n{ font-size:22px; font-weight:700; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;}
+  .stat .l{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+  .stat.hit .n{ color:var(--teal); }
+  .stat.miss .n{ color:var(--rust); }
+
+  .log{
+    max-height:190px; overflow-y:auto; background:var(--bg); border:1px solid var(--line); border-radius:8px;
+    padding:8px 4px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px;
+  }
+  .log .row{ padding:6px 12px; border-bottom:1px solid var(--line-soft); display:flex; gap:10px; align-items:center;}
+  .log .row:last-child{ border-bottom:none; }
+  .log .tag-hit{ color:var(--teal); font-weight:600; min-width:44px; }
+  .log .tag-miss{ color:var(--rust); font-weight:600; min-width:44px; }
+  .log .addr{ color:var(--text); min-width:60px; }
+  .log .detail{ color:var(--muted); font-size:12px; }
+
+  .note{
+    font-size:13px; color:var(--muted); background:var(--bg); border:1px solid var(--line);
+    border-radius:8px; padding:10px 14px; margin-top:4px;
+  }
+  .note b{ color:var(--amber); }
+
+  /* ---------- classic diagram (5.2.2) ---------- */
+  .diagram-wrap{ background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:20px; overflow-x:auto; }
+  .addr-split{ display:flex; gap:2px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; min-width:560px; }
+  .aseg{ border:1px solid var(--line); padding:10px 8px; text-align:center; }
+  .aseg .albl{ display:block; font-weight:600; font-size:12.5px; }
+  .aseg .aex{ display:block; color:var(--muted); font-size:11px; margin-top:4px; }
+  .atag{ flex:2.4; background:var(--violet-soft); border-color:var(--violet); }
+  .atag .albl{ color:var(--violet); }
+  .aidx{ flex:1.1; background:var(--amber-soft); border-color:var(--amber); }
+  .aidx .albl{ color:var(--amber); }
+  .aoff{ flex:1; background:var(--teal-soft); border-color:var(--teal); }
+  .aoff .albl{ color:var(--teal); }
+  .addr-bits-row{
+    display:flex; justify-content:space-between; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--muted);
+    font-size:11px; min-width:560px; margin:4px 0 18px;
+  }
+  .diagram-tables{ display:flex; gap:26px; flex-wrap:wrap; min-width:560px; }
+  .dtable{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }
+  .dtable.wide{ flex:1; min-width:320px; }
+  .dt-head{ display:flex; gap:2px; margin-bottom:4px; }
+  .dcell{ border:1px solid var(--line); padding:7px 10px; text-align:center; background:var(--bg-panel-2); }
+  .dv-h, .dt-h, .dd-h{ color:var(--muted); font-weight:600; background:transparent; border:none; padding:0 0 4px; }
+  .dt-row{ display:flex; gap:2px; margin-bottom:2px; }
+  .dt-row.hi-row .dcell{ background:var(--teal-soft); border-color:var(--teal); color:var(--teal); font-weight:600; }
+  .dt-row.hi-row .dcell.hl{ background:var(--amber-soft); border-color:var(--amber); color:var(--amber); }
+  .dv{ width:44px; }
+  .dtag{ flex:1; }
+  .dbyte{ flex:1; }
+  .ddots{ width:24px; color:var(--muted); background:transparent; border:none; }
+  .empty{ color:var(--muted); opacity:.45; }
+  .dt-row.dots{ text-align:center; color:var(--muted); padding:2px; }
+
+  /* ---------- circuit-style diagrams (N-way / fully assoc) ---------- */
+  .circuit-row{ display:flex; gap:48px; justify-content:center; align-items:stretch; flex-wrap:wrap; margin-top:10px; }
+  .way-col{ display:flex; flex-direction:column; align-items:center; gap:8px; min-width:200px; }
+  .way-label{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11.5px; color:var(--amber); font-weight:600; letter-spacing:.04em; }
+  .wire-arrow{ font-size:16px; color:var(--muted); line-height:1; }
+  .gate{
+    border:1px solid var(--line); border-radius:999px; padding:8px 16px; text-align:center;
+    background:var(--bg-panel-2); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; color:var(--text);
+  }
+  .gate small{ display:block; color:var(--muted); font-size:10.5px; margin-top:2px; }
+  .gate.cmp{ border-color:var(--violet); color:var(--violet); }
+  .gate.and{ border-radius:6px; }
+  .gate.or{ border-color:var(--teal); color:var(--teal); font-weight:600; }
+  .gate.mux{ border-radius:8px; border-color:var(--amber); color:var(--amber); padding:10px 20px; font-weight:600; max-width:320px; }
+  .merge-stack{ display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:16px; }
+
+  .fa-line{ display:flex; align-items:center; gap:12px; max-width:640px; margin:0 auto 8px; }
+  .fa-line .fa-idx{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--muted); font-size:11px; width:44px; text-align:right; }
+  .fa-line .dtable{ flex:1; }
+  .fa-line .gate.cmp{ min-width:70px; }
+
+  /* quiz */
+  .quiz-item{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:14px;
+  }
+  .quiz-item p.q{ font-weight:600; margin:0 0 12px; font-size:14.5px; }
+  .quiz-item .opts{ display:flex; flex-direction:column; gap:8px; }
+  .quiz-item label{
+    display:flex; gap:10px; align-items:flex-start; background:var(--bg-panel-2); border:1px solid var(--line);
+    padding:9px 12px; border-radius:8px; cursor:pointer; font-size:13.5px;
+  }
+  .quiz-item label:hover{ border-color:var(--muted); }
+  .quiz-item label input{ margin-top:3px; }
+  .quiz-item .fb{ margin-top:10px; padding:10px 12px; border-radius:8px; font-size:13px; display:none; }
+  .quiz-item .fb.ok{ background:var(--teal-soft); border:1px solid var(--teal); color:var(--teal); display:block; }
+  .quiz-item .fb.bad{ background:var(--rust-soft); border:1px solid var(--rust); color:var(--rust); display:block; }
+  .quiz-score{ font-size:14px; color:var(--muted); margin-top:6px; }
+
+  footer.pagefoot{ padding:30px 48px; color:var(--muted); font-size:12.5px; }
+
+  @media (max-width:860px){
+    .shell{ grid-template-columns:1fr; }
+    nav.side{ position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line); }
+    section.block{ padding:28px 20px; }
+  }
+  @media (max-width:640px){
+    header.site{ padding:16px; }
+    header.site .site-top{ flex-direction:column; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site">
+  <div class="site-top">
+    <a class="backlink" href="index.html">&larr; Volver al simulador de Tomasulo</a>
+    <button
+      id="theme-toggle"
+      class="theme-toggle"
+      type="button"
+      aria-pressed="false"
+      title="Cambiar entre modo claro y oscuro"
+    >
+      <span class="icon" aria-hidden="true">🌙</span>
+      <span class="theme-label-light">Modo oscuro</span>
+      <span class="theme-label-dark">Modo claro</span>
+    </button>
+  </div>
+  <p class="kicker">Arquitectura de Computadoras — Unidad 5: Jerarquía de Memoria</p>
+  <h1>Cómo la caché decide dónde vive cada dato</h1>
+  <p class="lede">Toda la Unidad 5 —de la jerarquía de memoria a la memoria principal— condensada en un recorrido con simulador incluido. El foco está puesto en <b style="color:var(--text)">5.2.2 Emplazamiento Directo</b> y <b style="color:var(--text)">5.3 Asociativa por Conjuntos (N-way)</b>, pero podés bajar y encontrar el resto de los temas de la unidad.</p>
+  <div class="addr-hero" id="heroBits"></div>
+</header>
+
+<div class="shell">
+
+  <nav class="side" id="sidenav">
+    <div class="brand">Jerarquía de Memoria<small>Unidad 5 — mapa interactivo</small></div>
+    <ol>
+      <li class="grp">
+        <p class="grp-title">Fundamentos</p>
+        <a href="#s-fundamentos">5.1–5.2 Jerarquía y terminología</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Emplazamiento</p>
+        <a href="#s-directa">5.2.2 Emplazamiento directo</a>
+        <a href="#s-nway">5.3 Asociativa por conjuntos</a>
+        <a href="#s-full">5.4 Totalmente asociativa</a>
+        <a href="#s-simulador">↳ Simulador de caché</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Estructura y gestión</p>
+        <a href="#s-estructura">5.5–5.6 Diseño y estructura</a>
+        <a href="#s-reemplazo">5.7–5.11 Políticas de reemplazo</a>
+        <a href="#s-actualizacion">5.12–5.14 Write through / back</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Rendimiento</p>
+        <a href="#s-rendimiento">5.15 Rendimiento y calculadora</a>
+        <a href="#s-mejoras">5.16 Reducir la tasa de fallos</a>
+        <a href="#s-penalizacion">5.17–5.19.3 Reducir penalización</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Memoria virtual y principal</p>
+        <a href="#s-virtual">5.19.4–5.19.7 Caché y mem. virtual</a>
+        <a href="#s-principal">5.20 Memoria principal</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Autoevaluación</p>
+        <a href="#s-quiz">Quiz de repaso</a>
+      </li>
+    </ol>
+  </nav>
+
+  <main id="main">
+
+    <!-- ============ 5.1-5.2 FUNDAMENTOS ============ -->
+    <section class="block" id="s-fundamentos">
+      <h2><span class="num">5.1–5.2</span> Jerarquía de memoria y terminología</h2>
+      <p class="sub">La base de todo lo que sigue: por qué existen niveles de memoria y el vocabulario que se usa para describir sus aciertos y fallos.</p>
+
+      <details class="card" open>
+        <summary>¿Por qué una jerarquía y no una sola memoria?</summary>
+        <div class="body">
+          <p>Ninguna tecnología de memoria es simultáneamente grande, barata y rápida. La jerarquía combina niveles pequeños y veloces (registros, caché) con niveles grandes y económicos (memoria principal, disco) para que el sistema se comporte, en promedio, casi como si tuviera la velocidad del nivel más rápido al costo del más barato.</p>
+          <p>Esto funciona gracias al <strong>principio de localidad</strong>:</p>
+          <ul>
+            <li><strong>Localidad temporal</strong>: un dato accedido recientemente tiene alta probabilidad de volver a accederse pronto.</li>
+            <li><strong>Localidad espacial / secuencial</strong>: si se accede a una dirección, es probable que se acceda pronto a direcciones cercanas, porque las instrucciones y los datos suelen usarse de forma contigua.</li>
+          </ul>
+          <p>Además, la jerarquía respeta dos propiedades: <strong>inclusión</strong> (todo lo que está en un nivel rápido también existe en el nivel siguiente, más lento) y <strong>coherencia</strong> (las copias de un mismo dato en distintos niveles deben mantenerse consistentes, vía políticas como write-through o write-back).</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Vocabulario base: bloque, acierto (hit), fallo (miss)</summary>
+        <div class="body">
+          <p><strong>Bloque</strong>: unidad mínima de transferencia entre dos niveles de la jerarquía. No se mueve un byte a la vez, se mueve un bloque completo.</p>
+          <p><strong>Acierto (hit)</strong>: el dato pedido ya está en el nivel consultado. Se mide con la <em>tasa de aciertos</em> (aciertos / accesos totales) y el <em>tiempo de acierto</em> (acceso + detección de acierto).</p>
+          <p><strong>Fallo (miss)</strong>: el dato no está y hay que buscarlo en el nivel siguiente. Se mide con la <em>tasa de fallos</em> (1 − tasa de aciertos) y el <em>tiempo de penalización por fallo</em>, siempre mayor al tiempo de acierto porque incluye traer y ubicar el bloque nuevo.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Políticas de emplazamiento: las tres familias</summary>
+        <div class="body">
+          <p>El <strong>emplazamiento</strong> es la regla que decide en qué línea o conjunto de la caché puede ubicarse un bloque traído de memoria principal. Determina directamente cuántos conflictos habrá y qué tan alta será la tasa de fallos. Hay tres familias, que son exactamente las tres secciones siguientes:</p>
+          <ul>
+            <li><strong>Directo</strong>: cada bloque tiene una única línea posible.</li>
+            <li><strong>Asociativo por conjuntos</strong>: cada bloque puede ir a cualquiera de las N líneas dentro de un conjunto.</li>
+            <li><strong>Totalmente asociativo</strong>: cada bloque puede ir a cualquier línea de la caché.</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ 5.2.2 DIRECTA ============ -->
+    <section class="block" id="s-directa">
+      <h2><span class="num">5.2.2</span> Emplazamiento Directo (Caché Directa)</h2>
+      <p class="sub">Cada bloque de memoria principal tiene un único marco posible en la caché.</p>
+
+      <details class="card" open>
+        <summary>La regla de emplazamiento</summary>
+        <div class="body">
+          <p>En caché directa, el número de bloque de memoria principal <code>B</code> se ubica siempre en el mismo marco <code>MB</code> de la caché, calculado como:</p>
+          <div class="formula">MB = B mod M &nbsp;&nbsp;·&nbsp;&nbsp; M = cantidad de marcos en la caché</div>
+          <p>Cada marco guarda un <strong>tag</strong> (los bits más significativos de la dirección, que identifican cuál de los tantos bloques candidatos está efectivamente presente) y un <strong>bit de validez</strong>. Acceder a la caché no requiere recorrer nada: se va directo al marco indicado por el índice y se compara el tag. Por eso el dato es accesible <em>antes</em> de confirmar el acierto — se puede asumir el hit y seguir, corrigiendo si resulta fallo.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Ejemplo mínimo (memoria de 16 B, caché de 4 B)</summary>
+        <div class="body">
+          <p>Con bloques de 1 byte, una caché de 4 marcos solo puede contener 4 de los 16 bytes de memoria principal a la vez. El marco 0 de la caché termina representando a las posiciones de memoria 0, 4, 8 y 12 — todas comparten el mismo índice porque sus 2 bits menos significativos de dirección son iguales. Los bits altos de la dirección (el tag) son los que distinguen cuál de esas cuatro posiciones está realmente cargada en un momento dado.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>El problema del aliasing</summary>
+        <div class="body">
+          <p>Como muchos bloques de memoria compiten por el mismo marco, alternar accesos entre dos direcciones que comparten índice (aunque tengan tags distintos) produce un fallo en cada acceso: cada una desaloja a la otra. Esto se llama <strong>aliasing</strong> y es la principal debilidad de la caché directa — probalo en el simulador de abajo poniendo asociatividad "Directa (1-way)" y accediendo alternadamente a dos direcciones separadas exactamente por el tamaño de la caché.</p>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary>Diagrama clásico: por qué la línea de datos tiene "N" bytes</summary>
+        <div class="body">
+          <p>Ejemplo típico: caché de <strong>1 KB</strong> con bloques de <strong>32 bytes</strong>, direcciones de 32 bits. El <em>Byte Select</em> son los 5 bits menos significativos (2⁵ = 32 bytes por bloque); el resto se reparte entre índice y tag según cuántas líneas tenga la caché.</p>
+          <div class="diagram-wrap">
+            <div class="addr-split">
+              <div class="aseg atag">
+                <span class="albl">Cache Tag</span>
+                <span class="aex">ej: 0x50</span>
+              </div>
+              <div class="aseg aidx">
+                <span class="albl">Cache Index</span>
+                <span class="aex">ej: 0x01</span>
+              </div>
+              <div class="aseg aoff">
+                <span class="albl">Byte Select</span>
+                <span class="aex">ej: 0x00</span>
+              </div>
+            </div>
+            <div class="addr-bits-row"><span>31</span><span>···</span><span>bit N</span><span>···</span><span>4</span><span>0</span></div>
+
+            <div class="diagram-tables">
+              <div class="dtable">
+                <div class="dt-head">
+                  <div class="dcell dv-h">Valid</div>
+                  <div class="dcell dt-h">Cache Tag</div>
+                </div>
+                <div class="dt-row hi-row">
+                  <div class="dcell dv">1</div>
+                  <div class="dcell dtag">0x50</div>
+                </div>
+                <div class="dt-row"><div class="dcell dv">0</div><div class="dcell dtag empty">—</div></div>
+                <div class="dt-row"><div class="dcell dv">0</div><div class="dcell dtag empty">—</div></div>
+                <div class="dt-row dots">⋮</div>
+              </div>
+
+              <div class="dtable wide">
+                <div class="dt-head">
+                  <div class="dcell dd-h" style="flex:1">Cache Data (bloque de 32 bytes)</div>
+                </div>
+                <div class="dt-row hi-row">
+                  <div class="dcell dbyte">Byte 31</div><div class="dcell ddots">··</div><div class="dcell dbyte">Byte 1</div><div class="dcell dbyte hl">Byte 0</div>
+                </div>
+                <div class="dt-row"><div class="dcell dbyte empty">—</div><div class="dcell ddots">··</div><div class="dcell dbyte empty">—</div><div class="dcell dbyte empty">—</div></div>
+                <div class="dt-row"><div class="dcell dbyte empty">—</div><div class="dcell ddots">··</div><div class="dcell dbyte empty">—</div><div class="dcell dbyte empty">—</div></div>
+                <div class="dt-row dots">⋮</div>
+              </div>
+            </div>
+          </div>
+          <p class="note">La <strong>línea 0x01</strong> guarda el bloque completo (los 32 bytes consecutivos) que empieza en la dirección física indicada por <code>Tag 0x50 + Index 0x01</code>. El <code>Byte Select = 0x00</code> apunta al <strong>Byte 0</strong> dentro de esa línea — el byte exacto que el procesador pidió. Si el procesador después pide el byte contiguo, ya está ahí, sin nuevo acceso a memoria: <b>ese es el ahorro que justifica traer 32 bytes de una sola vez</b>.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ 5.3 N-WAY ============ -->
+    <section class="block" id="s-nway">
+      <h2><span class="num">5.3</span> Memoria Asociativa por Conjuntos (N-way)</h2>
+      <p class="sub">La solución al aliasing: dar más de una ubicación posible por conjunto.</p>
+
+      <details class="card" open>
+        <summary>Cómo funciona</summary>
+        <div class="body">
+          <p>Una caché N-way usa N bancos operando en paralelo (típicamente 2, 4 u 8), cada uno con su propio bloque, tag y bit de validez. El índice ya no selecciona un marco único sino un <strong>conjunto</strong> de N marcos:</p>
+          <ul>
+            <li>El índice de caché selecciona el conjunto.</li>
+            <li>Los N tags del conjunto se comparan <strong>en paralelo</strong>.</li>
+            <li>El dato se selecciona según cuál comparación dio acierto.</li>
+          </ul>
+          <p>Al tener N candidatos por conjunto en vez de uno solo, dos direcciones que antes competían por el mismo marco ahora pueden convivir — siempre que no sean más de N compitiendo a la vez por el mismo conjunto.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>5.3.1 — Caché Directa vs. Asociativa por Conjuntos</summary>
+        <div class="body">
+          <table class="cmp">
+            <tr><th>Parámetro</th><th>Caché Directa</th><th>Asociativa por Conjuntos</th></tr>
+            <tr><td>Comparadores necesarios</td><td>1</td><td class="hi">N</td></tr>
+            <tr><td>Retardo</td><td>Ninguno extra</td><td>Retardo extra por el multiplexor que elige entre las N vías</td></tr>
+            <tr><td>¿Cuándo llega el dato?</td><td>Antes del hit — se puede asumir acierto y continuar</td><td>Después del hit, ya que primero hay que resolver cuál vía acertó</td></tr>
+          </table>
+          <p>La asociatividad no es gratis: baja la tasa de fallos por conflicto, pero sube la complejidad de hardware y el tiempo de acceso.</p>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary>Diagrama: caché 2-way asociativa (comparación en paralelo)</summary>
+        <div class="body">
+          <p>El mismo <strong>Cache Index</strong> selecciona simultáneamente una fila en las dos vías. A partir de ahí, cada vía compara su propio tag contra el tag de la dirección <em>en paralelo</em> — nadie espera a nadie.</p>
+          <div class="diagram-wrap">
+            <div class="addr-split" style="max-width:420px;margin:0 auto 6px;">
+              <div class="aseg atag"><span class="albl">Adr Tag</span></div>
+              <div class="aseg aidx"><span class="albl">Cache Index</span></div>
+              <div class="aseg aoff"><span class="albl">Offset</span></div>
+            </div>
+            <div style="text-align:center;color:var(--muted);font-family:ui-monospace, SFMono-Regular, Menlo, monospace;font-size:11px;margin-bottom:6px;">↓ el índice llega a las dos vías al mismo tiempo ↓</div>
+
+            <div class="circuit-row">
+              <div class="way-col">
+                <div class="way-label">VÍA 0</div>
+                <div class="dtable" style="width:100%;">
+                  <div class="dt-head"><div class="dcell dv-h">Valid</div><div class="dcell dt-h">Tag</div><div class="dcell dt-h" style="flex:1.4">Data (bloque)</div></div>
+                  <div class="dt-row hi-row"><div class="dcell dv">1</div><div class="dcell dtag">0x50</div><div class="dcell dbyte" style="flex:1.4">···</div></div>
+                  <div class="dt-row dots">⋮</div>
+                </div>
+                <div class="wire-arrow">↓</div>
+                <div class="gate cmp">Compare<small>tag == Adr Tag?</small></div>
+                <div class="wire-arrow">↓</div>
+                <div class="gate and">AND con Valid → <b>match₀</b></div>
+              </div>
+              <div class="way-col">
+                <div class="way-label">VÍA 1</div>
+                <div class="dtable" style="width:100%;">
+                  <div class="dt-head"><div class="dcell dv-h">Valid</div><div class="dcell dt-h">Tag</div><div class="dcell dt-h" style="flex:1.4">Data (bloque)</div></div>
+                  <div class="dt-row"><div class="dcell dv">1</div><div class="dcell dtag">0x12</div><div class="dcell dbyte" style="flex:1.4">···</div></div>
+                  <div class="dt-row dots">⋮</div>
+                </div>
+                <div class="wire-arrow">↓</div>
+                <div class="gate cmp">Compare<small>tag == Adr Tag?</small></div>
+                <div class="wire-arrow">↓</div>
+                <div class="gate and">AND con Valid → <b>match₁</b></div>
+              </div>
+            </div>
+
+            <div class="merge-stack">
+              <div style="font-family:ui-monospace, SFMono-Regular, Menlo, monospace;font-size:11px;color:var(--muted);">match₀ &nbsp;·&nbsp; match₁</div>
+              <div class="wire-arrow">↓</div>
+              <div class="gate or">OR ( match₀ , match₁ ) → Hit</div>
+              <div class="wire-arrow">↓</div>
+              <div class="gate mux">MUX de 2 entradas — usa match₀/match₁ como selector → entrega el <b>Cache Block</b> de la vía que acertó</div>
+            </div>
+          </div>
+          <p class="note">Nada se hace "primero una vía, después la otra": los dos comparadores existen como hardware separado y trabajan a la vez. Lo único secuencial es el último paso, el <b>MUX</b>, que recién puede elegir el dato una vez que sabe cuál de las dos comparaciones dio positivo — ese es exactamente el "retardo extra por multiplexor" de la tabla de arriba.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ 5.4 FULLY ============ -->
+    <section class="block" id="s-full">
+      <h2><span class="num">5.4</span> Caché Totalmente Asociativa</h2>
+      <p class="sub">El extremo opuesto a la caché directa: cualquier bloque puede ir a cualquier marco.</p>
+      <details class="card">
+        <summary>Ventajas, desventajas y cuándo se usa</summary>
+        <div class="body">
+          <p>El tag pasa a ser la dirección completa, y para buscar un dato hay que recorrer (o comparar en paralelo) toda la tabla de tags, que no está ordenada. Es el límite superior de la asociatividad N-way cuando N = cantidad total de marcos.</p>
+          <table class="cmp">
+            <tr><th>Ventajas</th><th>Desventajas</th></tr>
+            <tr><td class="hi">Tasa de fallos baja — cada bloque puede ubicarse en cualquier marco libre</td><td>Alta complejidad de hardware</td></tr>
+            <tr><td></td><td>Directorio grande, por etiquetas largas (tag = dirección completa)</td></tr>
+            <tr><td></td><td>Requiere algoritmos de reemplazo, con su propia sobrecarga</td></tr>
+          </table>
+          <p>Por su costo, se reserva para cachés muy pequeñas (4 u 8 entradas), como los TLB o las cachés víctima que se ven más adelante.</p>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary>Diagrama simple: caché totalmente asociativa</summary>
+        <div class="body">
+          <p>La diferencia clave frente a los diagramas anteriores: <strong>no hay campo de índice</strong>. Como cualquier bloque puede ir a cualquier línea, no existe una regla que diga "andá directo a la línea X" — hay que preguntarle a <em>todas</em> las líneas a la vez.</p>
+          <div class="diagram-wrap">
+            <div class="addr-split" style="max-width:340px;margin:0 auto 18px;">
+              <div class="aseg atag" style="flex:3;"><span class="albl">Tag</span><span class="aex">= dirección completa</span></div>
+              <div class="aseg aoff"><span class="albl">Offset</span></div>
+            </div>
+
+            <div id="faLines"></div>
+
+            <div class="merge-stack">
+              <div style="font-family:ui-monospace, SFMono-Regular, Menlo, monospace;font-size:11px;color:var(--muted);">match₀ · match₁ · match₂ · match₃</div>
+              <div class="wire-arrow">↓</div>
+              <div class="gate or">OR de las N comparaciones → Hit</div>
+              <div class="wire-arrow">↓</div>
+              <div class="gate mux">MUX de N entradas (la línea que dio match) → <b>Cache Block</b></div>
+            </div>
+          </div>
+          <p class="note">Cada línea trae <b>su propio comparador</b> de dirección completa, y los N comparadores trabajan en paralelo. Por eso escala tan mal: con 8 líneas hacen falta 8 comparadores de tag completo, contra 1 solo (y más angosto) en la caché directa. Es exactamente la fila "Comparadores necesarios" de la tabla 5.3.1, llevada al extremo N = cantidad total de marcos.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ SIMULADOR ============ -->
+    <section class="block" id="s-simulador">
+      <h2><span class="num">↳</span> Simulador de caché (directa · N-way · totalmente asociativa · víctima opcional)</h2>
+      <p class="sub">Un mismo modelo cubre las tres políticas de emplazamiento: la asociatividad "Directa" es 1-way, y "Totalmente asociativa" es N-way cuando N = cantidad de marcos. Configurá la caché, sumale opcionalmente una caché víctima, accedé a direcciones y mirá el hit/miss en vivo.</p>
+
+      <details class="card">
+        <summary>¿Qué gano y qué pierdo al mover cada parámetro?</summary>
+        <div class="body">
+          <table class="cmp">
+            <tr><th>Parámetro</th><th>Al subirlo, ganás</th><th>Al subirlo, perdés</th></tr>
+            <tr>
+              <td><strong>Asociatividad</strong> (más vías)</td>
+              <td class="hi">Menos fallos por conflicto/aliasing — dos bloques con el mismo índice ya no se pisan entre sí, porque tienen más de un lugar posible en el conjunto</td>
+              <td>Más comparadores en paralelo (uno por vía) + un multiplexor más grande para elegir el dato — más área de silicio y <strong>más latencia</strong> antes de confirmar el hit, porque primero hay que ver cuál vía acertó</td>
+            </tr>
+            <tr>
+              <td><strong>Tamaño de bloque</strong></td>
+              <td class="hi">Mejor aprovechamiento de la localidad espacial — al traer más bytes vecinos de una sola vez, los próximos accesos cercanos ya vienen resueltos como hit</td>
+              <td>Bloques más grandes ⇒ menos bloques distintos entrando a la caché ⇒ menos conjuntos disponibles y más <strong>fallos por conflicto</strong>; además cada miss cuesta más (hay que transferir más bytes) y se puede desperdiciar espacio trayendo datos que nunca se usan</td>
+            </tr>
+            <tr>
+              <td><strong>Tamaño de caché</strong></td>
+              <td class="hi">Menos fallos por capacidad — entra más "conjunto de trabajo" del programa sin desalojar nada</td>
+              <td>Memoria más cara y, en la práctica, algo más lenta de acceder (una memoria física más grande tiende a tener mayor latencia); no ayuda en nada contra los fallos compulsorios/iniciales</td>
+            </tr>
+            <tr>
+              <td><strong>Política de reemplazo</strong> (Random → FIFO → LRU)</td>
+              <td class="hi">LRU suele acertar más que Random/FIFO porque aprovecha la localidad temporal real del programa, en vez de una regla ciega</td>
+              <td>Más hardware: LRU exacto necesita "registros de edad" (contadores) por línea cuando hay más de 2 vías — la ganancia en tasa de aciertos se paga con más lógica de control</td>
+            </tr>
+            <tr>
+              <td><strong>Caché víctima</strong> (activarla)</td>
+              <td class="hi">Absorbe fallos por conflicto sin subir la asociatividad de la principal — con apenas 2 a 8 entradas totalmente asociativas alcanza para amortiguar el "ping-pong" entre bloques que compiten por el mismo conjunto</td>
+              <td>Otra memoria pequeña, totalmente asociativa, al costado de la principal, más la lógica de intercambio (swap) que se dispara en cada acierto de víctima</td>
+            </tr>
+          </table>
+          <p class="note">Regla general: <b>no hay parámetro gratis</b>. Todo lo que baja la tasa de fallos (MR) sube el costo de hardware, el tiempo de acceso en el caso de acierto, o ambos. El diseño de una caché real es siempre ese equilibrio — no "la caché ideal", sino la mejor relación costo/latencia/tasa de fallos para el presupuesto de transistores disponible.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>¿Cómo funciona la caché víctima del simulador?</summary>
+        <div class="body">
+          <p>Es una memoria chica, <strong>totalmente asociativa</strong>, que guarda los últimos bloques <em>desalojados</em> de la caché principal (reemplazo <strong>FIFO</strong>: cuando se llena, sale el que lleva más tiempo ahí). Ante un <strong>miss</strong> en la principal, antes de ir a memoria se revisa la víctima:</p>
+          <ul>
+            <li>Si el bloque <strong>está</strong> en la víctima (hit de víctima), se <strong>intercambia</strong> con el bloque que la principal va a desalojar para hacerle lugar: el pedido vuelve a la principal y el desalojado pasa a ocupar el lugar que quedó libre en la víctima.</li>
+            <li>Si <strong>no</strong> está, recién ahí se va a memoria — y el bloque que la principal desaloja para hacer espacio entra a la víctima (no se pierde, por si se vuelve a pedir pronto).</li>
+          </ul>
+          <p>El caso de manual: una caché <strong>directa</strong> chica, con solo <strong>2 bloques que compiten por el mismo conjunto</strong>. Sin víctima, alternar entre ambos falla siempre (aliasing) — y de hecho, con una sola entrada de víctima ya alcanzaría para resolverlo. El botón <b>"Ejemplo de caché víctima"</b> de abajo arma ese escenario con 4 entradas (la cifra típica citada más abajo, en 5.16): tras las dos primeras pérdidas (compulsorias), todos los accesos siguientes vuelven a ser aciertos de víctima.</p>
+        </div>
+      </details>
+
+      <div class="sim">
+        <div class="cfg">
+          <div>
+            <label for="cfgMem">Memoria principal</label>
+            <select id="cfgMem">
+              <option value="16">16 B</option>
+              <option value="64" selected>64 B</option>
+              <option value="256">256 B</option>
+              <option value="1024">1024 B (1 KB)</option>
+            </select>
+          </div>
+          <div>
+            <label for="cfgBlock">Tamaño de bloque</label>
+            <select id="cfgBlock">
+              <option value="1">1 B</option>
+              <option value="2" selected>2 B</option>
+              <option value="4">4 B</option>
+              <option value="8">8 B</option>
+              <option value="16">16 B</option>
+              <option value="32">32 B</option>
+            </select>
+          </div>
+          <div>
+            <label for="cfgCache">Tamaño de caché</label>
+            <select id="cfgCache">
+              <option value="4">4 B</option>
+              <option value="8" selected>8 B</option>
+              <option value="16">16 B</option>
+              <option value="32">32 B</option>
+              <option value="64">64 B</option>
+              <option value="128">128 B</option>
+              <option value="256">256 B</option>
+            </select>
+          </div>
+          <div>
+            <label for="cfgWays">Asociatividad</label>
+            <select id="cfgWays"></select>
+          </div>
+          <div>
+            <label for="cfgPolicy">Reemplazo (si N-way)</label>
+            <select id="cfgPolicy">
+              <option value="LRU">LRU</option>
+              <option value="FIFO">FIFO</option>
+              <option value="RANDOM">Aleatorio</option>
+            </select>
+          </div>
+          <div>
+            <label for="cfgVictim">Caché víctima (FIFO)</label>
+            <select id="cfgVictim">
+              <option value="0" selected>Desactivada</option>
+              <option value="2">2 entradas</option>
+              <option value="4">4 entradas</option>
+              <option value="8">8 entradas</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="breakdown" id="breakdown"></div>
+
+        <div class="actions">
+          <input type="text" id="addrInput" placeholder="dirección decimal, ej. 6" style="max-width:180px;">
+          <button class="btn" id="btnAccess">Acceder</button>
+          <button class="btn ghost" id="btnAlias">Ejemplo de aliasing</button>
+          <button class="btn ghost" id="btnVictimDemo">Ejemplo de caché víctima</button>
+          <button class="btn ghost" id="btnRandom">Secuencia aleatoria</button>
+          <button class="btn ghost" id="btnReset">Reiniciar caché</button>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat hit"><div class="n" id="statHits">0</div><div class="l">Aciertos</div></div>
+          <div class="stat" id="statVictimBox" hidden><div class="n" id="statVictimHits">0</div><div class="l">De los cuales, víctima</div></div>
+          <div class="stat miss"><div class="n" id="statMiss">0</div><div class="l">Fallos (a memoria)</div></div>
+          <div class="stat"><div class="n" id="statRatio">—</div><div class="l">Tasa de aciertos</div></div>
+        </div>
+
+        <div class="grid-wrap">
+          <div class="gridcol">
+            <div class="col-label">Marcos de la caché (lo que hay cargado)</div>
+            <table class="cache-grid" id="cacheGrid"></table>
+          </div>
+          <div class="gridcol" id="victimCol" hidden>
+            <div class="col-label">Caché víctima (FIFO, totalmente asociativa)</div>
+            <table class="cache-grid" id="victimGrid"></table>
+          </div>
+          <div class="gridcol memmap-col">
+            <div class="col-label">Bloques de la RAM → a qué conjunto le tocan</div>
+            <div class="memmap" id="memMap"></div>
+            <div class="memmap-legend" id="memMapLegend"></div>
+            <p class="memmap-caption" id="memMapCaption"></p>
+          </div>
+        </div>
+
+        <div class="log" id="accessLog"></div>
+        <p class="note" id="simNote"></p>
+      </div>
+    </section>
+
+    <!-- ============ 5.5-5.6 ESTRUCTURA ============ -->
+    <section class="block" id="s-estructura">
+      <h2><span class="num">5.5–5.6</span> Diseño y estructura de la caché</h2>
+      <p class="sub">Las piezas físicas detrás de cualquiera de las políticas de emplazamiento anteriores.</p>
+      <details class="card">
+        <summary>Objetivo de diseño y componentes</summary>
+        <div class="body">
+          <p>La caché es una memoria pequeña y rápida entre el procesador y la memoria principal, cuyo objetivo es acercar el tiempo de acceso promedio al del nivel más rápido. Se compone de:</p>
+          <ul>
+            <li><strong>Memoria Principal (Mp)</strong>: 2ⁿ palabras, divididas en nB bloques de tamaño fijo.</li>
+            <li><strong>Memoria Caché (Mc)</strong>: nM marcos de bloque, con nM ≪ nB.</li>
+            <li><strong>Directorio</strong>: indica qué subconjunto de los nB bloques de memoria principal reside actualmente en los nM marcos.</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ 5.7-5.11 REEMPLAZO ============ -->
+    <section class="block" id="s-reemplazo">
+      <h2><span class="num">5.7–5.11</span> Políticas de reemplazo</h2>
+      <p class="sub">Qué bloque sacar cuando el conjunto está lleno y llega uno nuevo. Solo aplica cuando hay más de una ubicación posible (N-way o totalmente asociativa) — en caché directa cada bloque tiene un único marco fijo y no hay nada que elegir.</p>
+      <details class="card" open>
+        <summary>Random, FIFO, LRU y LFU comparados</summary>
+        <div class="body">
+          <table class="cmp">
+            <tr><th>Política</th><th>Criterio</th><th>Costo de implementación</th></tr>
+            <tr><td><strong>Aleatorio</strong></td><td>Se elige cualquier bloque del espacio de reemplazo al azar</td><td>Muy bajo, pero tasa de fallos relativamente alta</td></tr>
+            <tr><td><strong>FIFO</strong></td><td>Sale el bloque que lleva más tiempo cargado</td><td>Bajo — simple cola circular</td></tr>
+            <tr><td><strong>LRU</strong> (Least Recently Used)</td><td>Sale el bloque menos recientemente usado</td><td>Simple con 2 vías (un bit); con más vías requiere "registros de edad" (contadores)</td></tr>
+            <tr><td><strong>LFU</strong> (Least Frequently Used)</td><td>Sale el bloque menos referenciado</td><td>Requiere contadores de referencias por bloque</td></tr>
+          </table>
+          <p>El "espacio de reemplazo" —el conjunto de bloques candidatos— depende de la política de emplazamiento: en directa es un único marco fijo, en N-way son los N marcos del conjunto, y en totalmente asociativa es toda la caché. Probá cambiar la política de reemplazo en el simulador de arriba (con asociatividad ≥ 2-way) y compará cuántos fallos genera cada una con la misma secuencia de accesos.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ 5.12-5.14 ACTUALIZACION ============ -->
+    <section class="block" id="s-actualizacion">
+      <h2><span class="num">5.12–5.14</span> Políticas de actualización (escritura)</h2>
+      <p class="sub">Qué pasa con la memoria principal cuando el procesador escribe un dato que está en caché.</p>
+      <details class="card" open>
+        <summary>Write Through vs. Write Back</summary>
+        <div class="body">
+          <table class="cmp">
+            <tr><th></th><th>Write Through (Escritura Directa)</th><th>Write Back (Post-Escritura)</th></tr>
+            <tr><td>Qué se actualiza al escribir</td><td>Caché y memoria principal, siempre</td><td>Solo la caché; la memoria se actualiza recién cuando el bloque se reemplaza</td></tr>
+            <tr><td>Bit extra requerido</td><td>Solo validez (V)</td><td>Validez (V) + <strong>Dirty/Sucio (D)</strong>, que marca si hay que volcar el bloque antes de descartarlo</td></tr>
+            <tr><td>Ventaja principal</td><td class="hi">Nunca hay inconsistencia; diseño simple</td><td class="hi">Bajo tráfico de bus — varias escrituras al mismo bloque cuestan una sola actualización a memoria</td></tr>
+            <tr><td>Desventaja principal</td><td>Alta demanda de ancho de banda de bus</td><td>Hardware más costoso; puede haber inconsistencia temporal</td></tr>
+          </table>
+          <p>Write-through suele combinarse con un <em>buffer de escritura</em> para no bloquear al procesador esperando que la memoria confirme cada escritura.</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Write Allocate vs. No Write Allocate</summary>
+        <div class="body">
+          <p>Ante un fallo de escritura (la dirección no está en caché), hay dos caminos: <strong>Write Allocate</strong> trae el bloque completo a caché y luego escribe ahí (típico de write-back, apostando a que se seguirá escribiendo/leyendo ese bloque); <strong>No Write Allocate</strong> escribe directo en memoria principal sin cargar el bloque (típico de write-through, donde cargarlo no aporta ninguna ventaja porque de todas formas cada escritura futura también iría a memoria).</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ 5.15 RENDIMIENTO ============ -->
+    <section class="block" id="s-rendimiento">
+      <h2><span class="num">5.15</span> Rendimiento de la caché</h2>
+      <p class="sub">Cómo la tasa de fallos y la penalización terminan afectando el tiempo total de CPU.</p>
+      <details class="card" open>
+        <summary>La fórmula y una calculadora</summary>
+        <div class="body">
+          <div class="formula">Tiempo CPU = IC × (CPI + accesos_por_instr × MR × MP) × Tc</div>
+          <p>IC: instrucciones · CPI: ciclos por instrucción (sin memoria) · MR: tasa de fallos · MP: penalización por fallo (en ciclos) · Tc: tiempo de ciclo.</p>
+          <div class="cfg" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); margin-bottom:14px;">
+            <div><label>IC (instrucciones)</label><input type="text" id="pIC" value="1000000" class="mono"></div>
+            <div><label>CPI base</label><input type="text" id="pCPI" value="1.5" class="mono"></div>
+            <div><label>Accesos/instr</label><input type="text" id="pMA" value="1.2" class="mono"></div>
+            <div><label>Miss rate (MR)</label><input type="text" id="pMR" value="0.04" class="mono"></div>
+            <div><label>Miss penalty (ciclos)</label><input type="text" id="pMP" value="20" class="mono"></div>
+            <div><label>Tc (ns)</label><input type="text" id="pTc" value="0.5" class="mono"></div>
+          </div>
+          <button class="btn" id="btnCalc">Calcular tiempo de CPU</button>
+          <p class="note" id="calcOut" style="margin-top:12px;"></p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ 5.16 MEJORAS ============ -->
+    <section class="block" id="s-mejoras">
+      <h2><span class="num">5.16</span> Cómo mejorar el rendimiento</h2>
+      <p class="sub">Tres frentes de ataque: bajar la tasa de fallos, bajar la penalización, o bajar el tiempo de acceso a los aciertos.</p>
+      <details class="card" open>
+        <summary>Los tres tipos de fallo ("las 3 C")</summary>
+        <div class="body">
+          <ul>
+            <li><strong>Iniciales / compulsorios</strong>: la primera vez que se busca un dato, la caché está vacía sí o sí.</li>
+            <li><strong>Por capacidad</strong>: la caché es demasiado chica para contener todo el conjunto de trabajo.</li>
+            <li><strong>Por conflicto</strong>: dos bloques compiten por el mismo marco/conjunto por la política de emplazamiento (esto es exactamente el aliasing de la caché directa).</li>
+          </ul>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Palancas directas: asociatividad, tamaño de bloque, algoritmo de reemplazo</summary>
+        <div class="body">
+          <p>Subir la asociatividad baja los fallos por conflicto (con el costo visto en 5.3.1). Subir el tamaño de bloque aprovecha mejor la localidad espacial hasta cierto punto — bloques demasiado grandes traen datos que no se van a usar y desplazan otros bloques útiles, efecto que pega más fuerte en cachés chicas. Cambiar el algoritmo de reemplazo (LRU vs Random) importa más en cachés chicas; la diferencia se diluye a medida que la caché crece.</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Técnicas especiales: caché víctima, pseudo asociativa, prebúsqueda</summary>
+        <div class="body">
+          <p><strong>Caché víctima</strong>: una pequeña caché totalmente asociativa al lado de la principal. Cuando hay un miss en la principal, se revisa primero la víctima antes de ir a memoria — muy efectiva en cachés directas chicas (puede evitar entre 20% y 95% de los fallos con solo 4 entradas extra). Podés activarla en el <a href="#s-simulador">simulador de la sección 5.3/5.4</a> (más arriba) y comparar la tasa de aciertos con y sin ella.</p>
+          <p><strong>Pseudo asociativa</strong>: combina caché directa y totalmente asociativa. Ante un miss no va directo a memoria: primero prueba en el marco "hermano" (mismo índice con el bit más significativo invertido), simulando una asociatividad de 2 vías sin el costo de N comparadores en paralelo.</p>
+          <p><strong>Prebúsqueda (prefetching)</strong>: anticipa el acceso a memoria antes de que el procesador lo pida, solapándolo con instrucciones independientes previas. Puede ser por <em>software</em> (el compilador inserta instrucciones de prebúsqueda, útil en bucles y arrays) o por <em>hardware</em> (secuencial, marcada, adaptativa o con "stride" arbitrario para patrones de salto).</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ 5.17-5.19.3 PENALIZACION ============ -->
+    <section class="block" id="s-penalizacion">
+      <h2><span class="num">5.17–5.19.3</span> Reducir la penalización y el tiempo de acceso</h2>
+      <p class="sub">Una vez que el fallo ya ocurrió, ¿cómo se lo hace doler menos?</p>
+      <details class="card">
+        <summary>Prioridad a lecturas, subbloques, caché sin bloqueo, multinivel</summary>
+        <div class="body">
+          <ul>
+            <li><strong>Prioridad a lecturas sobre escrituras</strong>: en write-through con buffer de escritura, si una lectura no choca con lo que hay pendiente en el buffer, se la deja pasar directo en vez de esperar a que el buffer se vacíe.</li>
+            <li><strong>Reemplazo de subbloques</strong>: en vez de descartar el bloque entero, se divide en subbloques y solo se reemplazan los necesarios — ahorra tags y aprovecha mejor la localidad.</li>
+            <li><strong>Envío directo de la palabra al procesador</strong>: no hay que esperar a que llegue el bloque completo; en cuanto llega la palabra pedida, se la entrega mientras el resto del bloque sigue llegando.</li>
+            <li><strong>Caché sin bloqueo (non-blocking)</strong>: permite seguir atendiendo accesos aunque haya un miss pendiente, en vez de detener todo el procesador.</li>
+            <li><strong>Caché multinivel (L2, L3...)</strong>: agrega niveles intermedios para que el fallo de L1 no tenga que ir directo a memoria principal, mucho más lenta.</li>
+          </ul>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Cachés simples y pequeñas</summary>
+        <div class="body">
+          <p>Una caché con baja asociatividad y tamaño reducido es más rápida de consultar (menos comparaciones, hardware más simple) y más fácil de integrar directamente en el chip del procesador, evitando la latencia de ir a un chip externo.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ 5.19.4-7 VIRTUAL ============ -->
+    <section class="block" id="s-virtual">
+      <h2><span class="num">5.19.4–5.19.7</span> Caché y memoria virtual</h2>
+      <p class="sub">Qué pasa cuando la dirección que llega del procesador es virtual, no física.</p>
+      <details class="card">
+        <summary>Caché de direcciones virtuales y sus problemas</summary>
+        <div class="body">
+          <p>Consultar la caché con la dirección virtual (en vez de esperar la traducción del TLB) ahorra tiempo de acierto, pero introduce dos problemas: al cambiar de contexto hay que vaciar la caché (los datos están asociados a direcciones de un proceso puntual) y puede haber <strong>sinónimos</strong>: dos direcciones virtuales distintas que apuntan a la misma dirección física, generando copias duplicadas e inconsistentes del mismo dato.</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Direccionamiento parcial (solapamiento) vs. total</summary>
+        <div class="body">
+          <p><strong>Parcial (solapamiento)</strong>: el desplazamiento de la dirección virtual no cambia con la traducción, así que se puede usar para acceder a la caché en paralelo mientras el TLB traduce la página. Al terminar la traducción se compara el tag real. Su límite: la caché no puede ser mayor que una página virtual (salvo que se suba la asociatividad).</p>
+          <p><strong>Total</strong>: casi no se usa. Elimina directamente la traducción usando la página virtual como tag, lo que agrava el problema de sinónimos entre procesos distintos.</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Segmentación de escrituras</summary>
+        <div class="body">
+          <p>Como una escritura no puede comparar el tag y escribir el dato en paralelo (se arriesgaría a escribir en el lugar equivocado), se la divide en dos etapas con un buffer de escritura retrasada: primero se guarda dato+dirección mientras se compara el tag, y recién si hay acierto se efectúa la escritura real en la siguiente etapa.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ 5.20 PRINCIPAL ============ -->
+    <section class="block" id="s-principal">
+      <h2><span class="num">5.20</span> Memoria principal</h2>
+      <p class="sub">El nivel que atiende a la caché cuando esta falla.</p>
+      <details class="card" open>
+        <summary>DRAM vs. SRAM, ancho de banda y entrelazado</summary>
+        <div class="body">
+          <table class="cmp">
+            <tr><th>DRAM</th><th>SRAM</th></tr>
+            <tr><td>1 transistor por bit — alta densidad, bajo costo</td><td>Varios transistores por bit — más rápida, más cara, menos densa (se usa en la caché)</td></tr>
+            <tr><td>Lectura destructiva: hay que reescribir el bit tras leerlo</td><td>Lectura no destructiva</td></tr>
+          </table>
+          <p>El rendimiento de la memoria principal se mide en <strong>latencia</strong> (tiempo de acceso + tiempo de ciclo) y <strong>ancho de banda</strong> (datos transferibles por unidad de tiempo). El ancho de banda importa doblemente en sistemas con cachés L2/L3, porque de él depende la penalización de sus fallos — y de hecho, el tamaño de bloque de una caché se dimensiona en función del ancho de banda disponible hacia memoria principal. La <strong>memoria entrelazada</strong> reparte direcciones consecutivas entre varios bancos que pueden atenderse en paralelo, multiplicando el ancho de banda efectivo.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ QUIZ ============ -->
+    <section class="block" id="s-quiz">
+      <h2><span class="num">✓</span> Quiz de repaso — toda la unidad</h2>
+      <p class="sub">Ocho preguntas cruzando toda la Unidad 5. Elegí una opción por pregunta.</p>
+      <div id="quizWrap"></div>
+      <p class="quiz-score" id="quizScore"></p>
+    </section>
+
+    <footer class="pagefoot">Basado en los apuntes de la Unidad 5 — Jerarquía de Memoria. Hecho como material de repaso; no reemplaza la bibliografía de cátedra. Complemento del <a href="index.html">simulador de Tomasulo</a>.</footer>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   NAV — resaltar sección activa
+   ============================================================ */
+(function(){
+  const links = Array.from(document.querySelectorAll('nav.side a[href^="#"]'));
+  const targets = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+
+  // click: scroll manually instead of letting the browser navigate via the hash,
+  // which can force a full reload inside a sandboxed artifact viewer.
+  links.forEach((a, i) => {
+    a.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const target = targets[i];
+      if(target){ target.scrollIntoView({behavior:'smooth', block:'start'}); }
+    });
+  });
+
+  function onScroll(){
+    let current = targets[0];
+    const y = window.scrollY + 120;
+    for(const t of targets){ if(t.offsetTop <= y) current = t; }
+    links.forEach(a=>a.classList.remove('active'));
+    const idx = targets.indexOf(current);
+    if(idx>=0) links[idx].classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+
+/* ============================================================
+   HERO bit breakdown (ilustrativo)
+   ============================================================ */
+(function(){
+  const wrap = document.getElementById('heroBits');
+  const segs = [
+    {cls:'tag', lbl:'TAG', val:'0101'},
+    {cls:'idx', lbl:'ÍNDICE', val:'010'},
+    {cls:'off', lbl:'DESPLAZ.', val:'0'}
+  ];
+  wrap.innerHTML = segs.map(s=>`<div class="seg ${s.cls}"><span class="lbl">${s.lbl}</span><span class="val">${s.val}</span></div>`).join('');
+})();
+
+/* ============================================================
+   Diagrama caché totalmente asociativa (5.4) — N líneas + N comparadores
+   ============================================================ */
+(function(){
+  const wrap = document.getElementById('faLines');
+  if(!wrap) return;
+  const exampleTags = ['0x2C','0x91','0x05','0x77'];
+  wrap.innerHTML = exampleTags.map((tag, i)=>`
+    <div class="fa-line">
+      <div class="fa-idx">línea ${i}</div>
+      <div class="dtable">
+        <div class="dt-row ${i===2?'hi-row':''}">
+          <div class="dcell dv" style="width:36px;">${i===2?1:1}</div>
+          <div class="dcell dtag" style="flex:1;">${tag}</div>
+          <div class="dcell dbyte" style="flex:1.6;">bloque de datos</div>
+        </div>
+      </div>
+      <div class="gate cmp">=?</div>
+    </div>
+  `).join('') + `<div class="fa-line" style="justify-content:center;color:var(--muted);font-family:ui-monospace, SFMono-Regular, Menlo, monospace;font-size:12px;">⋮ (una línea y un comparador más por cada marco de la caché) ⋮</div>`;
+})();
+
+/* ============================================================
+   CACHE SIMULATOR
+   ============================================================ */
+const els = {
+  mem: document.getElementById('cfgMem'),
+  block: document.getElementById('cfgBlock'),
+  cache: document.getElementById('cfgCache'),
+  ways: document.getElementById('cfgWays'),
+  policy: document.getElementById('cfgPolicy'),
+  victim: document.getElementById('cfgVictim'),
+  addr: document.getElementById('addrInput'),
+  breakdown: document.getElementById('breakdown'),
+  grid: document.getElementById('cacheGrid'),
+  victimCol: document.getElementById('victimCol'),
+  victimGrid: document.getElementById('victimGrid'),
+  log: document.getElementById('accessLog'),
+  statHits: document.getElementById('statHits'),
+  statMiss: document.getElementById('statMiss'),
+  statRatio: document.getElementById('statRatio'),
+  statVictimBox: document.getElementById('statVictimBox'),
+  statVictimHits: document.getElementById('statVictimHits'),
+  note: document.getElementById('simNote'),
+};
+
+let state = null; // { sets: [[{valid,tag,touch,order}...]], victim:{size,entries:[{valid,blockNum,order}...]}, hits, victimHits, misses, log:[], seq:0 }
+
+function log2(n){ return Math.log(n)/Math.log(2); }
+function isPow2(n){ return n>0 && (n & (n-1))===0; }
+function optionValues(sel){ return Array.from(sel.options).map(o=>parseInt(o.value,10)); }
+function setToClosestGE(sel, min){
+  const vals = optionValues(sel);
+  const candidates = vals.filter(v=>v>=min);
+  sel.value = candidates.length ? Math.min(...candidates) : Math.max(...vals);
+}
+function sanitizeConfig(){
+  // el bloque no puede ser más grande que la caché entera
+  if(parseInt(els.block.value,10) > parseInt(els.cache.value,10)){
+    setToClosestGE(els.cache, parseInt(els.block.value,10));
+  }
+  // la caché no puede ser más grande que la memoria principal
+  if(parseInt(els.cache.value,10) > parseInt(els.mem.value,10)){
+    setToClosestGE(els.mem, parseInt(els.cache.value,10));
+  }
+}
+
+function frameCount(){
+  const f = parseInt(els.cache.value,10) / parseInt(els.block.value,10);
+  return (isFinite(f) && f>=1) ? f : 1;
+}
+
+function populateWays(){
+  const frames = frameCount();
+  const opts = [];
+  for(let w=1; w<=frames; w*=2){ opts.push(w); }
+  const prevVal = els.ways.value;
+  els.ways.innerHTML = opts.map(w=>{
+    let label = w+"-way";
+    if(w===1) label = "Directa (1-way)";
+    else if(w===frames) label = `Totalmente asociativa (${w}-way)`;
+    return `<option value="${w}">${label}</option>`;
+  }).join('');
+  // try to keep selection if still valid, else default to a mid value
+  if(opts.includes(parseInt(prevVal,10))){
+    els.ways.value = prevVal;
+  } else {
+    els.ways.value = opts[Math.min(1, opts.length-1)];
+  }
+}
+
+function currentParams(){
+  const memSize = parseInt(els.mem.value,10);
+  const blockSize = parseInt(els.block.value,10);
+  const cacheSize = parseInt(els.cache.value,10);
+  const ways = parseInt(els.ways.value,10);
+  const frames = cacheSize/blockSize;
+  const sets = frames/ways;
+  const offsetBits = Math.round(log2(blockSize));
+  const indexBits = Math.round(log2(sets));
+  const totalBits = Math.round(log2(memSize));
+  const tagBits = totalBits - indexBits - offsetBits;
+  return {memSize, blockSize, cacheSize, ways, frames, sets, offsetBits, indexBits, tagBits};
+}
+
+function resetState(){
+  const p = currentParams();
+  const victimSize = parseInt(els.victim.value,10) || 0;
+  state = {
+    p,
+    sets: Array.from({length:p.sets}, ()=> Array.from({length:p.ways}, ()=>({valid:false, tag:null}))),
+    victim: { size: victimSize, entries: Array.from({length:victimSize}, ()=>({valid:false, blockNum:null, order:0})) },
+    hits:0, victimHits:0, misses:0, log:[], seq:0
+  };
+  els.victimCol.hidden = victimSize===0;
+  els.statVictimBox.hidden = victimSize===0;
+  renderGrid(null,null,null);
+  renderVictimGrid(null,null);
+  renderLog();
+  renderStats();
+  renderBreakdown(null);
+  els.note.textContent = '';
+}
+
+function insertIntoVictim(blockNum){
+  const v = state.victim;
+  if(v.size===0) return;
+  let slot = v.entries.findIndex(e=>!e.valid);
+  if(slot === -1){
+    // FIFO: reemplaza la entrada que lleva más tiempo cargada
+    slot = v.entries.reduce((best,e,i)=> (e.order < v.entries[best].order ? i : best), 0);
+  }
+  v.entries[slot] = {valid:true, blockNum, order: state.seq};
+}
+
+function addrToFields(addr){
+  const p = state.p;
+  const blockNum = Math.floor(addr / p.blockSize);
+  const offset = addr % p.blockSize;
+  const setIndex = blockNum % p.sets;
+  const tag = Math.floor(blockNum / p.sets);
+  return {blockNum, offset, setIndex, tag};
+}
+
+function accessAddr(addr){
+  if(isNaN(addr) || addr<0 || addr>=state.p.memSize){
+    els.note.textContent = `Dirección inválida: tiene que ser un entero entre 0 y ${state.p.memSize-1}.`;
+    return;
+  }
+  const {blockNum, offset, setIndex, tag} = addrToFields(addr);
+  const set = state.sets[setIndex];
+  state.seq++;
+  let hitWay = -1;
+  for(let i=0;i<set.length;i++){
+    if(set[i].valid && set[i].tag===tag){ hitWay = i; break; }
+  }
+
+  if(hitWay>=0){
+    // HIT normal en la caché principal
+    set[hitWay].touch = state.seq;
+    state.hits++;
+    renderGrid(setIndex, hitWay, 'hit');
+    renderVictimGrid(null, null);
+    state.log.unshift({addr, ok:true, detail:`set ${setIndex}, vía ${hitWay} — tag ${tag} ya presente`});
+    renderBreakdown({addr, tag, setIndex, offset});
+    renderStats();
+    renderLog();
+    return;
+  }
+
+  // Miss en la principal: elegir la vía a ocupar (vacía, o por política de reemplazo)
+  let way = set.findIndex(f=>!f.valid);
+  let evictedEntry = null; // {tag, blockNum} — lo que sale de la principal, si sale algo
+  if(way === -1){
+    const policy = els.policy.value;
+    if(policy==='RANDOM'){
+      way = Math.floor(Math.random()*set.length);
+    } else if(policy==='FIFO'){
+      way = set.reduce((best,f,i)=> (f.order < set[best].order ? i: best), 0);
+    } else { // LRU
+      way = set.reduce((best,f,i)=> ((f.touch||0) < (set[best].touch||0) ? i: best), 0);
+    }
+    evictedEntry = { tag: set[way].tag, blockNum: set[way].tag*state.p.sets + setIndex };
+  }
+
+  const victimIdx = state.victim.size>0
+    ? state.victim.entries.findIndex(e=>e.valid && e.blockNum===blockNum)
+    : -1;
+
+  if(victimIdx>=0){
+    // HIT de víctima: se intercambia con lo que la principal está por desalojar
+    state.hits++; state.victimHits++;
+    set[way] = {valid:true, tag, touch: state.seq, order: state.seq};
+    state.victim.entries[victimIdx] = evictedEntry
+      ? {valid:true, blockNum: evictedEntry.blockNum, order: state.seq}
+      : {valid:false, blockNum:null, order:0};
+    renderGrid(setIndex, way, 'hit');
+    renderVictimGrid(victimIdx, 'hit');
+    state.log.unshift({addr, ok:true, detail: evictedEntry
+      ? `HIT de víctima — bloque ${blockNum} vuelve a set ${setIndex}/vía ${way}; tag ${evictedEntry.tag} pasa a la víctima`
+      : `HIT de víctima — bloque ${blockNum} vuelve a set ${setIndex}/vía ${way}; la víctima queda con un lugar libre`});
+  } else {
+    // MISS total: hay que ir a memoria
+    set[way] = {valid:true, tag, touch: state.seq, order: state.seq};
+    state.misses++;
+    renderGrid(setIndex, way, 'miss');
+    if(evictedEntry) insertIntoVictim(evictedEntry.blockNum);
+    renderVictimGrid(null, null);
+    state.log.unshift({addr, ok:false, detail: evictedEntry
+      ? `set ${setIndex}, vía ${way} — se desaloja tag ${evictedEntry.tag}${state.victim.size>0?' (pasa a la víctima)':''}, entra tag ${tag}`
+      : `set ${setIndex}, vía ${way} — marco libre, entra tag ${tag}`});
+  }
+  renderBreakdown({addr, tag, setIndex, offset});
+  renderStats();
+  renderLog();
+}
+
+function renderBreakdown(f){
+  const p = state.p;
+  if(!f){
+    els.breakdown.innerHTML = `
+      <div class="chip"><span class="k">bits tag</span>${p.tagBits}</div>
+      <div class="chip"><span class="k">bits índice</span>${p.indexBits}</div>
+      <div class="chip"><span class="k">bits offset</span>${p.offsetBits}</div>
+      <div class="chip"><span class="k">conjuntos</span>${p.sets}</div>
+      <div class="chip"><span class="k">vías</span>${p.ways}</div>`;
+    return;
+  }
+  els.breakdown.innerHTML = `
+    <div class="chip"><span class="k">dirección</span>${f.addr}</div>
+    <div class="chip"><span class="k">tag</span>${f.tag}</div>
+    <div class="chip"><span class="k">índice (conjunto)</span>${f.setIndex}</div>
+    <div class="chip"><span class="k">offset (byte select)</span>${f.offset}</div>
+    <div class="chip"><span class="k">bits t/i/o</span>${p.tagBits}/${p.indexBits}/${p.offsetBits}</div>`;
+}
+
+function renderGrid(flashSet, flashWay, flashType){
+  const p = state.p;
+  let head = '<tr><th></th>';
+  for(let w=0; w<p.ways; w++){ head += `<th>vía ${w}</th>`; }
+  head += '</tr>';
+  let rows = '';
+  for(let s=0; s<p.sets; s++){
+    rows += `<tr><td class="setlbl">conj. ${s}</td>`;
+    for(let w=0; w<p.ways; w++){
+      const f = state.sets[s][w];
+      let cls = 'frame';
+      if(f.valid) cls += ' valid';
+      if(s===flashSet && w===flashWay){ cls += flashType==='hit' ? ' flash-hit' : ' flash-miss'; }
+      let content = `<span class="empty">—</span>`;
+      if(f.valid){
+        const blockNum = f.tag * p.sets + s;
+        const startByte = blockNum * p.blockSize;
+        const endByte = startByte + p.blockSize - 1;
+        content = `<span class="tagv">tag ${f.tag}</span><br><span style="color:var(--muted); font-size:10.5px;">bytes ${startByte}–${endByte}</span>`;
+      }
+      rows += `<td class="${cls}">${content}</td>`;
+    }
+    rows += '</tr>';
+  }
+  els.grid.innerHTML = head + rows;
+  if(flashSet!==null){
+    setTimeout(()=>{
+      const cell = els.grid.querySelectorAll('tr')[flashSet+1]?.children[flashWay+1];
+      if(cell){ cell.classList.remove('flash-hit','flash-miss'); }
+    }, 900);
+  }
+}
+
+function renderVictimGrid(flashIdx, flashType){
+  if(!state || state.victim.size===0) return;
+  const p = state.p;
+  let head = '<tr>';
+  for(let i=0;i<state.victim.size;i++){ head += `<th>e${i}</th>`; }
+  head += '</tr>';
+  let row = '<tr>';
+  state.victim.entries.forEach((e, i)=>{
+    let cls = 'frame';
+    if(e.valid) cls += ' valid';
+    if(i===flashIdx){ cls += flashType==='hit' ? ' flash-hit' : ' flash-miss'; }
+    let content = `<span class="empty">—</span>`;
+    if(e.valid){
+      const startByte = e.blockNum * p.blockSize;
+      const endByte = startByte + p.blockSize - 1;
+      content = `<span class="tagv">bloque ${e.blockNum}</span><br><span style="color:var(--muted); font-size:10.5px;">bytes ${startByte}–${endByte}</span>`;
+    }
+    row += `<td class="${cls}">${content}</td>`;
+  });
+  row += '</tr>';
+  els.victimGrid.innerHTML = head + row;
+  if(flashIdx!==null && flashIdx>=0){
+    setTimeout(()=>{
+      const cell = els.victimGrid.querySelectorAll('tr')[1]?.children[flashIdx];
+      if(cell){ cell.classList.remove('flash-hit','flash-miss'); }
+    }, 900);
+  }
+}
+
+function renderStats(){
+  els.statHits.textContent = state.hits;
+  els.statMiss.textContent = state.misses;
+  els.statVictimHits.textContent = state.victimHits;
+  const total = state.hits+state.misses;
+  els.statRatio.textContent = total ? Math.round(100*state.hits/total)+'%' : '—';
+}
+
+function renderLog(){
+  els.log.innerHTML = state.log.slice(0,30).map(r=>`
+    <div class="row">
+      <span class="${r.ok?'tag-hit':'tag-miss'}">${r.ok?'HIT':'MISS'}</span>
+      <span class="addr">dir ${r.addr}</span>
+      <span class="detail">${r.detail}</span>
+    </div>`).join('') || '<div class="row detail">Sin accesos todavía.</div>';
+}
+
+const PALETTE = ['#e0954c','#4fc9b8','#9b8cf2','#e2664f','#6fa8ff','#f2c14e','#7bd389','#f28fb2','#c792ea','#7fd1ae'];
+
+function renderMemoryMap(){
+  const mapEl = document.getElementById('memMap');
+  const legendEl = document.getElementById('memMapLegend');
+  const capEl = document.getElementById('memMapCaption');
+  if(!mapEl || !state) return;
+  const p = state.p;
+  const realSets = p.sets;
+  const visualSets = Math.min(realSets, PALETTE.length); // nunca pintamos más colores de los que hay en la paleta
+  const isSimplified = realSets > PALETTE.length;
+  const totalBlocks = Math.round(p.memSize / p.blockSize);
+  const showBlocks = Math.min(totalBlocks, visualSets*3, 40);
+
+  let html = '';
+  for(let b=0; b<showBlocks; b++){
+    const g = b % visualSets;
+    const color = PALETTE[g];
+    const title = isSimplified
+      ? `bloque ${b} de RAM → grupo ilustrativo ${g} (hay ${realSets} conjuntos reales; acá agrupamos de a ${visualSets} colores para que se pueda ver)`
+      : `bloque ${b} de RAM → conjunto ${g}`;
+    html += `<div class="blk" style="background:${color}" title="${title}">${b}</div>`;
+  }
+  if(showBlocks < totalBlocks){
+    html += `<div class="blk more" title="siguen más bloques repitiendo el mismo patrón de colores">···</div>`;
+  }
+  mapEl.innerHTML = html;
+
+  let legendHtml = '';
+  for(let g=0; g<visualSets; g++){
+    legendHtml += `<div class="lg"><span class="sw" style="background:${PALETTE[g]}"></span>${isSimplified?'grupo':'conj.'} ${g}</div>`;
+  }
+  legendEl.innerHTML = legendHtml;
+
+  if(p.sets===1){
+    capEl.innerHTML = `Con <b style="color:var(--amber)">1 solo conjunto</b> (totalmente asociativa), todos los bloques comparten el mismo color: cualquiera puede ir a cualquiera de los ${p.ways} marcos.`;
+  } else if(!isSimplified){
+    capEl.innerHTML = `Todos los bloques del <b style="color:var(--amber)">mismo color</b> compiten por el <b style="color:var(--amber)">mismo conjunto</b> — y dentro de ese conjunto, tienen ${p.ways} lugar${p.ways>1?'es':''} posible${p.ways>1?'s':''} para convivir sin desalojarse. Con ${p.sets} conjuntos, el color se repite cada ${p.sets} bloques.`;
+  } else {
+    capEl.innerHTML = `Esta caché tiene <b style="color:var(--amber)">${realSets} conjuntos reales</b> — demasiados como para darle a cada uno un color distinguible. Para que se entienda la idea, esta ilustración los agrupa en <b style="color:var(--amber)">${visualSets} colores de ejemplo</b>; la lógica sigue siendo la misma (bloques del mismo color "compiten" y tienen ${p.ways} lugar${p.ways>1?'es':''} para convivir), pero acá el color <b>no</b> es el número real de conjunto. Para ver el mapeo exacto 1 a 1, probá una caché con menos conjuntos (subí la asociatividad o el tamaño de bloque).`;
+  }
+}
+
+function rebuildAll(){
+  stopRandomSequence();
+  sanitizeConfig();
+  populateWays();
+  resetState();
+  renderMemoryMap();
+}
+
+els.mem.addEventListener('change', rebuildAll);
+els.block.addEventListener('change', rebuildAll);
+els.cache.addEventListener('change', rebuildAll);
+els.ways.addEventListener('change', ()=>{ stopRandomSequence(); resetState(); renderMemoryMap(); });
+els.victim.addEventListener('change', ()=>{ stopRandomSequence(); resetState(); });
+document.getElementById('btnReset').addEventListener('click', ()=>{ stopRandomSequence(); resetState(); });
+
+document.getElementById('btnAccess').addEventListener('click', ()=>{
+  const v = parseInt(els.addr.value,10);
+  accessAddr(v);
+});
+els.addr.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ document.getElementById('btnAccess').click(); }});
+
+let randomTimer = null;
+const btnRandom = document.getElementById('btnRandom');
+
+function stopRandomSequence(){
+  if(randomTimer){
+    clearInterval(randomTimer);
+    randomTimer = null;
+    btnRandom.textContent = 'Secuencia aleatoria';
+    btnRandom.classList.remove('running');
+  }
+}
+
+btnRandom.addEventListener('click', ()=>{
+  if(randomTimer){
+    stopRandomSequence();
+    return;
+  }
+  btnRandom.textContent = 'Detener secuencia';
+  btnRandom.classList.add('running');
+  randomTimer = setInterval(()=>{
+    const addr = Math.floor(Math.random()*state.p.memSize);
+    els.addr.value = addr;
+    accessAddr(addr);
+  }, 450);
+});
+
+document.getElementById('btnAlias').addEventListener('click', ()=>{
+  const p = state.p;
+  // two addresses exactly cacheSize apart -> same set, different tag -> ping-pong conflict
+  const a1 = 0;
+  const a2 = p.cacheSize;
+  if(a2 >= p.memSize){
+    els.note.textContent = 'La memoria configurada es muy chica para este ejemplo — subí el tamaño de memoria principal.';
+    return;
+  }
+  els.note.textContent = `Alternando entre la dirección ${a1} y ${a2} (separadas exactamente por el tamaño de la caché, ${p.cacheSize} B) — mismo índice, distinto tag.`;
+  let i=0;
+  const seqAddrs = [a1,a2,a1,a2,a1,a2];
+  const step = ()=>{
+    if(i>=seqAddrs.length) return;
+    els.addr.value = seqAddrs[i];
+    accessAddr(seqAddrs[i]);
+    i++;
+    setTimeout(step, 500);
+  };
+  step();
+});
+
+document.getElementById('btnVictimDemo').addEventListener('click', ()=>{
+  // Fuerza caché directa (1-way) y activa la víctima si estaba apagada, para que el
+  // ping-pong de dos bloques por el mismo conjunto quede resuelto por la víctima.
+  if(optionValues(els.ways).includes(1)){ els.ways.value = '1'; }
+  if(parseInt(els.victim.value,10) === 0){ els.victim.value = '4'; }
+  stopRandomSequence();
+  resetState();
+  renderMemoryMap();
+
+  const p = state.p;
+  const a1 = 0;
+  const a2 = p.cacheSize;
+  if(a2 >= p.memSize){
+    els.note.textContent = 'La memoria configurada es muy chica para este ejemplo — subí el tamaño de memoria principal.';
+    return;
+  }
+  els.note.textContent = `Caché directa + víctima de ${state.victim.size} entradas: alternando entre ${a1} y ${a2} (mismo índice, distinto tag). Los dos primeros accesos son fallos (compulsorios); de ahí en más, la víctima absorbe el conflicto y son HIT de víctima.`;
+  let i=0;
+  const seqAddrs = [a1,a2,a1,a2,a1,a2];
+  const step = ()=>{
+    if(i>=seqAddrs.length) return;
+    els.addr.value = seqAddrs[i];
+    accessAddr(seqAddrs[i]);
+    i++;
+    setTimeout(step, 500);
+  };
+  step();
+});
+
+sanitizeConfig();
+populateWays();
+resetState();
+renderMemoryMap();
+
+/* ============================================================
+   PERFORMANCE CALCULATOR (5.15)
+   ============================================================ */
+document.getElementById('btnCalc').addEventListener('click', ()=>{
+  const IC = parseFloat(document.getElementById('pIC').value);
+  const CPI = parseFloat(document.getElementById('pCPI').value);
+  const MA = parseFloat(document.getElementById('pMA').value);
+  const MR = parseFloat(document.getElementById('pMR').value);
+  const MP = parseFloat(document.getElementById('pMP').value);
+  const Tc = parseFloat(document.getElementById('pTc').value);
+  const out = document.getElementById('calcOut');
+  if([IC,CPI,MA,MR,MP,Tc].some(isNaN)){
+    out.textContent = 'Completá todos los campos con números válidos.';
+    return;
+  }
+  const effectiveCPI = CPI + MA*MR*MP;
+  const cycles = IC*effectiveCPI;
+  const timeNs = cycles*Tc;
+  out.innerHTML = `CPI efectivo = ${CPI} + ${MA}×${MR}×${MP} = <b style="color:var(--amber)">${effectiveCPI.toFixed(3)}</b><br>
+    Ciclos totales = ${IC} × ${effectiveCPI.toFixed(3)} = ${cycles.toLocaleString('es-AR',{maximumFractionDigits:0})}<br>
+    Tiempo de CPU ≈ <b style="color:var(--teal)">${(timeNs/1e6).toFixed(3)} ms</b> (${timeNs.toLocaleString('es-AR',{maximumFractionDigits:0})} ns)`;
+});
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
+const QUIZ = [
+  {q:"En una caché directa de 8 marcos, ¿a qué marco va el bloque de memoria principal número 21?", opts:["Marco 0","Marco 5","Marco 8","Depende del reemplazo"], correct:1, exp:"MB = B mod M = 21 mod 8 = 5."},
+  {q:"¿Qué problema ataca principalmente la asociatividad N-way respecto de la caché directa?", opts:["Los fallos compulsorios/iniciales","Los fallos por capacidad","Los fallos por conflicto (aliasing)","La latencia de memoria principal"], correct:2, exp:"El aliasing ocurre porque varios bloques comparten un único marco posible; dar N vías por conjunto reduce esos conflictos."},
+  {q:"¿Cuál es la principal desventaja de subir la asociatividad de N a 2N?", opts:["Sube la tasa de fallos","Se necesitan más comparadores y aparece un retardo extra de multiplexado","Se pierde la propiedad de inclusión","Deja de servir el bit de validez"], correct:1, exp:"Cada vía extra necesita su propio comparador en paralelo, y elegir cuál acertó exige un multiplexor adicional."},
+  {q:"En write-back, ¿para qué sirve el bit 'dirty' (D)?", opts:["Indica si el bloque es válido","Indica si el bloque fue modificado y debe escribirse en memoria antes de descartarlo","Cuenta cuántas veces se usó el bloque","Marca qué vía fue la última en escribir"], correct:1, exp:"Sin el bit dirty no se sabría si hace falta volcar el bloque a memoria principal antes de reemplazarlo."},
+  {q:"¿Qué política de reemplazo necesita, en el caso general (más de 2 vías), contadores llamados 'registros de edad'?", opts:["FIFO","Aleatoria","LRU","Write-through"], correct:2, exp:"LRU es trivial con un bit en 2 vías, pero con más vías requiere contar antigüedad de uso por línea."},
+  {q:"¿Por qué write-through suele usar 'no write allocate' ante un fallo de escritura?", opts:["Porque no existen los fallos de escritura en write-through","Porque de todas formas cada escritura futura también tendría que ir a memoria principal, así que cargar el bloque no aporta ventaja","Porque write-through no admite bloques","Porque siempre hay espacio libre en la caché"], correct:1, exp:"Como cada escritura ya se refleja en memoria principal, no hay beneficio en traer el bloque completo a la caché primero."},
+  {q:"Una caché víctima es...", opts:["Una caché totalmente asociativa grande que reemplaza a la L1","Una pequeña caché totalmente asociativa que revisa bloques recién desalojados antes de ir a memoria principal","Un algoritmo de reemplazo aleatorio","Un tipo de memoria DRAM"], correct:1, exp:"Es especialmente útil en cachés directas chicas, donde puede evitar entre 20% y 95% de los fallos con solo 4 entradas."},
+  {q:"¿Qué mide el 'ancho de banda' de la memoria principal, a diferencia de la latencia?", opts:["El tiempo entre pedido y llegada del primer dato","La cantidad máxima de datos transferibles por unidad de tiempo","El tamaño del tag","La cantidad de bits de índice"], correct:1, exp:"La latencia es tiempo de acceso + tiempo de ciclo; el ancho de banda es volumen de datos por segundo, clave para dimensionar el tamaño de bloque."},
+];
+
+(function(){
+  const wrap = document.getElementById('quizWrap');
+  const scoreEl = document.getElementById('quizScore');
+  let answered = 0, correct = 0;
+
+  QUIZ.forEach((item, qi)=>{
+    const div = document.createElement('div');
+    div.className = 'quiz-item';
+    div.innerHTML = `
+      <p class="q">${qi+1}. ${item.q}</p>
+      <div class="opts">
+        ${item.opts.map((o,oi)=>`
+          <label>
+            <input type="radio" name="q${qi}" value="${oi}">
+            <span>${o}</span>
+          </label>`).join('')}
+      </div>
+      <div class="fb"></div>
+    `;
+    wrap.appendChild(div);
+    div.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        const chosen = parseInt(inp.value,10);
+        const fb = div.querySelector('.fb');
+        if(!div.dataset.answered){
+          div.dataset.answered = "1";
+          answered++;
+          if(chosen === item.correct) correct++;
+          updateScore();
+        } else {
+          // allow changing answer, adjust score
+          const wasCorrectBefore = div.dataset.wasCorrect === "1";
+          if(wasCorrectBefore) correct--;
+        }
+        const isRight = chosen === item.correct;
+        div.dataset.wasCorrect = isRight ? "1":"0";
+        if(isRight){
+          correct = Object.values(document.querySelectorAll('.quiz-item')).length ? correct : correct; // no-op guard
+        }
+        fb.className = 'fb ' + (isRight ? 'ok':'bad');
+        fb.textContent = (isRight ? '✓ Correcto. ' : '✗ No es correcto. ') + item.exp;
+        recomputeScore();
+      });
+    });
+  });
+
+  function recomputeScore(){
+    let c = 0, a = 0;
+    document.querySelectorAll('.quiz-item').forEach(div=>{
+      if(div.dataset.answered){ a++; if(div.dataset.wasCorrect==="1") c++; }
+    });
+    scoreEl.textContent = `Puntaje: ${c} / ${a} respondidas (de ${QUIZ.length} preguntas)`;
+  }
+  function updateScore(){ recomputeScore(); }
+  recomputeScore();
+})();
+
+/* ================= Theme toggle ================= */
+(function () {
+  var btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  function sync() {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    var icon = btn.querySelector('.icon');
+    if (icon) icon.textContent = dark ? '☀️' : '🌙';
+  }
+  btn.addEventListener('click', function () {
+    var el = document.documentElement;
+    var next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+    el.dataset.theme = next;
+    try { localStorage.setItem('tw-theme', next); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
+</body>
+</html>

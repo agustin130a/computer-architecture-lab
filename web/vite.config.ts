@@ -15,6 +15,7 @@ export default defineConfig({
       input: {
         main: resolve(root, 'index.html'),
         predictores: resolve(root, 'predictores.html'),
+        cache: resolve(root, 'cache.html'),
       },
     },
   },
