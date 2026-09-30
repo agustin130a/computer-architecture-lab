@@ -38,7 +38,7 @@ jobs:
         run: npm run build
         env:
           # Project site is served under /<repo>/
-          VITE_BASE: /tomasulo-web/
+          VITE_BASE: /computer-architecture-lab/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

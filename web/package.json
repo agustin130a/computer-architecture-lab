@@ -1,5 +1,5 @@
 {
-  "name": "tomasulo-web",
+  "name": "computer-architecture-lab",
   "version": "1.0.0",
   "description": "Web port of Tomasulo-Visual: cycle-by-cycle Tomasulo simulator with an examples selector.",
   "type": "module",
