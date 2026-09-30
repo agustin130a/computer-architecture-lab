@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jerarquía de Memoria y Caché | Computer Architecture Lab</title>
+<title>Jerarquía de memoria y caché | Computer Architecture Lab</title>
 <meta
   name="description"
-  content="Guía interactiva de la jerarquía de memoria: emplazamiento directo, asociativo por conjuntos y totalmente asociativo, con simulador de caché y caché con memoria virtual (física, parcial y total). Complemento del simulador de Tomasulo."
+  content="Guía interactiva de la jerarquía de memoria: emplazamiento directo, asociativo por conjuntos y totalmente asociativo, con simulador de caché y caché con memoria virtual (física, parcial y total). "
 />
 <script>
   // Aplica el tema guardado/del sistema antes del render para evitar parpadeo.
@@ -21,8 +21,8 @@
   })();
 </script>
 <style>
+  /* ==== STD:TOKENS v1 ==== (no editar a mano: se sincroniza desde el template de la skill guia-arquitectura) */
   :root{
-    /* ---- Tema claro (por defecto), tokens compartidos con index.html / predictores.html ---- */
     --bg: #f4f6fb;
     --bg-grad: radial-gradient(1200px 520px at 50% -160px, #e9eefb 0%, var(--bg) 70%);
     --bg-panel: #ffffff;
@@ -36,18 +36,15 @@
     --focus: #0a4bce;
     --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
     --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
-    /* Colores semánticos propios de esta página (tag/índice/desplazamiento) */
-    --amber: #b45309;
-    --amber-soft: #fdf2e3;
-    --teal: #0f766e;
-    --teal-soft: #e6f4f2;
-    --rust: #c0392b;
-    --rust-soft: #fbeae7;
-    --violet: #6d4fd1;
-    --violet-soft: #ede9fb;
+    --highlight: #b45309;
+    --ok: #0f766e;
+    --ok-soft: #e6f4f2;
+    --err: #c0392b;
+    --err-soft: #fbeae7;
+    --warn: #b45309;
+    --warn-soft: #fdf2e3;
   }
   html[data-theme='dark']{
-    /* ---- Tema oscuro (navy), tokens compartidos con index.html / predictores.html ---- */
     --bg: #0d1524;
     --bg-grad: radial-gradient(1200px 560px at 50% -160px, #172236 0%, var(--bg) 68%);
     --bg-panel: #131d2e;
@@ -61,18 +58,19 @@
     --focus: #7bb8ff;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.35);
     --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
-    /* Colores semánticos propios de esta página, valores originales del diseño oscuro */
-    --amber: #e2a640;
-    --amber-soft: #3a2c17;
-    --teal: #4fc9b8;
-    --teal-soft: #163431;
-    --rust: #e2664f;
-    --rust-soft: #3a2019;
-    --violet: #9b8cf2;
-    --violet-soft: #241c3a;
+    --highlight: #e2a640;
+    --ok: #4fc9b8;
+    --ok-soft: #163431;
+    --err: #e2664f;
+    --err-soft: #3a2019;
+    --warn: #e2a640;
+    --warn-soft: #3a2c17;
   }
-  *{box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
+  /* ==== /STD:TOKENS ==== */
+
+  /* ==== STD:SHELL v1 ==== (header, nav lateral, secciones, footer) */
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; background:var(--bg); }
   body{
     margin:0;
     background:var(--bg);
@@ -83,12 +81,10 @@
     line-height:1.55;
     transition:background-color .2s ease, color .2s ease;
   }
-  code, .mono, .bits, .addr{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
-
+  code, .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
   a{ color:var(--accent); }
   :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
 
-  /* ---------- Skip link (accesibilidad) ---------- */
   .skip-link{
     position:absolute; left:-999px; top:0;
     background:var(--accent); color:var(--accent-ink); padding:8px 12px; z-index:20;
@@ -96,7 +92,6 @@
   }
   .skip-link:focus{ left:8px; top:8px; }
 
-  /* ---------- Header estilo Tomasulo Web ---------- */
   header.site{
     padding:20px 24px;
     background:var(--bg-panel);
@@ -112,9 +107,11 @@
     color:var(--accent); text-decoration:none; font-size:.9rem; font-weight:600;
   }
   .backlink:hover{ text-decoration:underline; }
-  header.site h1{ margin:10px 0 0; font-size:clamp(24px,3vw,34px); letter-spacing:-.01em; max-width:20ch; }
   header.site .kicker{ color:var(--muted); font-size:.9rem; margin:0; }
+  header.site h1{ margin:10px 0 0; font-size:clamp(24px,3vw,34px); letter-spacing:-.01em; max-width:24ch; }
   header.site .lede{ color:var(--muted); font-size:1rem; max-width:72ch; margin:10px 0 22px; }
+  header.site .lede b{ color:var(--text); }
+  header.site .hero{ max-width:760px; overflow-x:auto; }
 
   .theme-toggle{
     flex:0 0 auto;
@@ -129,28 +126,16 @@
   html[data-theme='dark'] .theme-toggle .theme-label-light{ display:none; }
   html[data-theme='dark'] .theme-toggle .theme-label-dark{ display:inline; }
 
-  /* ---------- layout shell ---------- */
-  .shell{
-    display:grid;
-    grid-template-columns: 260px 1fr;
-    min-height:100vh;
-  }
+  .shell{ display:grid; grid-template-columns:260px minmax(0,1fr); min-height:100vh; }
   nav.side{
     position:sticky; top:0; height:100vh; overflow-y:auto;
     background:var(--bg-panel);
     border-right:1px solid var(--line);
     padding:22px 16px 40px;
   }
-  nav.side .brand{
-    font-weight:700; font-size:15px; letter-spacing:.2px;
-    margin-bottom:2px;
-  }
-  nav.side .brand small{
-    display:block; color:var(--muted); font-weight:400; font-size:12px; margin-top:3px;
-  }
-  nav.side ol{
-    list-style:none; margin:22px 0 0; padding:0;
-  }
+  nav.side .brand{ font-weight:700; font-size:15px; letter-spacing:.2px; margin-bottom:2px; }
+  nav.side .brand small{ display:block; color:var(--muted); font-weight:400; font-size:12px; margin-top:3px; }
+  nav.side ol{ list-style:none; margin:22px 0 0; padding:0; }
   nav.side .grp{ margin-bottom:18px; }
   nav.side .grp-title{
     color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em;
@@ -163,8 +148,160 @@
   nav.side a:hover{ background:var(--bg-panel-2); opacity:1; }
   nav.side a.active{ background:var(--bg-panel-2); color:var(--accent); opacity:1; }
 
-  main{ padding: 0 0 100px; }
+  main{ padding:0 0 100px; min-width:0; }
+  section.block{
+    padding:40px 48px;
+    border-bottom:1px solid var(--line);
+    max-width:1080px;
+    scroll-margin-top:12px;
+  }
+  section.block h2{ font-size:22px; margin:0 0 6px; display:flex; align-items:baseline; gap:10px; }
+  section.block h2 .num{ color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; flex:0 0 auto; }
+  section.block .sub{ color:var(--muted); font-size:14px; margin:0 0 22px; max-width:66ch; }
+  section.block h3{ font-size:17px; margin:30px 0 6px; scroll-margin-top:12px; }
+  section.block p{ max-width:72ch; }
 
+  footer.pagefoot{ padding:30px 48px; color:var(--muted); font-size:12.5px; }
+
+  @media (max-width:860px){
+    .shell{ grid-template-columns:minmax(0,1fr); }
+    nav.side{ position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line); }
+    section.block{ padding:28px 20px; }
+    footer.pagefoot{ padding:24px 20px; }
+  }
+  @media (max-width:640px){
+    header.site{ padding:16px; }
+    header.site .site-top{ flex-direction:column; }
+  }
+  /* ==== /STD:SHELL ==== */
+
+  /* ==== STD:COMPONENTS v1 ==== (piezas reutilizables dentro de las secciones) */
+  /* Tarjeta desplegable de teoría */
+  details.card{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    margin-bottom:10px; overflow:hidden;
+  }
+  details.card summary{
+    cursor:pointer; padding:14px 18px; font-weight:600; font-size:14.5px;
+    display:flex; align-items:center; gap:10px; list-style:none;
+  }
+  details.card summary::-webkit-details-marker{ display:none; }
+  details.card summary::before{
+    content:"+"; color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; width:14px;
+  }
+  details.card[open] summary::before{ content:"–"; }
+  details.card .body{ padding:0 18px 18px; font-size:14.5px; }
+  details.card .body p{ margin:0 0 12px; }
+  details.card .body ul{ margin:0 0 12px; padding-left:20px; }
+  details.card .body li{ margin-bottom:6px; }
+  details.card .body strong{ color:var(--highlight); }
+
+  /* Caja de contenido fija (texto + diagrama, sin desplegar) */
+  .panel{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px 22px; margin:14px 0; box-shadow:var(--shadow-sm);
+  }
+  .panel > h3:first-child{ margin-top:0; }
+
+  /* Tabla comparativa */
+  .table-scroll{ overflow-x:auto; }
+  table.cmp{ width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:13.5px; }
+  table.cmp th, table.cmp td{ border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top; }
+  table.cmp th{ background:var(--bg-panel-2); color:var(--muted); font-weight:600; }
+  table.cmp td.hi{ color:var(--ok); }
+
+  /* Fórmula / regla destacada */
+  .formula{
+    background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
+  }
+
+  /* Nota al margen (.info para una aclaración, sin variante para un "ojo con esto") */
+  .note{
+    border-left:3px solid var(--warn); border-radius:0 8px 8px 0;
+    padding:12px 16px; background:var(--warn-soft);
+    font-size:13.5px; margin:14px 0; color:var(--text); max-width:80ch;
+  }
+  .note.info{ border-left-color:var(--ok); background:var(--ok-soft); }
+
+  /* Etiquetas */
+  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px; }
+  .pill{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:12.5px; color:var(--muted); }
+  .pill b{ color:var(--text); }
+
+  /* Panel de simulador / widget interactivo */
+  .sim{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:24px; margin:10px 0 16px; }
+  .sim .cfg{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px; }
+  .sim .cfg label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  .sim select, .sim input[type=text], .sim input[type=number]{
+    width:100%; background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
+    padding:9px 10px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px;
+  }
+  .sim .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+  .sim .msg{ padding:11px 14px; border-radius:8px; font-size:13.5px; margin:12px 0; background:var(--bg-panel-2); border:1px solid var(--line); }
+  .sim .msg.ok{ background:var(--ok-soft); border-color:var(--ok); color:var(--ok); }
+  .sim .msg.err{ background:var(--err-soft); border-color:var(--err); color:var(--err); }
+  button.btn{
+    background:var(--accent); color:var(--accent-ink); border:1px solid var(--accent); font-weight:600; font-size:13.5px;
+    padding:9px 16px; border-radius:8px; cursor:pointer; font-family:inherit;
+  }
+  button.btn:hover{ filter:brightness(1.08); }
+  button.btn.ghost{ background:transparent; color:var(--text); border-color:var(--line); }
+  button.btn.ghost:hover{ background:var(--bg-panel-2); filter:none; }
+  button.btn.ghost.sel{ border-color:var(--accent); color:var(--accent); background:var(--bg-panel-2); }
+  button.btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  /* Contadores */
+  .stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 18px; min-width:110px; }
+  .stat .n{ font-size:22px; font-weight:700; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .stat .l{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stat.ok .n{ color:var(--ok); }
+  .stat.err .n{ color:var(--err); }
+
+  /* Quiz de repaso (lo arma stdQuiz() a partir de un array) */
+  .quiz-item{ background:var(--bg-panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:14px; }
+  .quiz-item p.q{ font-weight:600; margin:0 0 12px; font-size:14.5px; }
+  .quiz-item .opts{ display:flex; flex-direction:column; gap:8px; }
+  .quiz-item label{
+    display:flex; gap:10px; align-items:flex-start; background:var(--bg-panel-2); border:1px solid var(--line);
+    padding:9px 12px; border-radius:8px; cursor:pointer; font-size:13.5px;
+  }
+  .quiz-item label:hover{ border-color:var(--muted); }
+  .quiz-item label input{ margin-top:3px; }
+  .quiz-item .fb{ margin-top:10px; padding:10px 12px; border-radius:8px; font-size:13px; display:none; }
+  .quiz-item .fb.ok{ background:var(--ok-soft); border:1px solid var(--ok); color:var(--ok); display:block; }
+  .quiz-item .fb.bad{ background:var(--err-soft); border:1px solid var(--err); color:var(--err); display:block; }
+  .quiz-score{ font-size:14px; color:var(--muted); margin-top:6px; }
+
+  @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
+  /* ==== /STD:COMPONENTS ==== */
+
+  /* ==== PAGE:TOKENS ==== tag / índice / desplazamiento y estados del simulador */
+  :root{
+    --amber: #b45309;
+    --amber-soft: #fdf2e3;
+    --teal: #0f766e;
+    --teal-soft: #e6f4f2;
+    --rust: #c0392b;
+    --rust-soft: #fbeae7;
+    --violet: #6d4fd1;
+    --violet-soft: #ede9fb;
+    --blk-ink: #12161c;
+  }
+  html[data-theme='dark']{
+    --amber: #e2a640;
+    --amber-soft: #3a2c17;
+    --teal: #4fc9b8;
+    --teal-soft: #163431;
+    --rust: #e2664f;
+    --rust-soft: #3a2019;
+    --violet: #9b8cf2;
+    --violet-soft: #241c3a;
+    --blk-ink: #12161c;
+  }
+
+  /* ==== PAGE ==== hero de bits, simulador de caché, diagramas y memoria virtual */
   .addr-hero{
     display:flex; gap:2px; align-items:stretch; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
     max-width:640px; flex-wrap:wrap;
@@ -181,75 +318,6 @@
   .addr-hero .off{ background:var(--teal-soft); border:1px solid var(--teal); }
   .addr-hero .off .val{ color:var(--teal); }
 
-  section.block{
-    padding:40px 48px;
-    border-bottom:1px solid var(--line);
-    max-width:1080px;
-  }
-  section.block h2{
-    font-size:22px; margin:0 0 6px; display:flex; align-items:baseline; gap:10px;
-  }
-  section.block h2 .num{ color:var(--amber); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600;}
-  section.block .sub{ color:var(--muted); font-size:14px; margin:0 0 22px; max-width:66ch; }
-
-  details.card{
-    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
-    margin-bottom:10px; overflow:hidden;
-  }
-  details.card summary{
-    cursor:pointer; padding:14px 18px; font-weight:600; font-size:14.5px;
-    display:flex; align-items:center; gap:10px; list-style:none;
-  }
-  details.card summary::-webkit-details-marker{ display:none; }
-  details.card summary::before{
-    content:"+"; color:var(--amber); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; width:14px;
-  }
-  details.card[open] summary::before{ content:"–"; }
-  details.card .body{ padding:0 18px 18px; color:var(--text); font-size:14.5px; }
-  details.card .body p{ margin:0 0 12px; }
-  details.card .body ul{ margin:0 0 12px; padding-left:20px; }
-  details.card .body li{ margin-bottom:6px; }
-  details.card .body strong{ color:var(--amber); }
-
-  table.cmp{ width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:13.5px; }
-  table.cmp th, table.cmp td{ border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top; }
-  table.cmp th{ background:var(--bg-panel-2); color:var(--muted); font-weight:600; }
-  table.cmp td.hi{ color:var(--teal); }
-
-  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px;}
-  .pill{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:12.5px; color:var(--muted);}
-  .pill b{ color:var(--text); }
-
-  .formula{
-    background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--accent);
-    padding:12px 16px; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
-  }
-
-  /* ---------- simulator ---------- */
-  .sim{
-    background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:24px;
-    margin-top:6px;
-  }
-  .sim .cfg{
-    display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px;
-  }
-  .sim .cfg label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;}
-  .sim select, .sim input[type=text]{
-    width:100%; background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
-    padding:9px 10px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px;
-  }
-  .sim select:focus, .sim input:focus{ outline:2px solid var(--focus); outline-offset:1px; }
-
-  .sim .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px; }
-  button.btn{
-    background:var(--accent); color:var(--accent-ink); border:none; font-weight:600; font-size:13.5px;
-    padding:10px 16px; border-radius:8px; cursor:pointer; font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  }
-  button.btn:hover{ filter:brightness(1.08); }
-  button.btn.ghost{
-    background:transparent; color:var(--text); border:1px solid var(--line);
-  }
-  button.btn.ghost:hover{ background:var(--bg-panel-2); }
   button.btn.ghost.running{ background:var(--rust-soft); border-color:var(--rust); color:var(--rust); }
   button.btn:disabled{ opacity:.4; cursor:not-allowed; }
 
@@ -281,22 +349,13 @@
   .memmap{ display:flex; flex-wrap:wrap; gap:5px; }
   .memmap .blk{
     width:30px; height:30px; border-radius:6px; display:flex; align-items:center; justify-content:center;
-    font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:10.5px; color:#12161c; font-weight:700;
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:10.5px; color:var(--blk-ink); font-weight:700;
   }
   .memmap .blk.more{ background:transparent !important; border:1px dashed var(--line); color:var(--muted); font-weight:400; }
   .memmap-legend{ display:flex; flex-wrap:wrap; gap:10px 14px; margin-top:12px; }
   .memmap-legend .lg{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
   .memmap-legend .sw{ width:12px; height:12px; border-radius:3px; flex-shrink:0; }
   .memmap-caption{ font-size:12px; color:var(--muted); margin-top:12px; max-width:340px; }
-
-  .stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
-  .stat{
-    background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 18px; min-width:110px;
-  }
-  .stat .n{ font-size:22px; font-weight:700; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;}
-  .stat .l{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
-  .stat.hit .n{ color:var(--teal); }
-  .stat.miss .n{ color:var(--rust); }
 
   .log{
     max-height:190px; overflow-y:auto; background:var(--bg); border:1px solid var(--line); border-radius:8px;
@@ -308,12 +367,6 @@
   .log .tag-miss{ color:var(--rust); font-weight:600; min-width:44px; }
   .log .addr{ color:var(--text); min-width:60px; }
   .log .detail{ color:var(--muted); font-size:12px; }
-
-  .note{
-    font-size:13px; color:var(--muted); background:var(--bg); border:1px solid var(--line);
-    border-radius:8px; padding:10px 14px; margin-top:4px;
-  }
-  .note b{ color:var(--amber); }
 
   /* ---------- classic diagram (5.2.2) ---------- */
   .diagram-wrap{ background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:20px; overflow-x:auto; }
@@ -367,35 +420,6 @@
   .fa-line .fa-idx{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--muted); font-size:11px; width:44px; text-align:right; }
   .fa-line .dtable{ flex:1; }
   .fa-line .gate.cmp{ min-width:70px; }
-
-  /* quiz */
-  .quiz-item{
-    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:14px;
-  }
-  .quiz-item p.q{ font-weight:600; margin:0 0 12px; font-size:14.5px; }
-  .quiz-item .opts{ display:flex; flex-direction:column; gap:8px; }
-  .quiz-item label{
-    display:flex; gap:10px; align-items:flex-start; background:var(--bg-panel-2); border:1px solid var(--line);
-    padding:9px 12px; border-radius:8px; cursor:pointer; font-size:13.5px;
-  }
-  .quiz-item label:hover{ border-color:var(--muted); }
-  .quiz-item label input{ margin-top:3px; }
-  .quiz-item .fb{ margin-top:10px; padding:10px 12px; border-radius:8px; font-size:13px; display:none; }
-  .quiz-item .fb.ok{ background:var(--teal-soft); border:1px solid var(--teal); color:var(--teal); display:block; }
-  .quiz-item .fb.bad{ background:var(--rust-soft); border:1px solid var(--rust); color:var(--rust); display:block; }
-  .quiz-score{ font-size:14px; color:var(--muted); margin-top:6px; }
-
-  footer.pagefoot{ padding:30px 48px; color:var(--muted); font-size:12.5px; }
-
-  @media (max-width:860px){
-    .shell{ grid-template-columns:minmax(0,1fr); }
-    nav.side{ position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line); }
-    section.block{ padding:28px 20px; }
-  }
-  @media (max-width:640px){
-    header.site{ padding:16px; }
-    header.site .site-top{ flex-direction:column; }
-  }
 
   /* ---------- 5.19.4–5.19.7 caché y memoria virtual (física / parcial / total) ---------- */
   .vm h3{ font-size:17px; margin:34px 0 6px; scroll-margin-top:20px; }
@@ -633,7 +657,7 @@
               </div>
             </div>
           </div>
-          <p class="note">La <strong>línea 0x01</strong> guarda el bloque completo (los 32 bytes consecutivos) que empieza en la dirección física indicada por <code>Tag 0x50 + Index 0x01</code>. El <code>Byte Select = 0x00</code> apunta al <strong>Byte 0</strong> dentro de esa línea — el byte exacto que el procesador pidió. Si el procesador después pide el byte contiguo, ya está ahí, sin nuevo acceso a memoria: <b>ese es el ahorro que justifica traer 32 bytes de una sola vez</b>.</p>
+          <p class="note info">La <strong>línea 0x01</strong> guarda el bloque completo (los 32 bytes consecutivos) que empieza en la dirección física indicada por <code>Tag 0x50 + Index 0x01</code>. El <code>Byte Select = 0x00</code> apunta al <strong>Byte 0</strong> dentro de esa línea — el byte exacto que el procesador pidió. Si el procesador después pide el byte contiguo, ya está ahí, sin nuevo acceso a memoria: <b>ese es el ahorro que justifica traer 32 bytes de una sola vez</b>.</p>
         </div>
       </details>
     </section>
@@ -716,7 +740,7 @@
               <div class="gate mux">MUX de 2 entradas — usa match₀/match₁ como selector → entrega el <b>Cache Block</b> de la vía que acertó</div>
             </div>
           </div>
-          <p class="note">Nada se hace "primero una vía, después la otra": los dos comparadores existen como hardware separado y trabajan a la vez. Lo único secuencial es el último paso, el <b>MUX</b>, que recién puede elegir el dato una vez que sabe cuál de las dos comparaciones dio positivo — ese es exactamente el "retardo extra por multiplexor" de la tabla de arriba.</p>
+          <p class="note info">Nada se hace "primero una vía, después la otra": los dos comparadores existen como hardware separado y trabajan a la vez. Lo único secuencial es el último paso, el <b>MUX</b>, que recién puede elegir el dato una vez que sabe cuál de las dos comparaciones dio positivo — ese es exactamente el "retardo extra por multiplexor" de la tabla de arriba.</p>
         </div>
       </details>
     </section>
@@ -759,7 +783,7 @@
               <div class="gate mux">MUX de N entradas (la línea que dio match) → <b>Cache Block</b></div>
             </div>
           </div>
-          <p class="note">Cada línea trae <b>su propio comparador</b> de dirección completa, y los N comparadores trabajan en paralelo. Por eso escala tan mal: con 8 líneas hacen falta 8 comparadores de tag completo, contra 1 solo (y más angosto) en la caché directa. Es exactamente la fila "Comparadores necesarios" de la tabla 5.3.1, llevada al extremo N = cantidad total de marcos.</p>
+          <p class="note info">Cada línea trae <b>su propio comparador</b> de dirección completa, y los N comparadores trabajan en paralelo. Por eso escala tan mal: con 8 líneas hacen falta 8 comparadores de tag completo, contra 1 solo (y más angosto) en la caché directa. Es exactamente la fila "Comparadores necesarios" de la tabla 5.3.1, llevada al extremo N = cantidad total de marcos.</p>
         </div>
       </details>
     </section>
@@ -800,7 +824,7 @@
               <td>Otra memoria pequeña, totalmente asociativa, al costado de la principal, más la lógica de intercambio (swap) que se dispara en cada acierto de víctima</td>
             </tr>
           </table>
-          <p class="note">Regla general: <b>no hay parámetro gratis</b>. Todo lo que baja la tasa de fallos (MR) sube el costo de hardware, el tiempo de acceso en el caso de acierto, o ambos. El diseño de una caché real es siempre ese equilibrio — no "la caché ideal", sino la mejor relación costo/latencia/tasa de fallos para el presupuesto de transistores disponible.</p>
+          <p class="note info">Regla general: <b>no hay parámetro gratis</b>. Todo lo que baja la tasa de fallos (MR) sube el costo de hardware, el tiempo de acceso en el caso de acierto, o ambos. El diseño de una caché real es siempre ese equilibrio — no "la caché ideal", sino la mejor relación costo/latencia/tasa de fallos para el presupuesto de transistores disponible.</p>
         </div>
       </details>
 
@@ -885,9 +909,9 @@
         </div>
 
         <div class="stat-row">
-          <div class="stat hit"><div class="n" id="statHits">0</div><div class="l">Aciertos</div></div>
+          <div class="stat ok"><div class="n" id="statHits">0</div><div class="l">Aciertos</div></div>
           <div class="stat" id="statVictimBox" hidden><div class="n" id="statVictimHits">0</div><div class="l">De los cuales, víctima</div></div>
-          <div class="stat miss"><div class="n" id="statMiss">0</div><div class="l">Fallos (a memoria)</div></div>
+          <div class="stat err"><div class="n" id="statMiss">0</div><div class="l">Fallos (a memoria)</div></div>
           <div class="stat"><div class="n" id="statRatio">—</div><div class="l">Tasa de aciertos</div></div>
         </div>
 
@@ -909,7 +933,7 @@
         </div>
 
         <div class="log" id="accessLog"></div>
-        <p class="note" id="simNote"></p>
+        <p class="note info" id="simNote"></p>
       </div>
     </section>
 
@@ -992,7 +1016,7 @@
             <div><label>Tc (ns)</label><input type="text" id="pTc" value="0.5" class="mono"></div>
           </div>
           <button class="btn" id="btnCalc">Calcular tiempo de CPU</button>
-          <p class="note" id="calcOut" style="margin-top:12px;"></p>
+          <p class="note info" id="calcOut" style="margin-top:12px;"></p>
         </div>
       </details>
     </section>
@@ -1201,35 +1225,86 @@
 </div>
 
 <script>
-/* ============================================================
-   NAV — resaltar sección activa
-   ============================================================ */
-(function(){
-  const links = Array.from(document.querySelectorAll('nav.side a[href^="#"]'));
-  const targets = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+/* ==== STD:SCRIPT v1 ==== (tema, scroll-spy del nav lateral y motor del quiz) */
+(function () {
+  var btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  function sync() {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    var icon = btn.querySelector('.icon');
+    if (icon) icon.textContent = dark ? '☀️' : '🌙';
+  }
+  btn.addEventListener('click', function () {
+    var el = document.documentElement;
+    var next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+    el.dataset.theme = next;
+    try { localStorage.setItem('tw-theme', next); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
 
-  // click: scroll manually instead of letting the browser navigate via the hash,
-  // which can force a full reload inside a sandboxed artifact viewer.
-  links.forEach((a, i) => {
-    a.addEventListener('click', (e)=>{
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.side a[href^="#"]'));
+  var targets = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+  links.forEach(function (a, i) {
+    a.addEventListener('click', function (e) {
+      // scroll manual: navegar por hash puede recargar la página dentro de visores embebidos
       e.preventDefault();
-      const target = targets[i];
-      if(target){ target.scrollIntoView({behavior:'smooth', block:'start'}); }
+      if (targets[i]) targets[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try { history.replaceState(null, '', a.getAttribute('href')); } catch (err) {}
     });
   });
-
-  function onScroll(){
-    let current = targets[0];
-    const y = window.scrollY + 120;
-    for(const t of targets){ if(t.offsetTop <= y) current = t; }
-    links.forEach(a=>a.classList.remove('active'));
-    const idx = targets.indexOf(current);
-    if(idx>=0) links[idx].classList.add('active');
+  function onScroll() {
+    var y = window.scrollY + 120, current = -1;
+    targets.forEach(function (t, i) {
+      if (t && t.getBoundingClientRect().top + window.scrollY <= y) current = i;
+    });
+    links.forEach(function (a, i) { a.classList.toggle('active', i === current); });
   }
-  window.addEventListener('scroll', onScroll, {passive:true});
+  window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 })();
 
+// stdQuiz([{q, opts:[...], correct:<índice>, exp}], 'quizWrap', 'quizScore')
+function stdQuiz(items, wrapId, scoreId) {
+  var wrap = document.getElementById(wrapId || 'quizWrap');
+  var scoreEl = document.getElementById(scoreId || 'quizScore');
+  if (!wrap) return;
+  function score() {
+    var c = 0, a = 0;
+    wrap.querySelectorAll('.quiz-item').forEach(function (div) {
+      if (div.dataset.answered) { a++; if (div.dataset.right === '1') c++; }
+    });
+    if (scoreEl) scoreEl.textContent = 'Puntaje: ' + c + ' / ' + a + ' respondidas (de ' + items.length + ' preguntas)';
+  }
+  items.forEach(function (item, qi) {
+    var div = document.createElement('div');
+    div.className = 'quiz-item';
+    div.innerHTML = '<p class="q">' + (qi + 1) + '. ' + item.q + '</p><div class="opts">'
+      + item.opts.map(function (o, oi) {
+        return '<label><input type="radio" name="' + wrap.id + '-q' + qi + '" value="' + oi + '"><span>' + o + '</span></label>';
+      }).join('') + '</div><div class="fb" aria-live="polite"></div>';
+    wrap.appendChild(div);
+    div.querySelectorAll('input').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        var right = parseInt(inp.value, 10) === item.correct;
+        div.dataset.answered = '1';
+        div.dataset.right = right ? '1' : '0';
+        var fb = div.querySelector('.fb');
+        fb.className = 'fb ' + (right ? 'ok' : 'bad');
+        fb.textContent = (right ? '✓ Correcto. ' : '✗ No es correcto. ') + item.exp;
+        score();
+      });
+    });
+  });
+  score();
+}
+/* ==== /STD:SCRIPT ==== */
+</script>
+<script>
+/* ==== PAGE:SCRIPT ==== */
 /* ============================================================
    HERO bit breakdown (ilustrativo)
    ============================================================ */
@@ -1741,82 +1816,7 @@ const QUIZ = [
   {q:"¿Qué mide el 'ancho de banda' de la memoria principal, a diferencia de la latencia?", opts:["El tiempo entre pedido y llegada del primer dato","La cantidad máxima de datos transferibles por unidad de tiempo","El tamaño del tag","La cantidad de bits de índice"], correct:1, exp:"La latencia es tiempo de acceso + tiempo de ciclo; el ancho de banda es volumen de datos por segundo, clave para dimensionar el tamaño de bloque."},
 ];
 
-(function(){
-  const wrap = document.getElementById('quizWrap');
-  const scoreEl = document.getElementById('quizScore');
-  let answered = 0, correct = 0;
-
-  QUIZ.forEach((item, qi)=>{
-    const div = document.createElement('div');
-    div.className = 'quiz-item';
-    div.innerHTML = `
-      <p class="q">${qi+1}. ${item.q}</p>
-      <div class="opts">
-        ${item.opts.map((o,oi)=>`
-          <label>
-            <input type="radio" name="q${qi}" value="${oi}">
-            <span>${o}</span>
-          </label>`).join('')}
-      </div>
-      <div class="fb"></div>
-    `;
-    wrap.appendChild(div);
-    div.querySelectorAll('input').forEach(inp=>{
-      inp.addEventListener('change', ()=>{
-        const chosen = parseInt(inp.value,10);
-        const fb = div.querySelector('.fb');
-        if(!div.dataset.answered){
-          div.dataset.answered = "1";
-          answered++;
-          if(chosen === item.correct) correct++;
-          updateScore();
-        } else {
-          // allow changing answer, adjust score
-          const wasCorrectBefore = div.dataset.wasCorrect === "1";
-          if(wasCorrectBefore) correct--;
-        }
-        const isRight = chosen === item.correct;
-        div.dataset.wasCorrect = isRight ? "1":"0";
-        if(isRight){
-          correct = Object.values(document.querySelectorAll('.quiz-item')).length ? correct : correct; // no-op guard
-        }
-        fb.className = 'fb ' + (isRight ? 'ok':'bad');
-        fb.textContent = (isRight ? '✓ Correcto. ' : '✗ No es correcto. ') + item.exp;
-        recomputeScore();
-      });
-    });
-  });
-
-  function recomputeScore(){
-    let c = 0, a = 0;
-    document.querySelectorAll('.quiz-item').forEach(div=>{
-      if(div.dataset.answered){ a++; if(div.dataset.wasCorrect==="1") c++; }
-    });
-    scoreEl.textContent = `Puntaje: ${c} / ${a} respondidas (de ${QUIZ.length} preguntas)`;
-  }
-  function updateScore(){ recomputeScore(); }
-  recomputeScore();
-})();
-
-/* ================= Theme toggle ================= */
-(function () {
-  var btn = document.getElementById('theme-toggle');
-  if (!btn) return;
-  function sync() {
-    var dark = document.documentElement.dataset.theme === 'dark';
-    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
-    var icon = btn.querySelector('.icon');
-    if (icon) icon.textContent = dark ? '☀️' : '🌙';
-  }
-  btn.addEventListener('click', function () {
-    var el = document.documentElement;
-    var next = el.dataset.theme === 'dark' ? 'light' : 'dark';
-    el.dataset.theme = next;
-    try { localStorage.setItem('tw-theme', next); } catch (e) {}
-    sync();
-  });
-  sync();
-})();
+stdQuiz(QUIZ);
 
 /* ============================================================
    5.19.4–5.19.7 Caché y memoria virtual — física, parcial y total
