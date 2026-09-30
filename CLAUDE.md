@@ -36,58 +36,44 @@ Cada HTML de nivel superior tiene que estar listado en
 copia a `dist/` y la página no se despliega (falla silenciosa: el archivo
 existe en el repo pero nunca llega a GitHub Pages).
 
-Para agregar una guía nueva del mismo estilo (`.html` autocontenido):
-1. Registrarla en `vite.config.ts` (`rollupOptions.input`).
-2. Agregarle una tarjeta (`article.card`) en el home `index.html`, con su
-   lista de secciones enlazadas por ancla (y un color propio `--c-*`).
-3. Darle su propio `<a class="backlink" href="index.html">&larr; Inicio</a>`
-   de vuelta al home — no hace falta que las guías se enlacen entre sí.
-4. Seguir el contrato de tema de la siguiente sección.
+Para agregar una guía o una sección nueva, o para llevar una página al formato
+común, usar la skill del repo **`guia-arquitectura`**
+(`.claude/skills/guia-arquitectura/`). Ahí están el template
+(`assets/guide-template.html`, fuente de verdad del estándar: header, nav lateral,
+secciones `s-*` numeradas, componentes, quiz, tokens), el porqué de cada regla
+(`references/standard.md`) y el validador:
 
-Si se agrega o renombra una sección de una guía, actualizar también su
-enlace en la tarjeta del home. `predictores.html` acepta `#t0`…`#t5` en la
-URL para abrir directo esa pestaña; `cache.html` usa ids `s-*` normales.
+```bash
+python3 .claude/skills/guia-arquitectura/scripts/check_guide.py check        # todas las páginas
+python3 .claude/skills/guia-arquitectura/scripts/check_guide.py sync web/x.html  # re-copia los bloques STD:*
+```
+
+Resumen de lo que exige: registrar la página en `vite.config.ts`, darle tarjeta en
+el home con un link por sección, `<a class="backlink" href="index.html">&larr; Inicio</a>`,
+bloques `STD:*` idénticos al template (no se editan a mano en las páginas) y el CSS/JS
+propio de cada widget en `PAGE`, scopeado bajo la clase de su sección.
+`tomasulo.html` solo sigue el estándar en el chrome (header/footer); su CSS está en
+`src/style.css`. `predictores.html#t0`…`#t5` (links de la versión con pestañas)
+redirigen a las secciones `s-*` equivalentes.
 
 ## Contrato de tema claro/oscuro
 
-Las cuatro páginas comparten el mismo mecanismo, cada una con su propia copia
-del CSS (no hay un stylesheet compartido entre `index.html` y las guías
-autocontenidas):
+Las cuatro páginas comparten el mismo mecanismo:
 
 - Atributo `data-theme` (`"light"` / `"dark"`) en `<html>`, persistido en
   `localStorage['tw-theme']`.
 - Script inline en `<head>` que aplica el tema guardado (o el de
   `prefers-color-scheme`) *antes* del primer render, para evitar el
   parpadeo de tema equivocado.
-- Botón `#theme-toggle` con el mismo marcado e igual script al final del
-  `<body>` en las cuatro páginas.
-- Tokens base compartidos: mismos valores hex en las cuatro páginas (claro en
-  `:root`, oscuro en `html[data-theme='dark']`), aunque cada archivo los
-  nombra a su manera — `src/style.css` usa `--ink`/`--panel`/`--border`,
-  `index.html`, `predictores.html` y `cache.html` usan `--text`/`--panel` o
-  `--bg-panel`/`--line`. Al portar una página nueva, copiar los *valores*
-  de `predictores.html` (es el ejemplo más reciente), no asumir que los
-  nombres de variable coinciden entre archivos.
-- Cada guía puede sumar tokens semánticos propios por encima de esa base
-  (p. ej. `predictores.html` usa `--taken`/`--nottaken` para tomado/no
-  tomado; `cache.html` usa `--amber`/`--teal`/`--violet` para
-  tag/índice/desplazamiento; `index.html` usa `--c-tomasulo`/`--c-pred`/
-  `--c-mem` para identificar cada página). `--accent` queda reservado para elementos de
-  "chrome" compartido (links, foco, indicador activo de nav/tabs, botón
-  primario); los tokens semánticos de cada página son para su contenido
-  propio, no para reemplazar `--accent`.
-
-Al portar una página HTML externa a este proyecto: los colores "quemados"
-(hex u `rgba()` literales, sobre todo los ajustados para un solo tema
-oscuro) hay que tokenizarlos con esta convención antes de integrarla —
-si no, el toggle de tema no tiene efecto sobre esos elementos.
-
-Al sumar contenido externo *dentro* de una guía existente (p. ej. la
-sección `#s-virtual` de `cache.html`), además: scopear todo su CSS bajo
-una clase de la sección (ahí `.vm`), prefijar sus ids (`vm-*`), envolver su
-JS en una IIFE con `addEventListener` (sin `onclick` inline ni globales) y
-sacar cualquier `<link>` a Google Fonts. Verificar que no queden ids
-duplicados: `grep -o 'id="[^"]*"' cache.html | sort | uniq -d`.
+- Botón `#theme-toggle` con el mismo marcado en las cuatro páginas.
+- En las guías los tokens base viven en el bloque `STD:TOKENS` (nombres canónicos
+  `--bg-panel`, `--line`, `--text`, `--highlight`, `--ok`/`--err`/`--warn`…) y los
+  semánticos de cada página en `PAGE:TOKENS`, siempre con par claro/oscuro.
+  `src/style.css` (Tomasulo) y `index.html` (home) tienen su propia copia con los
+  mismos valores hex pero otros nombres (`--ink`/`--border`, `--panel`).
+- `--accent` queda reservado para el "chrome" (links, foco, activo del nav, botón
+  primario).
+- Nada de colores literales fuera de los tokens: el toggle no los cambia.
 
 ## Comandos (todo corre desde `web/`)
 

@@ -9,7 +9,7 @@ estudiar tocando: todo corre en el navegador y se despliega en **GitHub Pages**.
 | --- | --- |
 | [Inicio](web/index.html) | Índice del sitio: una tarjeta por página con enlaces directos a cada sección. |
 | [Simulador de Tomasulo](web/tomasulo.html) | Planificación dinámica fuera de orden, ciclo a ciclo (Issue → Execute → Write Back). |
-| [Predicción de saltos](web/predictores.html) | Contador saturado de 2 bits, predictor local, global, comparación lado a lado e híbrido (juez). |
+| [Predicción de saltos](web/predictores.html) | Contador saturado de 2 bits, predictor local, global, comparación lado a lado, híbrido (juez) y quiz. |
 | [Jerarquía de memoria y caché](web/cache.html) | Unidad 5 completa: emplazamiento directo / N-way / totalmente asociativo, simulador de caché con caché de víctima, políticas, rendimiento, caché y memoria virtual (física, parcial y total) y memoria principal, con quiz. |
 
 ## Simulador de Tomasulo
@@ -64,6 +64,7 @@ widgets:
 ## Estructura
 
 ```
+.claude/skills/guia-arquitectura/  # skill: template, estándar y validador de guías
 web/                 # sitio (TypeScript + Vite, multi-page)
   index.html         # inicio: índice de todas las páginas (standalone)
   tomasulo.html      # simulador de Tomasulo (usa src/main.ts)
@@ -80,6 +81,21 @@ reference-java/      # app original Java Swing (referencia, no se ejecuta en web
 Cada página HTML de nivel superior debe registrarse en `web/vite.config.ts`
 (`rollupOptions.input`) para que el build la incluya, y enlazarse desde el
 inicio (`index.html`).
+
+## Agregar temas
+
+Las guías siguen un estándar común (header, índice lateral, secciones numeradas,
+componentes, quiz y tema claro/oscuro) definido en la skill de Claude Code del repo,
+[`.claude/skills/guia-arquitectura/`](.claude/skills/guia-arquitectura/):
+
+- `assets/guide-template.html`: template de una guía nueva (fuente de verdad del estándar).
+- `references/standard.md`: reglas, catálogo de componentes, cómo migrar una página.
+- `scripts/check_guide.py`: valida todas las páginas (`check`) y re-sincroniza los
+  bloques comunes desde el template (`sync`).
+
+```bash
+python3 .claude/skills/guia-arquitectura/scripts/check_guide.py check
+```
 
 ## Desarrollo
 
