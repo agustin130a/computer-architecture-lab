@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jerarquía de Memoria y Caché | Tomasulo Web</title>
+<title>Jerarquía de Memoria y Caché | Computer Architecture Lab</title>
 <meta
   name="description"
-  content="Guía interactiva de la jerarquía de memoria: emplazamiento directo, asociativo por conjuntos y totalmente asociativo, con simulador de caché. Complemento del simulador de Tomasulo."
+  content="Guía interactiva de la jerarquía de memoria: emplazamiento directo, asociativo por conjuntos y totalmente asociativo, con simulador de caché y caché con memoria virtual (física, parcial y total). Complemento del simulador de Tomasulo."
 />
 <script>
   // Aplica el tema guardado/del sistema antes del render para evitar parpadeo.
@@ -388,7 +388,7 @@
   footer.pagefoot{ padding:30px 48px; color:var(--muted); font-size:12.5px; }
 
   @media (max-width:860px){
-    .shell{ grid-template-columns:1fr; }
+    .shell{ grid-template-columns:minmax(0,1fr); }
     nav.side{ position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line); }
     section.block{ padding:28px 20px; }
   }
@@ -396,6 +396,54 @@
     header.site{ padding:16px; }
     header.site .site-top{ flex-direction:column; }
   }
+
+  /* ---------- 5.19.4–5.19.7 caché y memoria virtual (física / parcial / total) ---------- */
+  .vm h3{ font-size:17px; margin:34px 0 6px; scroll-margin-top:20px; }
+  .vm .vm-bar{ display:flex; height:50px; border-radius:8px; overflow:hidden; font-size:12px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .vm .vm-bar > div{
+    display:flex; flex-direction:column; justify-content:center; align-items:center; line-height:1.25;
+    white-space:nowrap; overflow:hidden; border-right:2px solid var(--bg-panel); transition:width .35s ease;
+  }
+  .vm .vm-bar > div:last-child{ border-right:0; }
+  .vm .vm-bar b{ font-weight:600; font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  .vm .vm-cap{ font-size:12.5px; color:var(--muted); margin:14px 0 6px; }
+  .vm .c-page{ background:var(--violet-soft); color:var(--violet); }
+  .vm .c-off{ background:var(--teal-soft); color:var(--teal); }
+  .vm .c-idx{ background:var(--amber-soft); color:var(--amber); }
+  .vm .c-word{ background:var(--bg-panel-2); color:var(--muted); }
+  .vm .c-err{ background:var(--rust-soft); color:var(--rust); }
+  .vm .c-mem{ background:var(--amber-soft); color:var(--amber); }
+  .vm .vm-row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+  .vm .vm-hint{ font-size:13px; color:var(--muted); }
+  .vm button.btn.ghost.sel{ border-color:var(--accent); color:var(--accent); background:var(--bg-panel-2); }
+  .vm .vm-msg{ padding:11px 14px; border-radius:8px; font-size:13.5px; margin:12px 0; background:var(--bg-panel-2); border:1px solid var(--line); }
+  .vm .vm-msg.ok{ background:var(--teal-soft); border-color:var(--teal); color:var(--teal); }
+  .vm .vm-msg.err{ background:var(--rust-soft); border-color:var(--rust); color:var(--rust); }
+  .vm .vm-scroll{ overflow-x:auto; }
+  .vm table.cmp.mono td{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .vm .vm-grid2{ display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:16px; }
+  .vm .vm-tlrow{ margin-bottom:18px; }
+  .vm .vm-tlhead{ display:flex; justify-content:space-between; font-size:14px; margin-bottom:6px; }
+  .vm .vm-tlhead span:last-child{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--muted); }
+  .vm .vm-lanes{ position:relative; display:grid; grid-template-rows:repeat(3,26px); gap:4px; padding-left:70px; }
+  .vm .vm-lane{ border-radius:4px; background:var(--bg-panel-2); position:relative; }
+  .vm .vm-lanelbl{ position:absolute; left:0; font-size:12px; color:var(--muted); width:64px; line-height:26px; }
+  .vm .vm-blk{
+    position:absolute; top:0; height:26px; border-radius:4px; font-size:12px; line-height:26px; padding-left:6px;
+    overflow:hidden; white-space:nowrap; transform-origin:left; transform:scaleX(1);
+    box-shadow:inset 0 0 0 1px currentColor;
+  }
+  .vm .vm-phs{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+  .vm .vm-ph{ border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:13px; line-height:1.55; }
+  .vm .vm-ph.on{ border:2px solid var(--accent); }
+  .vm .vm-ph h4{ font-size:12.5px; font-weight:600; margin:0 0 4px; color:var(--muted); }
+  .vm .vm-ways{ display:grid; gap:6px; margin-top:10px; }
+  .vm .vm-way{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; padding:8px; border-radius:8px; border:1px solid var(--line); }
+  .vm .vm-way.hit{ border:2px solid var(--teal); }
+  .vm .t-ok{ color:var(--teal); } .vm .t-err{ color:var(--rust); } .vm .t-warn{ color:var(--amber); }
+  .vm label.vm-check{ display:flex; align-items:center; gap:6px; font-size:13.5px; margin-left:8px; }
+  @media (max-width:640px){ .vm .vm-grid2, .vm .vm-phs{ grid-template-columns:1fr; } .vm .vm-bar{ font-size:11px; } }
+  @media (prefers-reduced-motion:reduce){ .vm .vm-bar > div, .vm .vm-blk{ transition:none !important; } }
 </style>
 </head>
 <body>
@@ -404,7 +452,7 @@
 
 <header class="site">
   <div class="site-top">
-    <a class="backlink" href="index.html">&larr; Volver al simulador de Tomasulo</a>
+    <a class="backlink" href="index.html">&larr; Inicio</a>
     <button
       id="theme-toggle"
       class="theme-toggle"
@@ -454,6 +502,9 @@
       <li class="grp">
         <p class="grp-title">Memoria virtual y principal</p>
         <a href="#s-virtual">5.19.4–5.19.7 Caché y mem. virtual</a>
+        <a href="#s-virtual-tiempo">↳ Física, parcial y total en el tiempo</a>
+        <a href="#s-virtual-total">↳ Virtual total: homónimos y sinónimos</a>
+        <a href="#s-virtual-parcial">↳ Virtual parcial: solapamiento</a>
         <a href="#s-principal">5.20 Memoria principal</a>
       </li>
       <li class="grp">
@@ -1001,20 +1052,115 @@
     </section>
 
     <!-- ============ 5.19.4-7 VIRTUAL ============ -->
-    <section class="block" id="s-virtual">
-      <h2><span class="num">5.19.4–5.19.7</span> Caché y memoria virtual</h2>
-      <p class="sub">Qué pasa cuando la dirección que llega del procesador es virtual, no física.</p>
+    <section class="block vm" id="s-virtual">
+      <h2><span class="num">5.19.4–5.19.7</span> Caché y memoria virtual: física, parcial y total</h2>
+      <p class="sub">La memoria virtual y la caché cortan la misma dirección de formas distintas. Toda la sección se reduce a una pregunta: el índice y el tag de la caché, ¿salen de la dirección virtual o de la física?</p>
+
+      <p class="vm-cap">Dirección virtual de 32 bits con páginas de 4 KB</p>
+      <div class="vm-bar">
+        <div class="c-page" style="width:62.5%"><b>Página virtual</b><span>20 bits, la TLB la traduce</span></div>
+        <div class="c-off" style="width:37.5%"><b>Desplazamiento</b><span>12 bits, no cambia</span></div>
+      </div>
+      <p class="vm-cap">La misma dirección para una caché directa de 4 KB con bloques de 64 B</p>
+      <div class="vm-bar">
+        <div class="c-page" style="width:62.5%"><b>Tag</b><span>20 bits</span></div>
+        <div class="c-idx" style="width:18.75%"><b>Índice</b><span>6 bits</span></div>
+        <div class="c-word" style="width:18.75%"><b>Palabra</b><span>6 bits</span></div>
+      </div>
+      <p style="margin-top:14px; max-width:68ch">El índice y la palabra caben dentro del desplazamiento, que es idéntico en la dirección virtual y en la física. Ese detalle es el que hace posible el solapamiento.</p>
+
+      <h3 id="s-virtual-tiempo">Las tres variantes en el tiempo</h3>
+      <p class="sub">La caché <b>física</b> traduce y después busca. La <b>parcial</b> busca mientras traduce y confirma con el tag físico. La <b>total</b> busca con la dirección virtual y solo usa la TLB si falla. Los tiempos son ilustrativos (TLB y caché: 1 unidad; memoria: 4).</p>
+      <div class="sim">
+        <div class="vm-row">
+          <button type="button" class="btn ghost sel" id="vm-bHit">Acierto en caché</button>
+          <button type="button" class="btn ghost" id="vm-bMiss">Fallo en caché</button>
+          <button type="button" class="btn ghost" id="vm-bPlay">Reproducir</button>
+        </div>
+        <div id="vm-tl"></div>
+      </div>
+
+      <h3 id="s-virtual-total">Direccionamiento virtual total</h3>
+      <p class="sub">El tag es la página virtual, así que la caché no sabe de qué proceso es cada línea. Aparecen dos problemas: los <b>homónimos</b> (misma dirección virtual, distinta física) producen falsos aciertos y se evitan vaciando la caché o agregando el PID al tag. Los <b>sinónimos</b> (distintas direcciones virtuales, misma física) dejan copias incoherentes, y el PID no los resuelve.</p>
+      <div class="sim">
+        <div class="vm-row">
+          <span class="vm-hint">Proceso activo</span>
+          <button type="button" class="btn ghost" id="vm-pA">Proceso A</button>
+          <button type="button" class="btn ghost" id="vm-pB">Proceso B</button>
+          <label class="vm-check"><input type="checkbox" id="vm-pid"> Agregar PID al tag</label>
+          <button type="button" class="btn ghost" id="vm-flush" style="margin-left:auto">Vaciar caché</button>
+        </div>
+        <div class="vm-row">
+          <button type="button" class="btn ghost" id="vm-rdPriv">Leer dato privado</button>
+          <button type="button" class="btn ghost" id="vm-wrSh">Escribir compartido</button>
+          <button type="button" class="btn ghost" id="vm-rdSh">Leer compartido</button>
+        </div>
+        <div id="vm-vas" class="vm-hint"></div>
+        <div id="vm-msg" class="vm-msg" aria-live="polite">Probá un homónimo: sin PID, A lee el dato privado, cambiá a B y que B lea el dato privado.</div>
+        <div class="vm-grid2">
+          <div class="vm-scroll">
+            <div class="vm-cap" style="margin-top:0">Caché (tag = página virtual)</div>
+            <table class="cmp mono"><thead><tr><th>Tag</th><th>PID</th><th>Dato</th><th>Física real</th></tr></thead><tbody id="vm-cache"></tbody></table>
+          </div>
+          <div class="vm-scroll">
+            <div class="vm-cap" style="margin-top:0">Memoria principal</div>
+            <table class="cmp mono"><thead><tr><th>Física</th><th>Dato</th></tr></thead><tbody id="vm-mem"></tbody></table>
+          </div>
+        </div>
+        <p class="vm-hint" style="margin:4px 0 0">El asterisco marca una línea modificada que todavía no pasó a memoria (post-escritura). La columna «Física real» es lo que la caché no conoce.</p>
+      </div>
+
+      <h3 id="s-virtual-parcial">Direccionamiento virtual parcial (solapamiento)</h3>
+      <p class="sub">El índice sale del desplazamiento, así que la caché se lee en paralelo con la TLB y después se compara el tag físico. Funciona solo si el índice y la palabra caben en el desplazamiento: <b>tamaño de caché ≤ tamaño de página × asociatividad</b>.</p>
+      <div class="sim">
+        <div class="cfg">
+          <div><label for="vm-pg">Tamaño de página</label><select id="vm-pg"><option value="1024">1 KB</option><option value="2048">2 KB</option><option value="4096" selected>4 KB</option><option value="8192">8 KB</option><option value="16384">16 KB</option></select></div>
+          <div><label for="vm-cs">Tamaño de caché</label><select id="vm-cs"><option value="1024">1 KB</option><option value="2048">2 KB</option><option value="4096">4 KB</option><option value="8192" selected>8 KB</option><option value="16384">16 KB</option><option value="32768">32 KB</option><option value="65536">64 KB</option></select></div>
+          <div><label for="vm-bk">Tamaño de bloque</label><select id="vm-bk"><option value="16">16 B</option><option value="32">32 B</option><option value="64" selected>64 B</option><option value="128">128 B</option></select></div>
+          <div><label for="vm-as">Asociatividad</label><select id="vm-as"><option value="1">Directa (1 vía)</option><option value="2" selected>2 vías</option><option value="4">4 vías</option><option value="8">8 vías</option></select></div>
+        </div>
+        <p class="vm-cap" style="margin-top:0">Vista de la memoria virtual</p><div class="vm-bar" id="vm-vaBar"></div>
+        <p class="vm-cap">Vista de la caché</p><div class="vm-bar" id="vm-cBar"></div>
+        <div id="vm-st" class="vm-msg"></div>
+        <div class="vm-row">
+          <button type="button" class="btn" id="vm-step">Siguiente paso</button>
+          <button type="button" class="btn ghost" id="vm-reset">Reiniciar caché</button>
+          <span id="vm-cnt" class="vm-hint" style="margin-left:auto"></span>
+        </div>
+        <div id="vm-acc" class="vm-hint mono" style="margin-bottom:10px" aria-live="polite"></div>
+        <div class="vm-phs">
+          <div class="vm-ph" id="vm-ph1"><h4>1. La CPU emite la dirección</h4><div id="vm-t1">—</div></div>
+          <div class="vm-ph" id="vm-ph2"><h4>2. TLB y caché en paralelo</h4><div id="vm-t2">—</div></div>
+          <div class="vm-ph" id="vm-ph3"><h4>3. Comparar tag físico</h4><div id="vm-t3">—</div></div>
+        </div>
+        <div id="vm-setv"></div>
+      </div>
+
+      <h3 id="s-virtual-resumen">Resumen</h3>
+      <div class="vm-scroll">
+        <table class="cmp">
+          <tr><th></th><th>Índice</th><th>Tag</th><th>TLB</th><th>Problema</th></tr>
+          <tr><td><b>Física</b></td><td>físico</td><td>físico</td><td>antes, en serie</td><td>lentitud</td></tr>
+          <tr><td><b>Parcial</b></td><td>del desplazamiento</td><td>físico</td><td>en paralelo</td><td>caché ≤ página × asociatividad</td></tr>
+          <tr><td><b>Total</b></td><td>virtual</td><td>virtual (+PID)</td><td>solo en fallo</td><td>homónimos y sinónimos</td></tr>
+        </table>
+      </div>
       <details class="card">
-        <summary>Caché de direcciones virtuales y sus problemas</summary>
+        <summary>Direccionamiento virtual total: qué es y por qué casi no se usa</summary>
         <div class="body">
-          <p>Consultar la caché con la dirección virtual (en vez de esperar la traducción del TLB) ahorra tiempo de acierto, pero introduce dos problemas: al cambiar de contexto hay que vaciar la caché (los datos están asociados a direcciones de un proceso puntual) y puede haber <strong>sinónimos</strong>: dos direcciones virtuales distintas que apuntan a la misma dirección física, generando copias duplicadas e inconsistentes del mismo dato.</p>
+          <p>La caché se indexa y se etiqueta con la dirección virtual, sin traducir; la TLB solo se usa en un fallo. Es la más rápida, pero tiene dos problemas:</p>
+          <ul>
+            <li><strong>Homónimos</strong> (misma dirección virtual, distinta física entre procesos): producen falsos aciertos. Se evitan vaciando la caché en cada cambio de contexto o agregando el PID al tag.</li>
+            <li><strong>Sinónimos</strong> (distintas direcciones virtuales, misma física): generan copias duplicadas e incoherentes. El PID no los resuelve; hay que detectarlos.</li>
+          </ul>
+          <p>Por ese costo se prefiere el solapamiento, que es casi igual de rápido.</p>
         </div>
       </details>
       <details class="card">
-        <summary>Direccionamiento parcial (solapamiento) vs. total</summary>
+        <summary>Direccionamiento virtual parcial (solapamiento): qué es y cuál es su limitación</summary>
         <div class="body">
-          <p><strong>Parcial (solapamiento)</strong>: el desplazamiento de la dirección virtual no cambia con la traducción, así que se puede usar para acceder a la caché en paralelo mientras el TLB traduce la página. Al terminar la traducción se compara el tag real. Su límite: la caché no puede ser mayor que una página virtual (salvo que se suba la asociatividad).</p>
-          <p><strong>Total</strong>: casi no se usa. Elimina directamente la traducción usando la página virtual como tag, lo que agrava el problema de sinónimos entre procesos distintos.</p>
+          <p>El índice y la palabra salen del desplazamiento, igual en la dirección virtual y en la física. La caché se lee en paralelo con la TLB y luego se compara el tag físico: si coincide, se acepta el dato; si no, se descarta y se busca el correcto. No sufre homónimos ni sinónimos porque el tag es físico.</p>
+          <p><strong>Limitación</strong>: tamaño de caché ≤ tamaño de página × asociatividad. Para agrandar la caché sin agrandar la página hay que aumentar la asociatividad.</p>
         </div>
       </details>
       <details class="card">
@@ -1050,7 +1196,7 @@
       <p class="quiz-score" id="quizScore"></p>
     </section>
 
-    <footer class="pagefoot">Basado en los apuntes de la Unidad 5 — Jerarquía de Memoria. Hecho como material de repaso; no reemplaza la bibliografía de cátedra. Complemento del <a href="index.html">simulador de Tomasulo</a>.</footer>
+    <footer class="pagefoot">Basado en los apuntes de la Unidad 5 — Jerarquía de Memoria. Hecho como material de repaso; no reemplaza la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>; ver también el <a href="tomasulo.html">simulador de Tomasulo</a>.</footer>
   </main>
 </div>
 
@@ -1670,6 +1816,182 @@ const QUIZ = [
     sync();
   });
   sync();
+})();
+
+/* ============================================================
+   5.19.4–5.19.7 Caché y memoria virtual — física, parcial y total
+   ============================================================ */
+(function(){
+  const $ = id => document.getElementById('vm-' + id);
+  if(!$('tl')) return;
+  const hx = (n,w) => '0x' + (n>>>0).toString(16).toUpperCase().padStart(w||1,'0');
+
+  /* ---- Comparación temporal ---- */
+  let miss1 = false;
+  const MAXT = 6.5;
+  const TL = [
+    {name:'Física', hit:[[0,0,1,'c-page','TLB'],[1,1,1,'c-off','Caché']], miss:[[2,2,4,'c-mem','Memoria']]},
+    {name:'Parcial (solapamiento)', hit:[[0,0,1,'c-page','TLB'],[1,0,1,'c-off','Caché'],[1,1,.3,'c-page','tag']], miss:[[2,1.3,4,'c-mem','Memoria']]},
+    {name:'Total', hit:[[1,0,1,'c-off','Caché']], miss:[[0,1,1,'c-page','TLB'],[2,2,4,'c-mem','Memoria']]}
+  ];
+  const LN = ['TLB','Caché','Memoria'];
+  function tl(m){
+    miss1 = m;
+    $('bHit').classList.toggle('sel', !m);
+    $('bMiss').classList.toggle('sel', m);
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('tl').innerHTML = TL.map(r => {
+      const bl = m ? r.hit.concat(r.miss) : r.hit;
+      const tot = Math.max(...bl.map(b => b[1] + b[2]));
+      return `<div class="vm-tlrow"><div class="vm-tlhead"><span>${r.name}</span><span>${tot.toFixed(1)} u</span></div>`
+        + `<div class="vm-lanes">${LN.map((l,i) => `<span class="vm-lanelbl" style="top:${i*30}px">${l}</span>`).join('')}`
+        + [0,1,2].map(i => `<div class="vm-lane">${bl.filter(b => b[0]===i).map(b =>
+            `<div class="vm-blk ${b[3]}" data-d="${b[1]}" style="left:${b[1]/MAXT*100}%;width:${b[2]/MAXT*100}%">${b[4]}</div>`).join('')}</div>`).join('')
+        + `</div></div>`;
+    }).join('');
+    if(reduce) return;
+    const bs = $('tl').querySelectorAll('.vm-blk');
+    bs.forEach(b => { b.style.transition = 'none'; b.style.transform = 'scaleX(0)'; });
+    requestAnimationFrame(() => requestAnimationFrame(() => bs.forEach(b => {
+      b.style.transition = `transform .3s ease ${(+b.dataset.d) * 0.3}s`;
+      b.style.transform = 'scaleX(1)';
+    })));
+  }
+  $('bHit').addEventListener('click', () => tl(false));
+  $('bMiss').addEventListener('click', () => tl(true));
+  $('bPlay').addEventListener('click', () => tl(miss1));
+  tl(false);
+
+  /* ---- Virtual total: homónimos y sinónimos ---- */
+  const PT = {A:{priv:[0x1000,0x5000], sh:[0x2000,0x3000]}, B:{priv:[0x1000,0x9000], sh:[0x7000,0x3000]}};
+  const mem = {0x5000:'privA', 0x9000:'privB', 0x3000:10};
+  const truth = {...mem};
+  let cache = [], cur = 'A', usePid = false;
+  function say(t,k){ const m = $('msg'); m.innerHTML = t; m.className = 'vm-msg' + (k ? ' ' + k : ''); }
+  function find(va){ return cache.find(l => l.va === va && (!usePid || l.pid === cur)); }
+  function rd(kind){
+    const [va,pa] = PT[cur][kind];
+    const l = find(va);
+    if(l){
+      if(l.pa !== pa) say(`Acierto falso (homónimo). ${cur} pidió ${hx(va,4)} y recibió «${l.val}», la línea de ${l.pid}. Lo correcto era «${truth[pa]}».`, 'err');
+      else if(l.val !== truth[pa]) say(`Acierto con dato viejo (sinónimo): se leyó ${l.val}, pero el valor actual es ${truth[pa]}.`, 'err');
+      else say(`Acierto correcto: ${cur} leyó «${l.val}» en ${hx(va,4)} sin pasar por la TLB.`, 'ok');
+    } else {
+      const v = mem[pa];
+      cache.push({va, pid:cur, pa, val:v, dirty:false});
+      if(v !== truth[pa]) say(`Fallo: se trajo ${v} de memoria, pero el valor real es ${truth[pa]} y está modificado en otra línea (otra VA, misma física): sinónimo.`, 'err');
+      else say(`Fallo: la TLB tradujo ${hx(va,4)} a ${hx(pa,4)} y se trajo «${v}» de memoria. Correcto.`, 'ok');
+    }
+    draw();
+  }
+  function wr(){
+    const [va,pa] = PT[cur].sh;
+    const nv = truth[pa] + 1;
+    truth[pa] = nv;
+    const l = find(va);
+    if(l){ l.val = nv; l.dirty = true; } else cache.push({va, pid:cur, pa, val:nv, dirty:true});
+    say(`${cur} escribió ${nv} en ${hx(va,4)} (física ${hx(pa,4)}). Con post-escritura queda solo en la caché. Para ver un sinónimo: cambiá al otro proceso y leé el compartido.`);
+    draw();
+  }
+  function sw(p){ cur = p; say(`Cambio de contexto al proceso ${p}. La caché no se vació.`); draw(); }
+  function wb(){ cache.forEach(l => { if(l.dirty) mem[l.pa] = l.val; }); cache = []; }
+  function flush(){ wb(); say('Caché vaciada: las líneas modificadas se escribieron en memoria y todo lo demás se perdió. Los próximos accesos fallan: ese es el costo.'); draw(); }
+  function togPid(v){ usePid = v; wb(); say(v ? 'Ahora el tag incluye el PID (caché vaciada para empezar limpio).' : 'Tag sin PID (caché vaciada para empezar limpio).'); draw(); }
+  function draw(){
+    $('pA').classList.toggle('sel', cur === 'A');
+    $('pB').classList.toggle('sel', cur === 'B');
+    $('vas').textContent = `Proceso ${cur}: dato privado en VA ${hx(PT[cur].priv[0],4)}, compartido en VA ${hx(PT[cur].sh[0],4)}.`;
+    $('cache').innerHTML = cache.length
+      ? cache.map(l => `<tr><td>${hx(l.va,4)}</td><td>${usePid ? l.pid : '—'}</td><td>${l.val}${l.dirty ? ' *' : ''}</td><td style="color:var(--muted)">${hx(l.pa,4)}</td></tr>`).join('')
+      : '<tr><td colspan="4" style="color:var(--muted)">vacía</td></tr>';
+    $('mem').innerHTML = Object.keys(mem).map(k => `<tr><td>${hx(+k,4)}</td><td>${mem[k]}</td></tr>`).join('');
+  }
+  $('pA').addEventListener('click', () => sw('A'));
+  $('pB').addEventListener('click', () => sw('B'));
+  $('pid').addEventListener('change', e => togPid(e.target.checked));
+  $('flush').addEventListener('click', flush);
+  $('rdPriv').addEventListener('click', () => rd('priv'));
+  $('wrSh').addEventListener('click', wr);
+  $('rdSh').addEventListener('click', () => rd('sh'));
+  draw();
+
+  /* ---- Virtual parcial: solapamiento TLB + caché ---- */
+  const L2 = n => Math.round(Math.log2(n));
+  const PTAB = {0x10:0x3A5, 0x11:0x7F2, 0x12:0x05C};
+  const SEQ = [[0x10,0x040],[0x10,0x048],[0x11,0x040],[0x10,0x044],[0x12,0x200],[0x11,0x050],[0x12,0x9C0]];
+  let C = {}, sets = [], si = 0, ph = 0, ac = null, hits = 0, miss = 0, clk = 0;
+  const seg = (b,c,t,s) => `<div class="${c}" style="width:${b/32*100}%"><b>${t}</b><span>${s}</span></div>`;
+  function cfg(){
+    const pg = +$('pg').value, cs = +$('cs').value, bk = +$('bk').value, as = +$('as').value;
+    const off = L2(pg), w = L2(bk), ns = Math.max(1, cs/(bk*as)), ix = L2(ns), tg = 32 - ix - w, over = Math.max(0, ix + w - off);
+    C = {pg, cs, bk, as, off, w, ns, ix, tg, ok: over === 0};
+    $('vaBar').innerHTML = seg(32-off, 'c-page', 'Página virtual', (32-off) + ' bits') + seg(off, 'c-off', 'Desplazamiento', off + ' bits');
+    $('cBar').innerHTML = seg(tg, 'c-page', 'Tag', tg + ' bits')
+      + (over ? seg(over, 'c-err', 'Índice', over + ' fuera') : '')
+      + (ix - over > 0 ? seg(ix - over, 'c-idx', 'Índice', (ix - over) + ' bits') : '')
+      + seg(w, 'c-word', 'Palabra', w + ' bits');
+    const st = $('st');
+    if(C.ok){
+      st.className = 'vm-msg ok';
+      st.textContent = `Índice + palabra = ${ix+w} bits ≤ desplazamiento = ${off} bits. Caché ${cs/1024} KB ≤ ${pg/1024} KB × ${as} = ${pg*as/1024} KB: se puede indexar sin esperar a la TLB.`;
+    } else {
+      st.className = 'vm-msg err';
+      st.textContent = `Índice + palabra = ${ix+w} bits > desplazamiento = ${off} bits: ${over} bit(s) del índice salen de la página virtual. Caché ${cs/1024} KB > ${pg/1024} KB × ${as} = ${pg*as/1024} KB. Sin achicar la caché, haría falta asociatividad ≥ ${cs/pg}.`;
+    }
+    sets = Array.from({length:ns}, () => []); si = 0; ph = 0; ac = null; hits = 0; miss = 0; clk = 0;
+    ['t1','t2','t3'].forEach(i => $(i).innerHTML = '—');
+    $('setv').innerHTML = '';
+    $('acc').textContent = 'Pulsá «Siguiente paso» para iniciar el primer acceso.';
+    hl(0); cnt();
+  }
+  function hl(n){ [1,2,3].forEach(i => $('ph'+i).classList.toggle('on', i === n)); }
+  function cnt(){ $('cnt').textContent = `Aciertos: ${hits}, fallos: ${miss}`; }
+  function showSet(ix, tag){
+    const s = sets[ix];
+    let h = `<div class="vm-cap">Conjunto ${ix} (${C.as} vía${C.as > 1 ? 's' : ''})</div><div class="vm-ways" style="grid-template-columns:repeat(${Math.min(C.as,4)},minmax(0,1fr))">`;
+    for(let i = 0; i < C.as; i++){
+      const l = s[i];
+      h += `<div class="vm-way${l && tag !== undefined && l.tag === tag ? ' hit' : ''}" style="color:${l ? 'var(--text)' : 'var(--muted)'}">Vía ${i}<br>${l ? 'tag ' + hx(l.tag) : 'vacía'}</div>`;
+    }
+    $('setv').innerHTML = h + '</div>';
+  }
+  function step(){
+    if(ph === 0 || ph === 3){
+      const [vp,o] = SEQ[si % SEQ.length]; si++;
+      const off = o % C.pg;
+      const va = (vp << C.off) | off, pf = PTAB[vp], pa = (pf << C.off) | off;
+      ac = {vp, off, va, pf, ixV:(va >>> C.w) & (C.ns-1), ixP:(pa >>> C.w) & (C.ns-1), tag: pa >>> (C.w + C.ix), wd: va & (C.bk-1)};
+      ph = 1; hl(1);
+      $('acc').textContent = `Acceso ${si}: dirección virtual ${hx(va,8)}`;
+      $('t1').innerHTML = `Página virtual <span class="mono">${hx(vp)}</span><br>Desplazamiento <span class="mono">${hx(off)}</span><br>Índice <span class="mono">${ac.ixV}</span>, palabra <span class="mono">${ac.wd}</span>`;
+      $('t2').innerHTML = '—'; $('t3').innerHTML = '—'; $('setv').innerHTML = '';
+      return;
+    }
+    if(ph === 1){
+      ph = 2; hl(2);
+      let t = `TLB: página <span class="mono">${hx(ac.vp)}</span> → marco <span class="mono">${hx(ac.pf)}</span><br>Caché: lee el conjunto <span class="mono">${ac.ixV}</span> sin esperar`;
+      if(!C.ok && ac.ixV !== ac.ixP) t += `<br><span class="t-err">El bloque está en el conjunto ${ac.ixP}.</span>`;
+      else if(!C.ok) t += `<br><span class="t-warn">Coinciden por casualidad: no es confiable.</span>`;
+      $('t2').innerHTML = t; showSet(ac.ixV);
+      return;
+    }
+    ph = 3; hl(3); clk++;
+    let t = (!C.ok && ac.ixV !== ac.ixP) ? `<span class="t-err">Se leyó el conjunto equivocado; se repite con el índice físico (${ac.ixP}) y el acceso queda en serie.</span><br>` : '';
+    const s = sets[ac.ixP], h = s.find(l => l.tag === ac.tag);
+    if(h){ h.t = clk; hits++; t += `Tag <span class="mono">${hx(ac.tag)}</span> coincide: <span class="t-ok">acierto</span>.`; }
+    else {
+      miss++;
+      let ev = '';
+      if(s.length < C.as) s.push({tag:ac.tag, t:clk});
+      else { const v = s.reduce((a,b) => a.t < b.t ? a : b); ev = ` Reemplaza a ${hx(v.tag)} (LRU).`; v.tag = ac.tag; v.t = clk; }
+      t += `Tag <span class="mono">${hx(ac.tag)}</span> no está: <span class="t-err">fallo</span>, se descarta lo leído y se trae de memoria.${ev}`;
+    }
+    $('t3').innerHTML = t; showSet(ac.ixP, ac.tag); cnt();
+  }
+  ['pg','cs','bk','as'].forEach(id => $(id).addEventListener('change', cfg));
+  $('step').addEventListener('click', step);
+  $('reset').addEventListener('click', cfg);
+  cfg();
 })();
 </script>
 </body>
