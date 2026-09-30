@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
-// Project site is served at https://<user>.github.io/tomasulo-web/
-// In CI we set VITE_BASE=/tomasulo-web/ ; local dev uses '/'.
+// Project site is served at https://<user>.github.io/computer-architecture-lab/
+// In CI we set VITE_BASE=/computer-architecture-lab/ ; local dev uses '/'.
 export default defineConfig({
   base: process.env.VITE_BASE ?? '/',
   build: {
@@ -13,7 +13,8 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       input: {
-        main: resolve(root, 'index.html'),
+        home: resolve(root, 'index.html'),
+        tomasulo: resolve(root, 'tomasulo.html'),
         predictores: resolve(root, 'predictores.html'),
         cache: resolve(root, 'cache.html'),
       },

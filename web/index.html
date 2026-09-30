@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Computer Architecture Lab</title>
+<meta
+  name="description"
+  content="Simuladores y guías interactivas de arquitectura de computadoras: algoritmo de Tomasulo, predicción de saltos y jerarquía de memoria con caché y memoria virtual."
+/>
+<script>
+  // Aplica el tema guardado/del sistema antes del render para evitar parpadeo.
+  (function () {
+    try {
+      var t = localStorage.getItem('tw-theme');
+      if (!t) {
+        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root{
+    /* ---- Tema claro (por defecto), tokens compartidos con predictores.html / cache.html ---- */
+    --bg: #f4f6fb;
+    --bg-grad: radial-gradient(1200px 520px at 50% -160px, #e9eefb 0%, var(--bg) 70%);
+    --panel: #ffffff;
+    --panel-2: #eef2f7;
+    --line: #d8dee6;
+    --text: #1d2433;
+    --muted: #4a5568;
+    --accent: #1f6feb;
+    --accent-ink: #ffffff;
+    --focus: #0a4bce;
+    --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
+    --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+    /* Color propio de cada página del sitio (para las tarjetas del índice) */
+    --c-tomasulo: #6d4fd1;
+    --c-tomasulo-soft: #ede9fb;
+    --c-pred: #b45309;
+    --c-pred-soft: #fdf2e3;
+    --c-mem: #0f766e;
+    --c-mem-soft: #e6f4f2;
+  }
+  html[data-theme='dark']{
+    /* ---- Tema oscuro (navy), tokens compartidos con predictores.html / cache.html ---- */
+    --bg: #0d1524;
+    --bg-grad: radial-gradient(1200px 560px at 50% -160px, #172236 0%, var(--bg) 68%);
+    --panel: #131d2e;
+    --panel-2: #1a2942;
+    --line: #2a3a52;
+    --text: #e7edf3;
+    --muted: #9fb0c8;
+    --accent: #4d9fff;
+    --accent-ink: #06121f;
+    --focus: #7bb8ff;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.35);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+    --c-tomasulo: #9b8cf2;
+    --c-tomasulo-soft: #241c3a;
+    --c-pred: #e2a640;
+    --c-pred-soft: #3a2c17;
+    --c-mem: #4fc9b8;
+    --c-mem-soft: #163431;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  html{ background:var(--bg); }
+  body{
+    background:var(--bg);
+    background:var(--bg-grad);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height:1.55;
+    transition:background-color .2s ease, color .2s ease;
+  }
+  code, .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a{ color:var(--accent); }
+  :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+
+  .skip-link{
+    position:absolute; left:-999px; top:0;
+    background:var(--accent); color:var(--accent-ink); padding:8px 12px; z-index:20;
+    border-radius:0 0 6px 0;
+  }
+  .skip-link:focus{ left:8px; top:8px; }
+
+  .wrap{ max-width:1120px; margin:0 auto; padding:0 24px; }
+
+  header.site{ padding:28px 0 8px; }
+  .site-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+  .kicker{ color:var(--muted); font-size:.9rem; margin:0; font-weight:600; letter-spacing:.02em; }
+  header.site h1{ margin:8px 0 0; font-size:clamp(30px,5vw,46px); letter-spacing:-.02em; line-height:1.1; }
+  .lede{ color:var(--muted); font-size:1.05rem; max-width:68ch; margin:14px 0 0; }
+
+  .theme-toggle{
+    flex:0 0 auto;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border:1px solid var(--line); background:var(--panel-2); color:var(--text);
+    border-radius:999px; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer;
+    transition:border-color .15s ease, background-color .2s ease;
+  }
+  .theme-toggle:hover{ border-color:var(--muted); }
+  .theme-toggle .icon{ font-size:1rem; line-height:1; }
+  .theme-toggle .theme-label-dark{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-light{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-dark{ display:inline; }
+
+  /* ---------- Recorrido: dónde cae cada página en el procesador ---------- */
+  .path{
+    display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin:28px 0 8px;
+  }
+  .path .stop{
+    flex:1 1 200px; display:flex; gap:12px; align-items:center;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+    box-shadow:var(--shadow-sm); text-decoration:none; color:var(--text);
+  }
+  .path .stop:hover{ border-color:var(--muted); }
+  .path .stop .dot{
+    flex:0 0 auto; width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; font-size:13px;
+  }
+  .path .stop b{ display:block; font-size:.95rem; }
+  .path .stop .txt span{ display:block; color:var(--muted); font-size:.82rem; }
+  .path .arrow{ align-self:center; color:var(--muted); font-size:18px; }
+
+  /* ---------- Tarjetas por página ---------- */
+  main{ padding:18px 0 60px; }
+  .cards{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px; margin-top:18px; }
+  .card{
+    --c: var(--accent); --c-soft: var(--panel-2);
+    display:flex; flex-direction:column;
+    background:var(--panel); border:1px solid var(--line); border-top:4px solid var(--c);
+    border-radius:14px; padding:22px 22px 20px; box-shadow:var(--shadow);
+  }
+  .card.tomasulo{ --c: var(--c-tomasulo); --c-soft: var(--c-tomasulo-soft); }
+  .card.pred{ --c: var(--c-pred); --c-soft: var(--c-pred-soft); }
+  .card.mem{ --c: var(--c-mem); --c-soft: var(--c-mem-soft); }
+  .dot.tomasulo{ background:var(--c-tomasulo-soft); color:var(--c-tomasulo); }
+  .dot.pred{ background:var(--c-pred-soft); color:var(--c-pred); }
+  .dot.mem{ background:var(--c-mem-soft); color:var(--c-mem); }
+
+  .card .tag{
+    align-self:flex-start; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--c); background:var(--c-soft); border-radius:999px; padding:3px 10px;
+  }
+  .card h2{ font-size:1.3rem; margin:12px 0 6px; letter-spacing:-.01em; }
+  .card h2 a{ color:var(--text); text-decoration:none; }
+  .card h2 a:hover{ color:var(--accent); }
+  .card p.desc{ color:var(--muted); font-size:.93rem; margin:0 0 16px; }
+  .card h3{ font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:6px 0 8px; }
+  .card ul.toc{ list-style:none; margin:0 0 18px; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .card ul.toc a{
+    display:flex; gap:10px; align-items:baseline; padding:5px 8px; margin:0 -8px; border-radius:6px;
+    color:var(--text); text-decoration:none; font-size:.9rem;
+  }
+  .card ul.toc a:hover{ background:var(--panel-2); }
+  .card ul.toc .n{ flex:0 0 auto; min-width:66px; color:var(--c); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.78rem; font-weight:600; }
+  .card ul.toc .new{ margin-left:auto; font-size:10.5px; font-weight:700; color:var(--c); border:1px solid var(--c); border-radius:999px; padding:0 7px; }
+  .card ul.feats{ margin:0 0 18px; padding-left:18px; font-size:.9rem; }
+  .card ul.feats li{ margin-bottom:5px; }
+  .card .open{
+    margin-top:auto; align-self:flex-start;
+    display:inline-block; padding:9px 16px; border-radius:8px;
+    background:var(--accent); color:var(--accent-ink); font-weight:600; font-size:.9rem; text-decoration:none;
+  }
+  .card .open:hover{ filter:brightness(1.08); }
+
+  footer.pagefoot{ color:var(--muted); font-size:.85rem; padding:10px 0 40px; border-top:1px solid var(--line); }
+  footer.pagefoot p{ margin:16px 0 0; max-width:80ch; }
+
+  @media (max-width:980px){ .cards{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:680px){
+    .wrap{ padding:0 16px; }
+    .cards{ grid-template-columns:1fr; }
+    .site-top{ flex-direction:column-reverse; }
+    .path .arrow{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<div class="wrap">
+  <header class="site">
+    <div class="site-top">
+      <div>
+        <p class="kicker">Arquitectura de Computadoras · material interactivo</p>
+        <h1>Computer Architecture Lab</h1>
+      </div>
+      <button
+        id="theme-toggle"
+        class="theme-toggle"
+        type="button"
+        aria-pressed="false"
+        title="Cambiar entre modo claro y oscuro"
+      >
+        <span class="icon" aria-hidden="true">🌙</span>
+        <span class="theme-label-light">Modo oscuro</span>
+        <span class="theme-label-dark">Modo claro</span>
+      </button>
+    </div>
+    <p class="lede">Tres piezas para ver por dentro cómo un procesador moderno evita quedarse esperando: ejecuta fuera de orden, adivina hacia dónde van los saltos y esconde la lentitud de la memoria detrás de la caché. Cada una se puede tocar: simuladores paso a paso, no solo texto.</p>
+
+    <nav class="path" aria-label="Recorrido sugerido">
+      <a class="stop" href="#p-tomasulo"><span class="dot tomasulo">1</span><span class="txt"><b>Ejecución fuera de orden</b><span>Tomasulo: Issue → Exe → WB</span></span></a>
+      <span class="arrow" aria-hidden="true">→</span>
+      <a class="stop" href="#p-pred"><span class="dot pred">2</span><span class="txt"><b>Predicción de saltos</b><span>Que el pipeline no se vacíe</span></span></a>
+      <span class="arrow" aria-hidden="true">→</span>
+      <a class="stop" href="#p-mem"><span class="dot mem">3</span><span class="txt"><b>Jerarquía de memoria</b><span>Caché y memoria virtual</span></span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <div class="cards">
+
+      <article class="card tomasulo" id="p-tomasulo">
+        <span class="tag">Simulador</span>
+        <h2><a href="tomasulo.html">Algoritmo de Tomasulo</a></h2>
+        <p class="desc">Planificación dinámica ciclo a ciclo con estaciones de reserva y renombrado de registros. El motor es un port del Tomasulo-Visual original (Java) y coincide exactamente en la temporización.</p>
+        <h3>Qué podés hacer</h3>
+        <ul class="feats">
+          <li>Elegir uno de los 7 programas de ejemplo o cargar tu propio <code>.s</code>.</li>
+          <li>Editar el código y las latencias de cada unidad funcional.</li>
+          <li>Avanzar paso a paso, de a varios ciclos o hasta el final.</li>
+          <li>Ver el diagrama de estaciones, la tabla Issue / Exe / Write Back y los registros ocupados.</li>
+        </ul>
+        <a class="open" href="tomasulo.html">Abrir el simulador →</a>
+      </article>
+
+      <article class="card pred" id="p-pred">
+        <span class="tag">Guía interactiva</span>
+        <h2><a href="predictores.html">Predicción de saltos</a></h2>
+        <p class="desc">De por qué hace falta predecir hasta el predictor híbrido con juez, con un simulador en cada paso.</p>
+        <h3>Contenido</h3>
+        <ul class="toc">
+          <li><a href="predictores.html#t0"><span class="n">0</span>Por qué hace falta predecir</a></li>
+          <li><a href="predictores.html#t1"><span class="n">1</span>Contador saturado de 2 bits</a></li>
+          <li><a href="predictores.html#t2"><span class="n">2</span>Predictor de historia local</a></li>
+          <li><a href="predictores.html#t3"><span class="n">3</span>Predictor de historia global</a></li>
+          <li><a href="predictores.html#t4"><span class="n">4</span>Local vs. global, lado a lado</a></li>
+          <li><a href="predictores.html#t5"><span class="n">5</span>Híbrido: el juez (tournament)</a></li>
+        </ul>
+        <a class="open" href="predictores.html">Abrir la guía →</a>
+      </article>
+
+      <article class="card mem" id="p-mem">
+        <span class="tag">Guía interactiva</span>
+        <h2><a href="cache.html">Jerarquía de memoria y caché</a></h2>
+        <p class="desc">Toda la Unidad 5: emplazamiento, políticas, rendimiento, caché con memoria virtual y memoria principal, con simulador de caché y quiz.</p>
+        <h3>Contenido</h3>
+        <ul class="toc">
+          <li><a href="cache.html#s-fundamentos"><span class="n">5.1–5.2</span>Jerarquía y terminología</a></li>
+          <li><a href="cache.html#s-directa"><span class="n">5.2.2</span>Emplazamiento directo</a></li>
+          <li><a href="cache.html#s-nway"><span class="n">5.3</span>Asociativa por conjuntos</a></li>
+          <li><a href="cache.html#s-full"><span class="n">5.4</span>Totalmente asociativa</a></li>
+          <li><a href="cache.html#s-simulador"><span class="n">↳</span>Simulador de caché + víctima</a></li>
+          <li><a href="cache.html#s-estructura"><span class="n">5.5–5.6</span>Diseño y estructura</a></li>
+          <li><a href="cache.html#s-reemplazo"><span class="n">5.7–5.11</span>Políticas de reemplazo</a></li>
+          <li><a href="cache.html#s-actualizacion"><span class="n">5.12–5.14</span>Write through / back</a></li>
+          <li><a href="cache.html#s-rendimiento"><span class="n">5.15</span>Rendimiento y calculadora</a></li>
+          <li><a href="cache.html#s-mejoras"><span class="n">5.16</span>Reducir la tasa de fallos</a></li>
+          <li><a href="cache.html#s-penalizacion"><span class="n">5.17–5.19</span>Reducir la penalización</a></li>
+          <li><a href="cache.html#s-virtual"><span class="n">5.19.4–7</span>Caché y memoria virtual<span class="new">nuevo</span></a></li>
+          <li><a href="cache.html#s-principal"><span class="n">5.20</span>Memoria principal</a></li>
+          <li><a href="cache.html#s-quiz"><span class="n">✓</span>Quiz de repaso</a></li>
+        </ul>
+        <a class="open" href="cache.html">Abrir la guía →</a>
+      </article>
+
+    </div>
+  </main>
+
+  <footer class="pagefoot">
+    <p>Material de repaso hecho con fines educativos; no reemplaza la bibliografía de cátedra. El simulador de Tomasulo está basado en Tomasulo-Visual (proyecto de curso UMass ENG668).</p>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    function sync() {
+      var dark = document.documentElement.dataset.theme === 'dark';
+      btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+      var icon = btn.querySelector('.icon');
+      if (icon) icon.textContent = dark ? '☀️' : '🌙';
+    }
+    btn.addEventListener('click', function () {
+      var el = document.documentElement;
+      var next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+      el.dataset.theme = next;
+      try { localStorage.setItem('tw-theme', next); } catch (e) {}
+      sync();
+    });
+    sync();
+  })();
+</script>
+</body>
+</html>

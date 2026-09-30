@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Predictores de Salto — Local vs Global | Tomasulo Web</title>
+<title>Predictores de Salto — Local vs Global | Computer Architecture Lab</title>
 <meta
   name="description"
   content="Guía interactiva de predicción dinámica de saltos: contador saturado, predictor local, global e híbrido. Complemento del simulador de Tomasulo."
@@ -313,7 +313,7 @@
 <header class="site">
   <div class="site-inner">
     <div class="site-top">
-      <a class="backlink" href="index.html">&larr; Volver al simulador de Tomasulo</a>
+      <a class="backlink" href="index.html">&larr; Inicio</a>
       <button
         id="theme-toggle"
         class="theme-toggle"
@@ -616,21 +616,30 @@
   <p>
     Guía interactiva basada en los apuntes de Arquitectura de Computadoras — predicción
     dinámica de saltos (predictores locales, globales, de dos niveles (m,n) e híbridos).
-    Complemento del <a href="index.html">simulador de Tomasulo</a>.
+    Parte del <a href="index.html">Computer Architecture Lab</a>; ver también el <a href="tomasulo.html">simulador de Tomasulo</a>.
   </p>
 </footer>
 
 <script>
 /* ---------- Tabs ---------- */
-document.getElementById('tabs').addEventListener('click', e=>{
-  const btn = e.target.closest('button[data-tab]');
-  if(!btn) return;
+function showTab(id){
+  const btn = document.querySelector(`nav.tabs button[data-tab="${id}"]`);
+  if(!btn) return false;
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   document.querySelectorAll('section.view').forEach(s=>s.classList.remove('active'));
-  document.getElementById(btn.dataset.tab).classList.add('active');
+  document.getElementById(id).classList.add('active');
+  return true;
+}
+document.getElementById('tabs').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  showTab(btn.dataset.tab);
+  try { history.replaceState(null, '', '#' + btn.dataset.tab); } catch (err) {}
   window.scrollTo({top:0, behavior:'instant'});
 });
+// Deep link desde el inicio: predictores.html#t2 abre directo esa pestaña.
+if(location.hash) showTab(location.hash.slice(1));
 
 /* ---------- Shared helpers ---------- */
 const STATE_LABEL = ['Fuertemente NT','Débilmente NT','Débilmente T','Fuertemente T'];
