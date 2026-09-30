@@ -17,6 +17,7 @@ export default defineConfig({
         tomasulo: resolve(root, 'tomasulo.html'),
         predictores: resolve(root, 'predictores.html'),
         cache: resolve(root, 'cache.html'),
+        coherencia: resolve(root, 'coherencia.html'),
       },
     },
   },

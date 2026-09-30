@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coherencia de caché | Computer Architecture Lab</title>
+<meta
+  name="description"
+  content="Guía interactiva de coherencia de caché en multiprocesadores: protocolo snoopy de dos estados, MSI y MESI, con simulador de tres cachés sobre un bus y quiz de repaso."
+/>
+<script>
+  // Aplica el tema guardado/del sistema antes del render para evitar parpadeo.
+  (function () {
+    try {
+      var t = localStorage.getItem('tw-theme');
+      if (!t) {
+        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  })();
+</script>
+<style>
+  /* ==== STD:TOKENS v1 ==== (no editar a mano: se sincroniza desde el template de la skill guia-arquitectura) */
+  :root{
+    --bg: #f4f6fb;
+    --bg-grad: radial-gradient(1200px 520px at 50% -160px, #e9eefb 0%, var(--bg) 70%);
+    --bg-panel: #ffffff;
+    --bg-panel-2: #eef2f7;
+    --line: #d8dee6;
+    --line-soft: #e4e9f0;
+    --text: #1d2433;
+    --muted: #4a5568;
+    --accent: #1f6feb;
+    --accent-ink: #ffffff;
+    --focus: #0a4bce;
+    --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
+    --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+    --highlight: #b45309;
+    --ok: #0f766e;
+    --ok-soft: #e6f4f2;
+    --err: #c0392b;
+    --err-soft: #fbeae7;
+    --warn: #b45309;
+    --warn-soft: #fdf2e3;
+  }
+  html[data-theme='dark']{
+    --bg: #0d1524;
+    --bg-grad: radial-gradient(1200px 560px at 50% -160px, #172236 0%, var(--bg) 68%);
+    --bg-panel: #131d2e;
+    --bg-panel-2: #1a2942;
+    --line: #2a3a52;
+    --line-soft: #223047;
+    --text: #e7edf3;
+    --muted: #9fb0c8;
+    --accent: #4d9fff;
+    --accent-ink: #06121f;
+    --focus: #7bb8ff;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.35);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+    --highlight: #e2a640;
+    --ok: #4fc9b8;
+    --ok-soft: #163431;
+    --err: #e2664f;
+    --err-soft: #3a2019;
+    --warn: #e2a640;
+    --warn-soft: #3a2c17;
+  }
+  /* ==== /STD:TOKENS ==== */
+
+  /* ==== STD:SHELL v1 ==== (header, nav lateral, secciones, footer) */
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; background:var(--bg); }
+  body{
+    margin:0;
+    background:var(--bg);
+    background:var(--bg-grad);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height:1.55;
+    transition:background-color .2s ease, color .2s ease;
+  }
+  code, .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a{ color:var(--accent); }
+  :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+
+  .skip-link{
+    position:absolute; left:-999px; top:0;
+    background:var(--accent); color:var(--accent-ink); padding:8px 12px; z-index:20;
+    border-radius:0 0 6px 0;
+  }
+  .skip-link:focus{ left:8px; top:8px; }
+
+  header.site{
+    padding:20px 24px;
+    background:var(--bg-panel);
+    border-bottom:1px solid var(--line);
+    box-shadow:var(--shadow-sm);
+  }
+  .site-top{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    margin-bottom:6px;
+  }
+  .backlink{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--accent); text-decoration:none; font-size:.9rem; font-weight:600;
+  }
+  .backlink:hover{ text-decoration:underline; }
+  header.site .kicker{ color:var(--muted); font-size:.9rem; margin:0; }
+  header.site h1{ margin:10px 0 0; font-size:clamp(24px,3vw,34px); letter-spacing:-.01em; max-width:24ch; }
+  header.site .lede{ color:var(--muted); font-size:1rem; max-width:72ch; margin:10px 0 22px; }
+  header.site .lede b{ color:var(--text); }
+  header.site .hero{ max-width:760px; overflow-x:auto; }
+
+  .theme-toggle{
+    flex:0 0 auto;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border:1px solid var(--line); background:var(--bg-panel-2); color:var(--text);
+    border-radius:999px; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer;
+    transition:border-color .15s ease, background-color .2s ease;
+  }
+  .theme-toggle:hover{ border-color:var(--muted); }
+  .theme-toggle .icon{ font-size:1rem; line-height:1; }
+  .theme-toggle .theme-label-dark{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-light{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-dark{ display:inline; }
+
+  .shell{ display:grid; grid-template-columns:260px minmax(0,1fr); min-height:100vh; }
+  nav.side{
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    background:var(--bg-panel);
+    border-right:1px solid var(--line);
+    padding:22px 16px 40px;
+  }
+  nav.side .brand{ font-weight:700; font-size:15px; letter-spacing:.2px; margin-bottom:2px; }
+  nav.side .brand small{ display:block; color:var(--muted); font-weight:400; font-size:12px; margin-top:3px; }
+  nav.side ol{ list-style:none; margin:22px 0 0; padding:0; }
+  nav.side .grp{ margin-bottom:18px; }
+  nav.side .grp-title{
+    color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    margin:0 0 6px 2px; font-weight:600;
+  }
+  nav.side a{
+    display:block; color:var(--text); text-decoration:none; font-size:13.5px;
+    padding:5px 8px; border-radius:6px; opacity:.82;
+  }
+  nav.side a:hover{ background:var(--bg-panel-2); opacity:1; }
+  nav.side a.active{ background:var(--bg-panel-2); color:var(--accent); opacity:1; }
+
+  main{ padding:0 0 100px; min-width:0; }
+  section.block{
+    padding:40px 48px;
+    border-bottom:1px solid var(--line);
+    max-width:1080px;
+    scroll-margin-top:12px;
+  }
+  section.block h2{ font-size:22px; margin:0 0 6px; display:flex; align-items:baseline; gap:10px; }
+  section.block h2 .num{ color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; flex:0 0 auto; }
+  section.block .sub{ color:var(--muted); font-size:14px; margin:0 0 22px; max-width:66ch; }
+  section.block h3{ font-size:17px; margin:30px 0 6px; scroll-margin-top:12px; }
+  section.block p{ max-width:72ch; }
+
+  footer.pagefoot{ padding:30px 48px; color:var(--muted); font-size:12.5px; }
+
+  @media (max-width:860px){
+    .shell{ grid-template-columns:minmax(0,1fr); }
+    nav.side{ position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line); }
+    section.block{ padding:28px 20px; }
+    footer.pagefoot{ padding:24px 20px; }
+  }
+  @media (max-width:640px){
+    header.site{ padding:16px; }
+    header.site .site-top{ flex-direction:column; }
+  }
+  /* ==== /STD:SHELL ==== */
+
+  /* ==== STD:COMPONENTS v1 ==== (piezas reutilizables dentro de las secciones) */
+  /* Tarjeta desplegable de teoría */
+  details.card{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    margin-bottom:10px; overflow:hidden;
+  }
+  details.card summary{
+    cursor:pointer; padding:14px 18px; font-weight:600; font-size:14.5px;
+    display:flex; align-items:center; gap:10px; list-style:none;
+  }
+  details.card summary::-webkit-details-marker{ display:none; }
+  details.card summary::before{
+    content:"+"; color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; width:14px;
+  }
+  details.card[open] summary::before{ content:"–"; }
+  details.card .body{ padding:0 18px 18px; font-size:14.5px; }
+  details.card .body p{ margin:0 0 12px; }
+  details.card .body ul{ margin:0 0 12px; padding-left:20px; }
+  details.card .body li{ margin-bottom:6px; }
+  details.card .body strong{ color:var(--highlight); }
+
+  /* Caja de contenido fija (texto + diagrama, sin desplegar) */
+  .panel{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px 22px; margin:14px 0; box-shadow:var(--shadow-sm);
+  }
+  .panel > h3:first-child{ margin-top:0; }
+
+  /* Tabla comparativa */
+  .table-scroll{ overflow-x:auto; }
+  table.cmp{ width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:13.5px; }
+  table.cmp th, table.cmp td{ border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top; }
+  table.cmp th{ background:var(--bg-panel-2); color:var(--muted); font-weight:600; }
+  table.cmp td.hi{ color:var(--ok); }
+
+  /* Fórmula / regla destacada */
+  .formula{
+    background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
+  }
+
+  /* Nota al margen (.info para una aclaración, sin variante para un "ojo con esto") */
+  .note{
+    border-left:3px solid var(--warn); border-radius:0 8px 8px 0;
+    padding:12px 16px; background:var(--warn-soft);
+    font-size:13.5px; margin:14px 0; color:var(--text); max-width:80ch;
+  }
+  .note.info{ border-left-color:var(--ok); background:var(--ok-soft); }
+
+  /* Etiquetas */
+  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px; }
+  .pill{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:12.5px; color:var(--muted); }
+  .pill b{ color:var(--text); }
+
+  /* Panel de simulador / widget interactivo */
+  .sim{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:24px; margin:10px 0 16px; }
+  .sim .cfg{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px; }
+  .sim .cfg label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  .sim select, .sim input[type=text], .sim input[type=number]{
+    width:100%; background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
+    padding:9px 10px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px;
+  }
+  .sim .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+  .sim .msg{ padding:11px 14px; border-radius:8px; font-size:13.5px; margin:12px 0; background:var(--bg-panel-2); border:1px solid var(--line); }
+  .sim .msg.ok{ background:var(--ok-soft); border-color:var(--ok); color:var(--ok); }
+  .sim .msg.err{ background:var(--err-soft); border-color:var(--err); color:var(--err); }
+  button.btn{
+    background:var(--accent); color:var(--accent-ink); border:1px solid var(--accent); font-weight:600; font-size:13.5px;
+    padding:9px 16px; border-radius:8px; cursor:pointer; font-family:inherit;
+  }
+  button.btn:hover{ filter:brightness(1.08); }
+  button.btn.ghost{ background:transparent; color:var(--text); border-color:var(--line); }
+  button.btn.ghost:hover{ background:var(--bg-panel-2); filter:none; }
+  button.btn.ghost.sel{ border-color:var(--accent); color:var(--accent); background:var(--bg-panel-2); }
+  button.btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  /* Contadores */
+  .stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 18px; min-width:110px; }
+  .stat .n{ font-size:22px; font-weight:700; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .stat .l{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stat.ok .n{ color:var(--ok); }
+  .stat.err .n{ color:var(--err); }
+
+  /* Quiz de repaso (lo arma stdQuiz() a partir de un array) */
+  .quiz-item{ background:var(--bg-panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:14px; }
+  .quiz-item p.q{ font-weight:600; margin:0 0 12px; font-size:14.5px; }
+  .quiz-item .opts{ display:flex; flex-direction:column; gap:8px; }
+  .quiz-item label{
+    display:flex; gap:10px; align-items:flex-start; background:var(--bg-panel-2); border:1px solid var(--line);
+    padding:9px 12px; border-radius:8px; cursor:pointer; font-size:13.5px;
+  }
+  .quiz-item label:hover{ border-color:var(--muted); }
+  .quiz-item label input{ margin-top:3px; }
+  .quiz-item .fb{ margin-top:10px; padding:10px 12px; border-radius:8px; font-size:13px; display:none; }
+  .quiz-item .fb.ok{ background:var(--ok-soft); border:1px solid var(--ok); color:var(--ok); display:block; }
+  .quiz-item .fb.bad{ background:var(--err-soft); border:1px solid var(--err); color:var(--err); display:block; }
+  .quiz-score{ font-size:14px; color:var(--muted); margin-top:6px; }
+
+  @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
+  /* ==== /STD:COMPONENTS ==== */
+
+  /* ==== PAGE:TOKENS ==== estados MESI, bus compartido y texto sobre los badges */
+  :root{
+    --m: #C0366B;
+    --e: #6A47C7;
+    --s: #157F63;
+    --i: #8791A5;
+    --bus: #D99A00;
+    --bus-soft: #FFF3D1;
+    --badge-ink: #ffffff;
+  }
+  html[data-theme='dark']{
+    --m: #F2729F;
+    --e: #A98DF2;
+    --s: #40C79E;
+    --i: #7D889F;
+    --bus: #F2BA34;
+    --bus-soft: #3A2F12;
+    --badge-ink: #0d1524;
+  }
+
+  /* ==== PAGE ==== ilustración del header y widgets de coherencia (todo bajo .coh) */
+  .coh-hero svg{ width:100%; max-width:640px; height:auto; display:block; margin:0 0 18px; }
+  .coh-hero .box{ fill:var(--bg-panel); stroke:var(--line); stroke-width:1.5; }
+  .coh-hero .lbl{ font-weight:650; font-size:15px; fill:var(--text); }
+  .coh-hero .cap{ font-size:12px; fill:var(--muted); }
+  .coh-hero .busline{ stroke:var(--bus); stroke-width:6; stroke-linecap:round; }
+  .coh-hero .tap{ stroke:var(--bus); stroke-width:2; stroke-dasharray:3 4; }
+  .coh-hero .pulse{ fill:var(--bus); }
+
+  .coh .c-M{ color:var(--m); } .coh .c-E{ color:var(--e); } .coh .c-S, .coh .c-V{ color:var(--s); } .coh .c-I{ color:var(--i); }
+  .coh .props{ display:grid; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); gap:12px; margin:14px 0; }
+  .coh .props .panel{ margin:0; }
+  .coh .props strong{ display:block; margin-bottom:4px; }
+  .coh .props p{ margin:0; color:var(--muted); font-size:14px; }
+
+  /* Evolución de los protocolos */
+  .coh .steps{ list-style:none; margin:18px 0 0; padding:0; counter-reset:v; max-width:72ch; }
+  .coh .steps > li{ position:relative; padding:0 0 26px 52px; counter-increment:v; }
+  .coh .steps > li::before{
+    content:counter(v); position:absolute; left:0; top:-2px; width:36px; height:36px; border-radius:50%;
+    background:var(--text); color:var(--bg-panel); font-weight:700; display:grid; place-items:center;
+  }
+  .coh .steps > li::after{ content:""; position:absolute; left:17px; top:40px; bottom:6px; width:2px; background:var(--line); }
+  .coh .steps > li:last-child::after{ display:none; }
+  .coh .steps h3{ margin:4px 0 8px; }
+  .coh .chips{ display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 12px; }
+  .coh .chip{ font-size:12.5px; font-weight:600; padding:2px 10px; border-radius:999px; border:1.5px solid currentColor; }
+  .coh .limit{ font-size:14px; color:var(--muted); font-style:italic; }
+
+  /* Simulador */
+  .coh .sim-top{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center; margin-bottom:16px; }
+  .coh .seg{ display:inline-flex; background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px; gap:2px; }
+  .coh .seg button{ font:inherit; font-size:13.5px; font-weight:600; border:0; background:transparent; color:var(--muted); padding:7px 14px; border-radius:999px; cursor:pointer; }
+  .coh .seg button[aria-pressed="true"]{ background:var(--accent); color:var(--accent-ink); }
+  .coh .legend{ display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13.5px; color:var(--muted); margin:0 0 18px; }
+
+  .coh .procs{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(8px,2vw,18px); }
+  .coh .proc{ border:2px solid var(--line); border-radius:14px; padding:12px; background:var(--bg-panel); display:flex; flex-direction:column; gap:10px; transition:border-color .25s; }
+  .coh .proc-head{ display:flex; justify-content:space-between; align-items:baseline; font-weight:650; }
+  .coh .proc-head small{ font-weight:500; color:var(--muted); font-size:12px; }
+  .coh .state{ display:flex; align-items:center; gap:10px; }
+  .coh .badge{
+    width:48px; height:48px; flex:none; border-radius:12px; display:grid; place-items:center;
+    font-weight:750; font-size:24px; color:var(--badge-ink); background:var(--i); transition:background-color .3s;
+  }
+  .coh .badge.st-M{ background:var(--m); } .coh .badge.st-E{ background:var(--e); } .coh .badge.st-S, .coh .badge.st-V{ background:var(--s); }
+  .coh .state-txt{ font-size:13.5px; line-height:1.3; }
+  .coh .state-txt b{ display:block; font-size:14.5px; }
+  .coh .xval{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; color:var(--muted); }
+  .coh .acts{ display:grid; gap:6px; }
+  .coh .acts button{ font:inherit; font-weight:600; font-size:13px; border:1.5px solid var(--line); background:var(--bg-panel-2); color:var(--text); padding:7px 8px; border-radius:8px; cursor:pointer; }
+  .coh .acts button:hover{ border-color:var(--accent); }
+  .coh .acts button.w{ border-color:color-mix(in srgb, var(--m) 45%, var(--line)); }
+  .coh .proc.actor{ border-color:var(--accent); }
+  .coh .proc.snoop{ animation:coh-snoop .9s ease; }
+  @keyframes coh-snoop{ 0%,100%{ border-color:var(--line); } 30%{ border-color:var(--bus); box-shadow:0 0 0 4px var(--bus-soft); } }
+
+  .coh .taps{ display:grid; grid-template-columns:repeat(3,1fr); height:24px; }
+  .coh .taps span, .coh .mem-tap{ justify-self:center; width:2px; background:repeating-linear-gradient(var(--bus) 0 4px, transparent 4px 8px); }
+  .coh .mem-tap{ height:20px; margin:0 auto; }
+  .coh .bus{ position:relative; min-height:46px; border-radius:12px; background:var(--bus-soft); border:2px solid var(--bus); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .coh .bus-label{ position:relative; z-index:1; font-weight:600; font-size:14px; padding:6px 12px; text-align:center; }
+  .coh .coh-tok{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.9em; background:var(--bg-panel); padding:1px 6px; border-radius:4px; }
+  .coh .spark{ position:absolute; top:0; bottom:0; width:40%; left:-40%; background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--bus) 55%, transparent), transparent); }
+  .coh .bus.go .spark{ animation:coh-sweep .8s ease-out; }
+  @keyframes coh-sweep{ to{ left:100%; } }
+  .coh .mem-row{ display:flex; justify-content:center; }
+  .coh .mem{ display:flex; align-items:center; gap:14px; border:2px solid var(--line); border-radius:12px; padding:10px 16px; background:var(--bg-panel); flex-wrap:wrap; justify-content:center; }
+  .coh .coh-pill{ font-size:12.5px; font-weight:600; padding:2px 10px; border-radius:999px; }
+  .coh .coh-pill.ok{ background:var(--ok-soft); color:var(--ok); }
+  .coh .coh-pill.stale{ background:var(--warn-soft); color:var(--warn); }
+
+  .coh .sim-bottom{ display:grid; grid-template-columns:1.4fr 1fr; gap:16px; margin-top:22px; }
+  .coh .coh-panel{ border:1px solid var(--line); border-radius:12px; padding:14px 16px; background:var(--bg-panel-2); }
+  .coh .coh-panel h3{ margin:0 0 8px; font-size:15px; }
+  .coh .narr{ margin:0; padding-left:18px; font-size:14px; }
+  .coh .narr li{ margin:4px 0; }
+  .coh .narr.empty{ list-style:none; padding:0; color:var(--muted); }
+  .coh .coh-stats{ display:flex; gap:20px; flex-wrap:wrap; margin:0 0 10px; }
+  .coh .coh-stats b{ font-size:28px; font-weight:720; display:block; line-height:1; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .coh .coh-stats span{ font-size:12.5px; color:var(--muted); }
+  .coh .truth{ font-size:14px; margin:0; }
+  .coh .coh-panel select{ width:100%; margin-top:4px; }
+  .coh .scen-steps{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+  .coh .scen-steps span{ font-size:12.5px; padding:2px 8px; border-radius:6px; border:1px solid var(--line); color:var(--muted); }
+  .coh .scen-steps span.done{ color:var(--text); border-color:var(--text); opacity:.55; }
+  .coh .scen-steps span.next{ color:var(--accent-ink); background:var(--accent); border-color:var(--accent); }
+  .coh .compare{ margin:10px 0 0; font-size:13.5px; color:var(--muted); }
+  .coh .compare b{ color:var(--text); }
+  .coh details.hist{ margin-top:12px; }
+  .coh details.hist summary{ cursor:pointer; font-weight:600; font-size:14px; }
+  .coh details.hist ol{ font-size:13px; color:var(--muted); max-height:12rem; overflow:auto; padding-left:22px; }
+
+  .coh table.cmp td:first-child{ font-weight:750; font-size:16px; }
+
+  @media (max-width:760px){ .coh .sim-bottom{ grid-template-columns:1fr; } }
+  @media (max-width:520px){
+    .coh .proc{ padding:8px; gap:7px; }
+    .coh .badge{ width:40px; height:40px; font-size:20px; border-radius:10px; }
+    .coh .state{ flex-direction:column; align-items:flex-start; gap:5px; }
+    .coh .acts button{ font-size:12px; padding:6px 4px; }
+    .coh .seg button{ padding:6px 10px; font-size:12.5px; }
+  }
+  @media (prefers-reduced-motion:reduce){ .coh .proc.snoop, .coh .bus.go .spark{ animation:none; } .coh .badge{ transition:none; } }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site">
+  <div class="site-top">
+    <a class="backlink" href="index.html">&larr; Inicio</a>
+    <button
+      id="theme-toggle"
+      class="theme-toggle"
+      type="button"
+      aria-pressed="false"
+      title="Cambiar entre modo claro y oscuro"
+    >
+      <span class="icon" aria-hidden="true">🌙</span>
+      <span class="theme-label-light">Modo oscuro</span>
+      <span class="theme-label-dark">Modo claro</span>
+    </button>
+  </div>
+  <p class="kicker">Arquitectura de Computadoras — Unidad 6: Coherencia de caché</p>
+  <h1>Protocolo snoopy: coherencia espiando el bus</h1>
+  <p class="lede">Cómo varias cachés mantienen coherente un mismo dato sin un árbitro central: todas escuchan el bus y reaccionan a lo que hacen las demás. Vas a poder hacer leer, escribir y desalojar a tres procesadores y ver qué pasa por el bus con cada protocolo.</p>
+  <div class="hero coh-hero">
+    <svg viewBox="0 0 640 210" role="img" aria-label="Tres cachés conectadas a un bus compartido, que también conecta con la memoria">
+      <rect class="box" x="40" y="10" width="140" height="62" rx="12"/><text class="lbl" x="110" y="38" text-anchor="middle">P1 + caché</text><text class="cap" x="110" y="58" text-anchor="middle">escucha el bus</text>
+      <rect class="box" x="250" y="10" width="140" height="62" rx="12"/><text class="lbl" x="320" y="38" text-anchor="middle">P2 + caché</text><text class="cap" x="320" y="58" text-anchor="middle">escucha el bus</text>
+      <rect class="box" x="460" y="10" width="140" height="62" rx="12"/><text class="lbl" x="530" y="38" text-anchor="middle">P3 + caché</text><text class="cap" x="530" y="58" text-anchor="middle">escucha el bus</text>
+      <line class="tap" x1="110" y1="72" x2="110" y2="112"/><line class="tap" x1="320" y1="72" x2="320" y2="112"/><line class="tap" x1="530" y1="72" x2="530" y2="112"/>
+      <line class="busline" x1="30" y1="115" x2="610" y2="115"/>
+      <circle class="pulse" r="7" cy="115" cx="110">
+        <animate attributeName="cx" values="110;610;30;110" keyTimes="0;.45;.46;1" dur="5s" repeatCount="indefinite"/>
+      </circle>
+      <line class="tap" x1="320" y1="118" x2="320" y2="146"/>
+      <rect class="box" x="230" y="146" width="180" height="52" rx="12"/><text class="lbl" x="320" y="177" text-anchor="middle">Memoria principal</text>
+    </svg>
+  </div>
+</header>
+
+<div class="shell">
+
+  <nav class="side" id="sidenav" aria-label="Secciones de la guía">
+    <div class="brand">Coherencia de caché<small>Unidad 6 — protocolo snoopy</small></div>
+    <ol>
+      <li class="grp">
+        <p class="grp-title">El problema</p>
+        <a href="#s-problema">1 Copias desincronizadas</a>
+        <a href="#s-idea">2 Todos escuchan el bus</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Protocolos</p>
+        <a href="#s-evolucion">3 Dos estados, MSI y MESI</a>
+        <a href="#s-simulador">↳ Simulador</a>
+        <a href="#s-estados">4 Los estados de MESI</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Autoevaluación</p>
+        <a href="#s-quiz">Quiz de repaso</a>
+      </li>
+    </ol>
+  </nav>
+
+  <main id="main">
+
+    <!-- ============ 1 PROBLEMA ============ -->
+    <section class="block coh" id="s-problema">
+      <h2><span class="num">1</span> El problema: copias que se desincronizan</h2>
+      <p class="sub">Qué sale mal cuando cada procesador tiene su propia caché.</p>
+      <p>En un multiprocesador de memoria compartida, cada procesador tiene su propia caché. Si P1 y P2 leen la variable X, cada uno se queda con una copia. Si después P1 escribe X, la copia de P2 queda vieja, y P2 sigue leyendo el valor anterior sin enterarse. Eso es el problema de <strong>coherencia de caché</strong>.</p>
+      <div class="note info">Imaginá un documento original en un archivo central (la memoria) y varias personas con fotocopias en su escritorio (las cachés). Si alguien corrige su fotocopia, los demás siguen trabajando con una versión desactualizada. Hace falta alguna forma de avisarles.</div>
+    </section>
+
+    <!-- ============ 2 IDEA ============ -->
+    <section class="block coh" id="s-idea">
+      <h2><span class="num">2</span> La idea: todos escuchan el bus</h2>
+      <p class="sub">Coherencia sin registro central: cada caché espía las transacciones de las demás.</p>
+      <p>Con un bus, todas las transacciones pasan por un medio que cualquiera puede ver. Cada controlador de caché, además de atender a su procesador, <strong>espía el bus</strong> todo el tiempo. Cuando ve una transacción sobre una dirección de la que tiene copia, reacciona: invalida su copia o entrega el dato.</p>
+      <p>Siguiendo la analogía: todos trabajan en la misma sala. Quien corrige su fotocopia lo anuncia en voz alta, y quien tenga una copia de esa página la descarta.</p>
+      <p>Cada bloque de cada caché tiene un <strong>estado</strong>, y no hay registro central. Los cambios de estado los disparan dos tipos de eventos: pedidos del propio procesador (<code>PrRd</code>, <code>PrWr</code>) y transacciones que se observan en el bus, generadas por otros.</p>
+      <div class="props">
+        <div class="panel"><strong>Propagación</strong><p>Todos escuchan el bus, así que toda escritura llega a todas las cachés.</p></div>
+        <div class="panel"><strong>Serialización</strong><p>El bus atiende una transacción por vez y el arbitraje fija el orden: todos ven las escrituras en la misma secuencia.</p></div>
+      </div>
+      <p>Ante una escritura hay dos políticas: <strong>invalidar</strong> las otras copias («escribí, descarten las suyas») o <strong>actualizarlas</strong> («escribí, este es el valor nuevo»). Los tres protocolos de abajo usan invalidación.</p>
+    </section>
+
+    <!-- ============ 3 EVOLUCIÓN ============ -->
+    <section class="block coh" id="s-evolucion">
+      <h2><span class="num">3</span> Tres versiones, cada una arregla la anterior</h2>
+      <p class="sub">De write-through con dos estados a MESI: qué problema resuelve cada estado nuevo.</p>
+      <ol class="steps">
+        <li>
+          <h3>Dos estados, con write-through</h3>
+          <div class="chips"><span class="chip c-V">V válido</span><span class="chip c-I">I inválido</span></div>
+          <p>Usa escritura directa y no write allocate. Leer en I es un fallo: se trae de memoria y se pasa a V. Toda escritura va a memoria y se anuncia con <code>BusWr</code>; si el bloque estaba en I, sigue en I. Quien vea un <code>BusWr</code> sobre un bloque que tiene en V lo pasa a I.</p>
+          <p class="limit">Límite: cada escritura ocupa el bus. Con 2000 MHz, CPI 1 y un 15 % de stores de 8 bytes, cada procesador genera 2400 MB/s; un bus de 10 GB/s se satura con cuatro.</p>
+        </li>
+        <li>
+          <h3>MSI, con write-back</h3>
+          <div class="chips"><span class="chip c-M">M modificado</span><span class="chip c-S">S compartido</span><span class="chip c-I">I inválido</span></div>
+          <p>Se escribe solo en la caché y se vuelca después, así que la memoria puede quedar vieja. El estado M marca a la única caché con la versión buena: puede leer y escribir sin usar el bus. Aparecen <code>BusRdX</code> («leo para modificar, invaliden») y <code>Flush</code> («vuelco mi bloque modificado»). Si alguien pide un bloque que otra caché tiene en M, esa caché responde con <code>Flush</code>.</p>
+          <p class="limit">Límite: leer y luego escribir un dato que nadie más tiene cuesta dos transacciones, <code>BusRd</code> y <code>BusRdX</code>, aunque no haya a quién invalidar.</p>
+        </li>
+        <li>
+          <h3>MESI, con estado exclusivo</h3>
+          <div class="chips"><span class="chip c-M">M modificado</span><span class="chip c-E">E exclusivo</span><span class="chip c-S">S compartido</span><span class="chip c-I">I inválido</span></div>
+          <p>Al leer, se consulta en el bus si alguien más tiene el bloque mediante la señal S. Si alguien lo tiene, se entra en S; si nadie, en E. Desde E se pasa a M <strong>sin ninguna transacción de bus</strong>, porque ya se sabe que se es el único.</p>
+          <p class="limit">Límite general: como todos deben escucharlo todo, el bus no escala a muchos procesadores. Para eso existen los protocolos basados en directorio.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ============ ↳ SIMULADOR ============ -->
+    <section class="block coh" id="s-simulador">
+      <h2><span class="num">↳</span> Simulador: tres cachés y un bus</h2>
+      <p class="sub">Tres procesadores comparten la variable X. Hacé leer, escribir o desalojar a cada uno y observá qué pasa por el bus y cómo reaccionan los demás.</p>
+      <div class="sim">
+        <div class="sim-top">
+          <div class="seg" role="group" aria-label="Protocolo">
+            <button type="button" data-proto="VI">Dos estados</button>
+            <button type="button" data-proto="MSI">MSI</button>
+            <button type="button" data-proto="MESI" aria-pressed="true">MESI</button>
+          </div>
+        </div>
+        <div class="legend" id="coh-legend"></div>
+
+        <div class="procs" id="coh-procs"></div>
+        <div class="taps" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="bus" id="coh-bus" aria-live="polite"><div class="spark"></div><div class="bus-label" id="coh-busLabel">Bus libre</div></div>
+        <div class="mem-tap" aria-hidden="true"></div>
+        <div class="mem-row"><div class="mem" id="coh-mem"></div></div>
+
+        <div class="sim-bottom">
+          <div class="coh-panel">
+            <h3>Qué acaba de pasar</h3>
+            <ul class="narr empty" id="coh-narr"><li>Todavía nadie tocó X. Todas las cachés arrancan en I y la memoria tiene X = 10.</li></ul>
+            <details class="hist"><summary>Historial</summary><ol id="coh-hist"></ol></details>
+          </div>
+          <div class="coh-panel">
+            <div class="coh-stats">
+              <div><b id="coh-busCount">0</b><span>transacciones de bus</span></div>
+              <div><b id="coh-opCount">0</b><span>operaciones</span></div>
+            </div>
+            <p class="truth" id="coh-truth"></p>
+            <h3 style="margin-top:16px">Escenarios guiados</h3>
+            <select id="coh-scen" aria-label="Escenario">
+              <option value="">Elegir un escenario…</option>
+              <option value="apuntes">Ejemplo de los apuntes</option>
+              <option value="privado">Dato que nadie comparte</option>
+              <option value="turnos">Dos escritores por turnos</option>
+            </select>
+            <div class="scen-steps" id="coh-scenSteps"></div>
+            <div class="actions">
+              <button class="btn" id="coh-next" type="button" disabled>Siguiente paso</button>
+              <button class="btn ghost" id="coh-reset" type="button">Reiniciar</button>
+            </div>
+            <p class="compare" id="coh-compare"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4 ESTADOS ============ -->
+    <section class="block coh" id="s-estados">
+      <h2><span class="num">4</span> Los cuatro estados de MESI</h2>
+      <p class="sub">Qué sabe una caché sobre su copia en cada estado.</p>
+      <div class="table-scroll">
+        <table class="cmp">
+          <tr><th>Estado</th><th>¿Tengo copia?</th><th>¿Es la única?</th><th>¿Memoria actualizada?</th><th>¿Escribo sin avisar?</th></tr>
+          <tr><td class="c-M">M</td><td>Sí</td><td>Sí</td><td>No</td><td>Sí</td></tr>
+          <tr><td class="c-E">E</td><td>Sí</td><td>Sí</td><td>Sí</td><td>Sí, y paso a M</td></tr>
+          <tr><td class="c-S">S</td><td>Sí</td><td>No necesariamente</td><td>Sí</td><td>No, primero <code>BusRdX</code></td></tr>
+          <tr><td class="c-I">I</td><td>No</td><td>No aplica</td><td>No aplica</td><td>No</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ QUIZ ============ -->
+    <section class="block" id="s-quiz">
+      <h2><span class="num">✓</span> Quiz de repaso</h2>
+      <p class="sub">Cinco preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
+      <div id="quizWrap"></div>
+      <p class="quiz-score" id="quizScore"></p>
+    </section>
+
+    <footer class="pagefoot">Basado en los apuntes de Arquitectura de Computadoras (UNC, FCEFyN), unidad 6: coherencia de caché en multiprocesadores. Hecho como material de repaso; no reemplaza la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
+  </main>
+</div>
+
+<script>
+/* ==== STD:SCRIPT v1 ==== (tema, scroll-spy del nav lateral y motor del quiz) */
+(function () {
+  var btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  function sync() {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    var icon = btn.querySelector('.icon');
+    if (icon) icon.textContent = dark ? '☀️' : '🌙';
+  }
+  btn.addEventListener('click', function () {
+    var el = document.documentElement;
+    var next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+    el.dataset.theme = next;
+    try { localStorage.setItem('tw-theme', next); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.side a[href^="#"]'));
+  var targets = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+  links.forEach(function (a, i) {
+    a.addEventListener('click', function (e) {
+      // scroll manual: navegar por hash puede recargar la página dentro de visores embebidos
+      e.preventDefault();
+      if (targets[i]) targets[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try { history.replaceState(null, '', a.getAttribute('href')); } catch (err) {}
+    });
+  });
+  function onScroll() {
+    var y = window.scrollY + 120, current = -1;
+    targets.forEach(function (t, i) {
+      if (t && t.getBoundingClientRect().top + window.scrollY <= y) current = i;
+    });
+    links.forEach(function (a, i) { a.classList.toggle('active', i === current); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+// stdQuiz([{q, opts:[...], correct:<índice>, exp}], 'quizWrap', 'quizScore')
+function stdQuiz(items, wrapId, scoreId) {
+  var wrap = document.getElementById(wrapId || 'quizWrap');
+  var scoreEl = document.getElementById(scoreId || 'quizScore');
+  if (!wrap) return;
+  function score() {
+    var c = 0, a = 0;
+    wrap.querySelectorAll('.quiz-item').forEach(function (div) {
+      if (div.dataset.answered) { a++; if (div.dataset.right === '1') c++; }
+    });
+    if (scoreEl) scoreEl.textContent = 'Puntaje: ' + c + ' / ' + a + ' respondidas (de ' + items.length + ' preguntas)';
+  }
+  items.forEach(function (item, qi) {
+    var div = document.createElement('div');
+    div.className = 'quiz-item';
+    div.innerHTML = '<p class="q">' + (qi + 1) + '. ' + item.q + '</p><div class="opts">'
+      + item.opts.map(function (o, oi) {
+        return '<label><input type="radio" name="' + wrap.id + '-q' + qi + '" value="' + oi + '"><span>' + o + '</span></label>';
+      }).join('') + '</div><div class="fb" aria-live="polite"></div>';
+    wrap.appendChild(div);
+    div.querySelectorAll('input').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        var right = parseInt(inp.value, 10) === item.correct;
+        div.dataset.answered = '1';
+        div.dataset.right = right ? '1' : '0';
+        var fb = div.querySelector('.fb');
+        fb.className = 'fb ' + (right ? 'ok' : 'bad');
+        fb.textContent = (right ? '✓ Correcto. ' : '✗ No es correcto. ') + item.exp;
+        score();
+      });
+    });
+  });
+  score();
+}
+/* ==== /STD:SCRIPT ==== */
+</script>
+<script>
+/* ==== PAGE:SCRIPT ==== simulador de coherencia (motor del apunte, sin cambios) y quiz */
+(function(){
+  "use strict";
+  var NAMES = {M:"Modificado",E:"Exclusivo",S:"Compartido",V:"Válido",I:"Inválido"};
+  var LEGENDS = {
+    VI:[["V","válido: la copia sirve"],["I","inválido o ausente"]],
+    MSI:[["M","única copia, memoria vieja"],["S","copia limpia, puede haber otras"],["I","inválido o ausente"]],
+    MESI:[["M","única copia, memoria vieja"],["E","única copia, limpia"],["S","copia limpia compartida"],["I","inválido o ausente"]]
+  };
+
+  function fresh(protocol){
+    return {protocol:protocol, caches:[0,1,2].map(function(){return {st:"I",val:null};}), mem:10, latest:10, bus:0, ops:0};
+  }
+  function P(i){return "P"+(i+1);}
+
+  /* Motor: cada operación muta el estado y devuelve lo ocurrido */
+  function read(s,i){
+    var c=s.caches[i], out={lines:[],bus:[],snoop:[]};
+    s.ops++;
+    if(s.protocol==="VI"){
+      if(c.st==="V"){out.lines.push(P(i)+" lee X: acierto en estado V. No usa el bus.");return out;}
+      out.bus.push({who:i,op:"BusRd"}); s.bus++;
+      c.st="V"; c.val=s.mem;
+      out.lines.push(P(i)+" lee X: fallo. Emite BusRd y la memoria entrega X = "+s.mem+". Pasa de I a V.");
+      out.lines.push("Las demás cachés ven el BusRd, pero una lectura no las afecta.");
+      return out;
+    }
+    if(c.st!=="I"){out.lines.push(P(i)+" lee X: acierto en estado "+c.st+". No usa el bus.");return out;}
+    out.bus.push({who:i,op:"BusRd"}); s.bus++;
+    out.lines.push(P(i)+" lee X: fallo, estaba en I. Emite BusRd.");
+    s.caches.forEach(function(o,j){
+      if(j===i) return;
+      if(o.st==="M"){
+        s.mem=o.val; o.st="S"; out.snoop.push(j);
+        out.bus.push({who:j,op:"Flush"}); s.bus++;
+        out.lines.push(P(j)+" espiaba el bus y tiene X en M: hace Flush con X = "+o.val+". La memoria se actualiza y "+P(j)+" pasa de M a S.");
+      } else if(o.st==="E"){
+        o.st="S"; out.snoop.push(j);
+        out.lines.push(P(j)+" tenía X en E: ahora hay otra copia, así que pasa a S.");
+      } else if(o.st==="S"){
+        out.snoop.push(j);
+      }
+    });
+    var shared=s.caches.some(function(o,j){return j!==i && o.st!=="I";});
+    c.val=s.mem;
+    if(s.protocol==="MSI"){ c.st="S"; out.lines.push(P(i)+" recibe X = "+c.val+" y pasa de I a S."); }
+    else if(shared){ c.st="S"; out.lines.push("Otra caché activa la señal S: "+P(i)+" recibe X = "+c.val+" y pasa de I a S."); }
+    else { c.st="E"; out.lines.push("Nadie activa la señal S: "+P(i)+" recibe X = "+c.val+" y pasa de I a E, porque es la única copia."); }
+    return out;
+  }
+
+  function write(s,i){
+    var c=s.caches[i], out={lines:[],bus:[],snoop:[]}, v=s.latest+1;
+    s.latest=v; s.ops++;
+    if(s.protocol==="VI"){
+      out.bus.push({who:i,op:"BusWr"}); s.bus++; s.mem=v;
+      if(c.st==="V"){ c.val=v; out.lines.push(P(i)+" escribe X = "+v+" en su caché y en memoria. Emite BusWr y sigue en V."); }
+      else out.lines.push(P(i)+" escribe X = "+v+" directo en memoria y emite BusWr. Sigue en I por no write allocate.");
+      s.caches.forEach(function(o,j){ if(j!==i && o.st==="V"){ o.st="I"; out.snoop.push(j); out.lines.push(P(j)+" ve el BusWr: su copia quedó vieja y pasa de V a I."); }});
+      return out;
+    }
+    if(c.st==="M"){ c.val=v; out.lines.push(P(i)+" escribe X = "+v+": acierto en M, escribe solo en su caché. Sin bus. La memoria sigue desactualizada."); return out; }
+    if(c.st==="E"){ c.st="M"; c.val=v; out.lines.push(P(i)+" escribe X = "+v+": estaba en E, sabe que es la única copia y pasa a M sin usar el bus."); return out; }
+    out.bus.push({who:i,op:"BusRdX"}); s.bus++;
+    out.lines.push(P(i)+" quiere escribir X y estaba en "+c.st+": emite BusRdX para que los demás invaliden.");
+    s.caches.forEach(function(o,j){
+      if(j===i) return;
+      if(o.st==="M"){
+        s.mem=o.val; out.bus.push({who:j,op:"Flush"}); s.bus++;
+        out.lines.push(P(j)+" tenía X en M: hace Flush con X = "+o.val+" y pasa a I.");
+        o.st="I"; out.snoop.push(j);
+      } else if(o.st!=="I"){
+        out.lines.push(P(j)+" ve el BusRdX y pasa de "+o.st+" a I.");
+        o.st="I"; out.snoop.push(j);
+      }
+    });
+    c.st="M"; c.val=v;
+    out.lines.push(P(i)+" escribe X = "+v+" en su caché y queda en M. La memoria no se toca.");
+    return out;
+  }
+
+  function evict(s,i){
+    var c=s.caches[i], out={lines:[],bus:[],snoop:[]};
+    s.ops++;
+    if(c.st==="I"){ out.lines.push(P(i)+" no tiene X en caché: no hay nada que desalojar."); return out; }
+    if(c.st==="M"){
+      out.bus.push({who:i,op:"Flush"}); s.bus++; s.mem=c.val;
+      out.lines.push(P(i)+" desaloja X, que estaba en M: hace Flush con X = "+c.val+" para no perder el valor. Pasa a I.");
+    } else {
+      out.lines.push(P(i)+" desaloja X, que estaba en "+c.st+": la memoria ya tiene ese valor, así que solo pasa a I sin usar el bus.");
+    }
+    c.st="I"; c.val=null;
+    return out;
+  }
+
+  var OPS={r:read,w:write,e:evict};
+  var OPNAME={r:"lee",w:"escribe",e:"desaloja"};
+
+  var SCEN={
+    apuntes:{steps:[["r",0],["r",1],["w",0],["r",1]]},
+    privado:{steps:[["r",0],["w",0],["w",0]]},
+    turnos:{steps:[["w",0],["w",1],["w",0],["r",2]]}
+  };
+
+  function countBus(protocol,steps){
+    var s=fresh(protocol); steps.forEach(function(st){OPS[st[0]](s,st[1]);}); return s.bus;
+  }
+
+  /* Estado de la interfaz */
+  var state=fresh("MESI"), hist=[], scen=null, scenIdx=0;
+  var $=function(id){return document.getElementById("coh-"+id);};
+  var root=document.getElementById("s-simulador");
+  if(!root) return;
+
+  function buildProcs(){
+    var html="";
+    for(var i=0;i<3;i++){
+      html+='<div class="proc" id="coh-proc'+i+'">'+
+        '<div class="proc-head">'+P(i)+' <small>caché privada</small></div>'+
+        '<div class="state"><div class="badge" id="coh-badge'+i+'">I</div><div class="state-txt"><b id="coh-stname'+i+'">Inválido</b><span class="xval" id="coh-xval'+i+'">sin copia</span></div></div>'+
+        '<div class="acts">'+
+          '<button type="button" data-op="r" data-i="'+i+'">Leer X</button>'+
+          '<button type="button" class="w" data-op="w" data-i="'+i+'">Escribir X</button>'+
+          '<button type="button" data-op="e" data-i="'+i+'">Desalojar</button>'+
+        '</div></div>';
+    }
+    $("procs").innerHTML=html;
+  }
+
+  function render(){
+    root.querySelectorAll(".seg button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.proto===state.protocol));});
+    $("legend").innerHTML=LEGENDS[state.protocol].map(function(l){return '<span><b class="c-'+l[0]+'">'+l[0]+'</b> '+l[1]+'</span>';}).join("");
+    state.caches.forEach(function(c,i){
+      var b=$("badge"+i); b.className="badge st-"+c.st; b.textContent=c.st;
+      $("stname"+i).textContent=NAMES[c.st];
+      $("xval"+i).textContent=c.st==="I"?"sin copia":"X = "+c.val;
+    });
+    var fresh_=state.mem===state.latest;
+    $("mem").innerHTML='<b>Memoria</b><span class="xval">X = '+state.mem+'</span><span class="pill '+(fresh_?"ok":"stale")+'">'+(fresh_?"actualizada":"desactualizada")+'</span>';
+    $("busCount").textContent=state.bus;
+    $("opCount").textContent=state.ops;
+    var holders=[];
+    state.caches.forEach(function(c,i){ if(c.st!=="I" && c.val===state.latest) holders.push(P(i)+" ("+c.st+")"); });
+    if(fresh_) holders.push("la memoria");
+    $("truth").innerHTML="Valor más reciente de X: <b>"+state.latest+"</b>. Lo tienen: "+holders.join(", ")+".";
+    renderScen();
+  }
+
+  function renderScen(){
+    if(!scen){ $("scenSteps").innerHTML=""; $("next").disabled=true; $("compare").textContent=""; return; }
+    $("scenSteps").innerHTML=scen.steps.map(function(st,k){
+      var cls=k<scenIdx?"done":(k===scenIdx?"next":"");
+      return '<span class="'+cls+'">'+P(st[1])+" "+OPNAME[st[0]]+'</span>';
+    }).join("");
+    $("next").disabled=scenIdx>=scen.steps.length;
+    $("next").textContent=scenIdx>=scen.steps.length?"Escenario terminado":"Siguiente paso";
+    var n={VI:countBus("VI",scen.steps),MSI:countBus("MSI",scen.steps),MESI:countBus("MESI",scen.steps)};
+    $("compare").innerHTML="Transacciones de bus en este escenario: dos estados <b>"+n.VI+"</b>, MSI <b>"+n.MSI+"</b>, MESI <b>"+n.MESI+"</b>. Cambiá de protocolo para verlo paso a paso.";
+  }
+
+  var reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function animate(out,actor){
+    root.querySelectorAll(".proc").forEach(function(p){p.classList.remove("actor","snoop");});
+    $("proc"+actor).classList.add("actor");
+    var bus=$("bus");
+    if(out.bus.length){
+      $("busLabel").innerHTML=out.bus.map(function(b){return P(b.who)+' emite <span class="coh-tok">'+b.op+'</span>';}).join(" y luego ");
+      bus.classList.remove("go"); void bus.offsetWidth; bus.classList.add("go");
+    } else {
+      $("busLabel").textContent="Bus libre: esta operación no generó transacciones";
+    }
+    if(!reduce){
+      out.snoop.forEach(function(j){ var el=$("proc"+j); void el.offsetWidth; el.classList.add("snoop"); });
+    }
+  }
+
+  function run(op,i){
+    var out=OPS[op](state,i);
+    var narr=$("narr"); narr.classList.remove("empty");
+    narr.innerHTML=out.lines.map(function(l){return "<li>"+l+"</li>";}).join("");
+    var li=document.createElement("li");
+    li.textContent="["+(state.protocol==="VI"?"Dos estados":state.protocol)+"] "+out.lines[0];
+    $("hist").appendChild(li);
+    animate(out,i);
+    render();
+  }
+
+  function reset(keepScen){
+    state=fresh(state.protocol);
+    $("hist").innerHTML="";
+    var narr=$("narr"); narr.className="narr empty";
+    narr.innerHTML="<li>Todas las cachés arrancan en I y la memoria tiene X = 10.</li>";
+    $("busLabel").textContent="Bus libre";
+    root.querySelectorAll(".proc").forEach(function(p){p.classList.remove("actor","snoop");});
+    scenIdx=0;
+    if(!keepScen){ scen=null; $("scen").value=""; }
+    render();
+  }
+
+  buildProcs();
+  $("procs").addEventListener("click",function(e){
+    var b=e.target.closest("button[data-op]"); if(!b) return;
+    run(b.dataset.op,Number(b.dataset.i));
+  });
+  root.querySelectorAll(".seg button").forEach(function(b){
+    b.addEventListener("click",function(){ state.protocol=b.dataset.proto; reset(true); });
+  });
+  $("reset").addEventListener("click",function(){ reset(true); });
+  $("scen").addEventListener("change",function(e){ scen=SCEN[e.target.value]||null; reset(true); });
+  $("next").addEventListener("click",function(){
+    if(!scen || scenIdx>=scen.steps.length) return;
+    var st=scen.steps[scenIdx]; scenIdx++; run(st[0],st[1]);
+  });
+  render();
+})();
+
+stdQuiz([
+    {q:"En MSI, P1 tiene X en M y P2 lee X. ¿Qué pasa?",
+     opts:["P2 lee de memoria el valor viejo","P1 hace Flush, pasa a S y P2 queda en S","P1 pasa a I y P2 queda en M","P2 queda en E"],correct:1,
+     exp:"P1 espía el BusRd de P2, vuelca el dato bueno con Flush (la memoria se actualiza) y ambos quedan con copias limpias en S."},
+    {q:"¿Qué agrega MESI respecto de MSI?",
+     opts:["Un estado para bloques sucios compartidos","El estado E, para pasar a M sin transacción de bus cuando nadie más tiene el bloque","Actualización en lugar de invalidación","Un directorio centralizado"],correct:1,
+     exp:"E indica copia única y limpia. Escribir desde E no necesita BusRdX porque no hay nadie a quien invalidar."},
+    {q:"En el protocolo de dos estados, P1 escribe X sin tenerlo en caché. ¿En qué estado queda?",
+     opts:["V","M","I","S"],correct:2,
+     exp:"Usa no write allocate: la escritura va directo a memoria y el bloque no se trae a la caché, así que sigue en I."},
+    {q:"¿Por qué el protocolo de dos estados escala mal?",
+     opts:["Porque no garantiza la serialización","Porque cada escritura ocupa el bus","Porque necesita un bit dirty","Porque las lecturas nunca aciertan"],correct:1,
+     exp:"Con write-through, cada store viaja a memoria por el bus. Con unos pocos procesadores el ancho de banda se agota."},
+    {q:"¿Qué garantiza que todas las cachés vean las escrituras en el mismo orden?",
+     opts:["El bit de validez","La señal S","Que el bus atiende una transacción por vez y el arbitraje fija el orden","El Flush"],correct:2,
+     exp:"Es la propiedad de serialización: el bus es atómico y todos observan sus transacciones en la misma secuencia."}
+  ]);
+</script>
+</body>
+</html>

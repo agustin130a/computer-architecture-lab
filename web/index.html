@@ -42,6 +42,8 @@
     --c-pred-soft: #fdf2e3;
     --c-mem: #0f766e;
     --c-mem-soft: #e6f4f2;
+    --c-coh: #be185d;
+    --c-coh-soft: #fce7f3;
   }
   html[data-theme='dark']{
     /* ---- Tema oscuro (navy), tokens compartidos con predictores.html / cache.html ---- */
@@ -63,6 +65,8 @@
     --c-pred-soft: #3a2c17;
     --c-mem: #4fc9b8;
     --c-mem-soft: #163431;
+    --c-coh: #f472b6;
+    --c-coh-soft: #3b1a2c;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
@@ -128,7 +132,7 @@
 
   /* ---------- Tarjetas por página ---------- */
   main{ padding:18px 0 60px; }
-  .cards{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px; margin-top:18px; }
+  .cards{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; margin-top:18px; align-items:start; }
   .card{
     --c: var(--accent); --c-soft: var(--panel-2);
     display:flex; flex-direction:column;
@@ -138,9 +142,11 @@
   .card.tomasulo{ --c: var(--c-tomasulo); --c-soft: var(--c-tomasulo-soft); }
   .card.pred{ --c: var(--c-pred); --c-soft: var(--c-pred-soft); }
   .card.mem{ --c: var(--c-mem); --c-soft: var(--c-mem-soft); }
+  .card.coh{ --c: var(--c-coh); --c-soft: var(--c-coh-soft); }
   .dot.tomasulo{ background:var(--c-tomasulo-soft); color:var(--c-tomasulo); }
   .dot.pred{ background:var(--c-pred-soft); color:var(--c-pred); }
   .dot.mem{ background:var(--c-mem-soft); color:var(--c-mem); }
+  .dot.coh{ background:var(--c-coh-soft); color:var(--c-coh); }
 
   .card .tag{
     align-self:flex-start; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
@@ -171,7 +177,6 @@
   footer.pagefoot{ color:var(--muted); font-size:.85rem; padding:10px 0 40px; border-top:1px solid var(--line); }
   footer.pagefoot p{ margin:16px 0 0; max-width:80ch; }
 
-  @media (max-width:980px){ .cards{ grid-template-columns:1fr 1fr; } }
   @media (max-width:680px){
     .wrap{ padding:0 16px; }
     .cards{ grid-template-columns:1fr; }
@@ -203,7 +208,7 @@
         <span class="theme-label-dark">Modo claro</span>
       </button>
     </div>
-    <p class="lede">Tres piezas para ver por dentro cómo un procesador moderno evita quedarse esperando: ejecuta fuera de orden, adivina hacia dónde van los saltos y esconde la lentitud de la memoria detrás de la caché. Cada una se puede tocar: simuladores paso a paso, no solo texto.</p>
+    <p class="lede">Cuatro piezas para ver por dentro cómo un procesador moderno evita quedarse esperando: ejecuta fuera de orden, adivina hacia dónde van los saltos, esconde la lentitud de la memoria detrás de la caché y, cuando hay varios procesadores, mantiene coherentes sus copias. Cada una se puede tocar: simuladores paso a paso, no solo texto.</p>
 
     <nav class="path" aria-label="Recorrido sugerido">
       <a class="stop" href="#p-tomasulo"><span class="dot tomasulo">1</span><span class="txt"><b>Ejecución fuera de orden</b><span>Tomasulo: Issue → Exe → WB</span></span></a>
@@ -211,6 +216,8 @@
       <a class="stop" href="#p-pred"><span class="dot pred">2</span><span class="txt"><b>Predicción de saltos</b><span>Que el pipeline no se vacíe</span></span></a>
       <span class="arrow" aria-hidden="true">→</span>
       <a class="stop" href="#p-mem"><span class="dot mem">3</span><span class="txt"><b>Jerarquía de memoria</b><span>Caché y memoria virtual</span></span></a>
+      <span class="arrow" aria-hidden="true">→</span>
+      <a class="stop" href="#p-coh"><span class="dot coh">4</span><span class="txt"><b>Coherencia de caché</b><span>Varios procesadores, un dato</span></span></a>
     </nav>
   </header>
 
@@ -270,6 +277,22 @@
           <li><a href="cache.html#s-quiz"><span class="n">✓</span>Quiz de repaso</a></li>
         </ul>
         <a class="open" href="cache.html">Abrir la guía →</a>
+      </article>
+
+      <article class="card coh" id="p-coh">
+        <span class="tag">Guía interactiva</span>
+        <h2><a href="coherencia.html">Coherencia de caché</a></h2>
+        <p class="desc">Unidad 6: cómo varias cachés mantienen coherente un mismo dato espiando el bus, del protocolo de dos estados a MSI y MESI, con simulador de tres procesadores.</p>
+        <h3>Contenido</h3>
+        <ul class="toc">
+          <li><a href="coherencia.html#s-problema"><span class="n">1</span>Copias que se desincronizan</a></li>
+          <li><a href="coherencia.html#s-idea"><span class="n">2</span>Todos escuchan el bus</a></li>
+          <li><a href="coherencia.html#s-evolucion"><span class="n">3</span>Dos estados, MSI y MESI</a></li>
+          <li><a href="coherencia.html#s-simulador"><span class="n">↳</span>Simulador: tres cachés y un bus<span class="new">nuevo</span></a></li>
+          <li><a href="coherencia.html#s-estados"><span class="n">4</span>Los estados de MESI</a></li>
+          <li><a href="coherencia.html#s-quiz"><span class="n">✓</span>Quiz de repaso</a></li>
+        </ul>
+        <a class="open" href="coherencia.html">Abrir la guía →</a>
       </article>
 
     </div>
