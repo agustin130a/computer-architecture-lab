@@ -24,35 +24,29 @@
   </head>
   <body>
     <a class="skip-link" href="#main">Saltar al contenido</a>
-    <header>
-      <div class="header-inner">
-        <div>
-          <h1>Tomasulo Web</h1>
-          <p class="subtitle">Simulador ciclo a ciclo del algoritmo de Tomasulo (Issue → Execute → Write Back)</p>
+    <header class="site">
+      <div class="site-inner">
+        <div class="site-top">
+          <a class="backlink" href="index.html">&larr; Inicio</a>
+          <button
+            id="theme-toggle"
+            class="theme-toggle"
+            type="button"
+            aria-pressed="false"
+            title="Cambiar entre modo claro y oscuro"
+          >
+            <span class="icon" aria-hidden="true">🌙</span>
+            <span class="theme-label-light">Modo oscuro</span>
+            <span class="theme-label-dark">Modo claro</span>
+          </button>
         </div>
-        <button
-          id="theme-toggle"
-          class="theme-toggle"
-          type="button"
-          aria-pressed="false"
-          title="Cambiar entre modo claro y oscuro"
-        >
-          <span class="icon" aria-hidden="true">🌙</span>
-          <span class="theme-label-light">Modo oscuro</span>
-          <span class="theme-label-dark">Modo claro</span>
-        </button>
+        <p class="kicker">Arquitectura de Computadoras — Planificación dinámica</p>
+        <h1>Simulador de Tomasulo</h1>
+        <p class="lede">Ejecución fuera de orden ciclo a ciclo, con estaciones de reserva y renombrado de registros (Issue → Execute → Write Back). Elegí un programa de ejemplo o cargá el tuyo y avanzá paso a paso.</p>
       </div>
     </header>
 
     <main id="main">
-      <section class="page-nav" aria-label="Inicio">
-        <div class="page-nav-text">
-          <strong>Computer Architecture Lab</strong>
-          <span>Volvé al inicio para ver las guías de predicción de saltos y de jerarquía de memoria.</span>
-        </div>
-        <a class="page-nav-link" href="index.html">← Ir al inicio</a>
-      </section>
-
       <section class="controls" aria-label="Selección de programa">
         <div class="control-group">
           <label for="example-select">Ejemplo</label>
@@ -173,7 +167,8 @@
       <p>
         Portado a web (TypeScript + Canvas) desde
         <strong>Tomasulo-Visual</strong> (Java Swing). El motor replica ciclo a
-        ciclo la lógica original.
+        ciclo la lógica original. Parte del
+        <a href="index.html">Computer Architecture Lab</a>.
       </p>
     </footer>
 

@@ -69,22 +69,33 @@ body {
 }
 .skip-link:focus { left: 8px; top: 8px; }
 
-header {
-  padding: 18px 24px;
+header.site {
+  padding: 20px 24px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
 }
-.header-inner {
-  max-width: 1000px;
-  margin: 0 auto;
+.site-inner { max-width: 1000px; margin: 0 auto; }
+.site-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  margin-bottom: 6px;
 }
-header h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.01em; }
-.subtitle { margin: 4px 0 0; color: var(--muted); }
+.backlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.backlink:hover { text-decoration: underline; }
+header.site .kicker { margin: 0; color: var(--muted); font-size: 0.9rem; }
+header.site h1 { margin: 10px 0 0; font-size: clamp(24px, 3vw, 34px); letter-spacing: -0.01em; }
+header.site .lede { margin: 10px 0 4px; color: var(--muted); max-width: 72ch; }
 
 /* ---- Theme toggle ---- */
 .theme-toggle {
@@ -118,36 +129,6 @@ main {
 
 section h2 { font-size: 1.1rem; margin: 0 0 12px; }
 
-.page-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--panel);
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  border-radius: 10px;
-  box-shadow: var(--shadow);
-}
-.page-nav-text { display: flex; flex-direction: column; gap: 2px; }
-.page-nav-text strong { font-size: 1rem; }
-.page-nav-text span { color: var(--muted); font-size: 0.85rem; }
-.page-nav-link {
-  display: inline-block;
-  padding: 9px 16px;
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: filter 0.15s ease;
-}
-.page-nav-link:hover { filter: brightness(1.08); }
 
 .controls {
   display: flex;
@@ -328,6 +309,6 @@ footer {
 @media (max-width: 640px) {
   main { padding: 16px; }
   .controls { padding: 12px; }
-  .header-inner { flex-direction: column; }
-  .theme-toggle { align-self: flex-start; }
+  header.site { padding: 16px; }
+  .site-top { flex-direction: column; }
 }
