@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITULO_CORTO}} | Computer Architecture Lab</title>
+<meta
+  name="description"
+  content="{{DESCRIPCION_UNA_ORACION}}"
+/>
+<script>
+  // Aplica el tema guardado/del sistema antes del render para evitar parpadeo.
+  (function () {
+    try {
+      var t = localStorage.getItem('tw-theme');
+      if (!t) {
+        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  })();
+</script>
+<style>
+  /* ==== STD:TOKENS v1 ==== (no editar a mano: se sincroniza desde el template de la skill guia-arquitectura) */
+  :root{
+    --bg: #f4f6fb;
+    --bg-grad: radial-gradient(1200px 520px at 50% -160px, #e9eefb 0%, var(--bg) 70%);
+    --bg-panel: #ffffff;
+    --bg-panel-2: #eef2f7;
+    --line: #d8dee6;
+    --line-soft: #e4e9f0;
+    --text: #1d2433;
+    --muted: #4a5568;
+    --accent: #1f6feb;
+    --accent-ink: #ffffff;
+    --focus: #0a4bce;
+    --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
+    --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+    --highlight: #b45309;
+    --ok: #0f766e;
+    --ok-soft: #e6f4f2;
+    --err: #c0392b;
+    --err-soft: #fbeae7;
+    --warn: #b45309;
+    --warn-soft: #fdf2e3;
+  }
+  html[data-theme='dark']{
+    --bg: #0d1524;
+    --bg-grad: radial-gradient(1200px 560px at 50% -160px, #172236 0%, var(--bg) 68%);
+    --bg-panel: #131d2e;
+    --bg-panel-2: #1a2942;
+    --line: #2a3a52;
+    --line-soft: #223047;
+    --text: #e7edf3;
+    --muted: #9fb0c8;
+    --accent: #4d9fff;
+    --accent-ink: #06121f;
+    --focus: #7bb8ff;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.35);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+    --highlight: #e2a640;
+    --ok: #4fc9b8;
+    --ok-soft: #163431;
+    --err: #e2664f;
+    --err-soft: #3a2019;
+    --warn: #e2a640;
+    --warn-soft: #3a2c17;
+  }
+  /* ==== /STD:TOKENS ==== */
+
+  /* ==== STD:SHELL v1 ==== (header, nav lateral, secciones, footer) */
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; background:var(--bg); }
+  body{
+    margin:0;
+    background:var(--bg);
+    background:var(--bg-grad);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height:1.55;
+    transition:background-color .2s ease, color .2s ease;
+  }
+  code, .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a{ color:var(--accent); }
+  :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+
+  .skip-link{
+    position:absolute; left:-999px; top:0;
+    background:var(--accent); color:var(--accent-ink); padding:8px 12px; z-index:20;
+    border-radius:0 0 6px 0;
+  }
+  .skip-link:focus{ left:8px; top:8px; }
+
+  header.site{
+    padding:20px 24px;
+    background:var(--bg-panel);
+    border-bottom:1px solid var(--line);
+    box-shadow:var(--shadow-sm);
+  }
+  .site-top{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    margin-bottom:6px;
+  }
+  .backlink{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--accent); text-decoration:none; font-size:.9rem; font-weight:600;
+  }
+  .backlink:hover{ text-decoration:underline; }
+  header.site .kicker{ color:var(--muted); font-size:.9rem; margin:0; }
+  header.site h1{ margin:10px 0 0; font-size:clamp(24px,3vw,34px); letter-spacing:-.01em; max-width:24ch; }
+  header.site .lede{ color:var(--muted); font-size:1rem; max-width:72ch; margin:10px 0 22px; }
+  header.site .lede b{ color:var(--text); }
+  header.site .hero{ max-width:760px; overflow-x:auto; }
+
+  .theme-toggle{
+    flex:0 0 auto;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border:1px solid var(--line); background:var(--bg-panel-2); color:var(--text);
+    border-radius:999px; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer;
+    transition:border-color .15s ease, background-color .2s ease;
+  }
+  .theme-toggle:hover{ border-color:var(--muted); }
+  .theme-toggle .icon{ font-size:1rem; line-height:1; }
+  .theme-toggle .theme-label-dark{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-light{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-dark{ display:inline; }
+
+  .shell{ display:grid; grid-template-columns:260px minmax(0,1fr); min-height:100vh; }
+  nav.side{
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    background:var(--bg-panel);
+    border-right:1px solid var(--line);
+    padding:22px 16px 40px;
+  }
+  nav.side .brand{ font-weight:700; font-size:15px; letter-spacing:.2px; margin-bottom:2px; }
+  nav.side .brand small{ display:block; color:var(--muted); font-weight:400; font-size:12px; margin-top:3px; }
+  nav.side ol{ list-style:none; margin:22px 0 0; padding:0; }
+  nav.side .grp{ margin-bottom:18px; }
+  nav.side .grp-title{
+    color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    margin:0 0 6px 2px; font-weight:600;
+  }
+  nav.side a{
+    display:block; color:var(--text); text-decoration:none; font-size:13.5px;
+    padding:5px 8px; border-radius:6px; opacity:.82;
+  }
+  nav.side a:hover{ background:var(--bg-panel-2); opacity:1; }
+  nav.side a.active{ background:var(--bg-panel-2); color:var(--accent); opacity:1; }
+
+  main{ padding:0 0 100px; min-width:0; }
+  section.block{
+    padding:40px 48px;
+    border-bottom:1px solid var(--line);
+    max-width:1080px;
+    scroll-margin-top:12px;
+  }
+  section.block h2{ font-size:22px; margin:0 0 6px; display:flex; align-items:baseline; gap:10px; }
+  section.block h2 .num{ color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; flex:0 0 auto; }
+  section.block .sub{ color:var(--muted); font-size:14px; margin:0 0 22px; max-width:66ch; }
+  section.block h3{ font-size:17px; margin:30px 0 6px; scroll-margin-top:12px; }
+  section.block p{ max-width:72ch; }
+
+  footer.pagefoot{ padding:30px 48px; color:var(--muted); font-size:12.5px; }
+
+  @media (max-width:860px){
+    .shell{ grid-template-columns:minmax(0,1fr); }
+    nav.side{ position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line); }
+    section.block{ padding:28px 20px; }
+    footer.pagefoot{ padding:24px 20px; }
+  }
+  @media (max-width:640px){
+    header.site{ padding:16px; }
+    header.site .site-top{ flex-direction:column; }
+  }
+  /* ==== /STD:SHELL ==== */
+
+  /* ==== STD:COMPONENTS v1 ==== (piezas reutilizables dentro de las secciones) */
+  /* Tarjeta desplegable de teoría */
+  details.card{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    margin-bottom:10px; overflow:hidden;
+  }
+  details.card summary{
+    cursor:pointer; padding:14px 18px; font-weight:600; font-size:14.5px;
+    display:flex; align-items:center; gap:10px; list-style:none;
+  }
+  details.card summary::-webkit-details-marker{ display:none; }
+  details.card summary::before{
+    content:"+"; color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; width:14px;
+  }
+  details.card[open] summary::before{ content:"–"; }
+  details.card .body{ padding:0 18px 18px; font-size:14.5px; }
+  details.card .body p{ margin:0 0 12px; }
+  details.card .body ul{ margin:0 0 12px; padding-left:20px; }
+  details.card .body li{ margin-bottom:6px; }
+  details.card .body strong{ color:var(--highlight); }
+
+  /* Caja de contenido fija (texto + diagrama, sin desplegar) */
+  .panel{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px 22px; margin:14px 0; box-shadow:var(--shadow-sm);
+  }
+  .panel > h3:first-child{ margin-top:0; }
+
+  /* Tabla comparativa */
+  .table-scroll{ overflow-x:auto; }
+  table.cmp{ width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:13.5px; }
+  table.cmp th, table.cmp td{ border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top; }
+  table.cmp th{ background:var(--bg-panel-2); color:var(--muted); font-weight:600; }
+  table.cmp td.hi{ color:var(--ok); }
+
+  /* Fórmula / regla destacada */
+  .formula{
+    background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
+  }
+
+  /* Nota al margen (.info para una aclaración, sin variante para un "ojo con esto") */
+  .note{
+    border-left:3px solid var(--warn); border-radius:0 8px 8px 0;
+    padding:12px 16px; background:var(--warn-soft);
+    font-size:13.5px; margin:14px 0; color:var(--text); max-width:80ch;
+  }
+  .note.info{ border-left-color:var(--ok); background:var(--ok-soft); }
+
+  /* Etiquetas */
+  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px; }
+  .pill{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:12.5px; color:var(--muted); }
+  .pill b{ color:var(--text); }
+
+  /* Panel de simulador / widget interactivo */
+  .sim{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:24px; margin:10px 0 16px; }
+  .sim .cfg{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px; }
+  .sim .cfg label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  .sim select, .sim input[type=text], .sim input[type=number]{
+    width:100%; background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
+    padding:9px 10px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px;
+  }
+  .sim .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+  .sim .msg{ padding:11px 14px; border-radius:8px; font-size:13.5px; margin:12px 0; background:var(--bg-panel-2); border:1px solid var(--line); }
+  .sim .msg.ok{ background:var(--ok-soft); border-color:var(--ok); color:var(--ok); }
+  .sim .msg.err{ background:var(--err-soft); border-color:var(--err); color:var(--err); }
+  button.btn{
+    background:var(--accent); color:var(--accent-ink); border:1px solid var(--accent); font-weight:600; font-size:13.5px;
+    padding:9px 16px; border-radius:8px; cursor:pointer; font-family:inherit;
+  }
+  button.btn:hover{ filter:brightness(1.08); }
+  button.btn.ghost{ background:transparent; color:var(--text); border-color:var(--line); }
+  button.btn.ghost:hover{ background:var(--bg-panel-2); filter:none; }
+  button.btn.ghost.sel{ border-color:var(--accent); color:var(--accent); background:var(--bg-panel-2); }
+  button.btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  /* Contadores */
+  .stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 18px; min-width:110px; }
+  .stat .n{ font-size:22px; font-weight:700; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .stat .l{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stat.ok .n{ color:var(--ok); }
+  .stat.err .n{ color:var(--err); }
+
+  /* Quiz de repaso (lo arma stdQuiz() a partir de un array) */
+  .quiz-item{ background:var(--bg-panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:14px; }
+  .quiz-item p.q{ font-weight:600; margin:0 0 12px; font-size:14.5px; }
+  .quiz-item .opts{ display:flex; flex-direction:column; gap:8px; }
+  .quiz-item label{
+    display:flex; gap:10px; align-items:flex-start; background:var(--bg-panel-2); border:1px solid var(--line);
+    padding:9px 12px; border-radius:8px; cursor:pointer; font-size:13.5px;
+  }
+  .quiz-item label:hover{ border-color:var(--muted); }
+  .quiz-item label input{ margin-top:3px; }
+  .quiz-item .fb{ margin-top:10px; padding:10px 12px; border-radius:8px; font-size:13px; display:none; }
+  .quiz-item .fb.ok{ background:var(--ok-soft); border:1px solid var(--ok); color:var(--ok); display:block; }
+  .quiz-item .fb.bad{ background:var(--err-soft); border:1px solid var(--err); color:var(--err); display:block; }
+  .quiz-score{ font-size:14px; color:var(--muted); margin-top:6px; }
+
+  @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
+  /* ==== /STD:COMPONENTS ==== */
+
+  /* ==== PAGE:TOKENS ==== tokens semánticos propios de esta página (claro y oscuro) */
+  :root{
+    --{{token}}: #000000;
+    --{{token}}-soft: #ffffff;
+  }
+  html[data-theme='dark']{
+    --{{token}}: #ffffff;
+    --{{token}}-soft: #000000;
+  }
+
+  /* ==== PAGE ==== CSS propio de los widgets de esta página. Scopear bajo la clase de cada sección. */
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site">
+  <div class="site-top">
+    <a class="backlink" href="index.html">&larr; Inicio</a>
+    <button
+      id="theme-toggle"
+      class="theme-toggle"
+      type="button"
+      aria-pressed="false"
+      title="Cambiar entre modo claro y oscuro"
+    >
+      <span class="icon" aria-hidden="true">🌙</span>
+      <span class="theme-label-light">Modo oscuro</span>
+      <span class="theme-label-dark">Modo claro</span>
+    </button>
+  </div>
+  <p class="kicker">Arquitectura de Computadoras — {{UNIDAD_O_TEMA}}</p>
+  <h1>{{TITULO_LARGO}}</h1>
+  <p class="lede">{{LEDE: 2-3 oraciones, qué problema resuelve el tema y qué vas a poder tocar}}</p>
+  <!-- Opcional: <div class="hero" aria-hidden="true">…ilustración chica…</div> -->
+</header>
+
+<div class="shell">
+
+  <nav class="side" id="sidenav" aria-label="Secciones de la guía">
+    <div class="brand">{{NOMBRE_CORTO}}<small>{{SUBTITULO_NAV}}</small></div>
+    <ol>
+      <li class="grp">
+        <p class="grp-title">{{GRUPO_1}}</p>
+        <a href="#s-{{slug-1}}">{{NUM}} {{Titulo corto 1}}</a>
+        <a href="#s-{{slug-2}}">{{NUM}} {{Titulo corto 2}}</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Autoevaluación</p>
+        <a href="#s-quiz">Quiz de repaso</a>
+      </li>
+    </ol>
+  </nav>
+
+  <main id="main">
+
+    <!-- ============ {{NUM}} {{TITULO}} ============ -->
+    <section class="block" id="s-{{slug-1}}">
+      <h2><span class="num">{{NUM}}</span> {{Titulo de la sección}}</h2>
+      <p class="sub">{{Una oración: qué pregunta responde esta sección}}</p>
+
+      <details class="card" open>
+        <summary>{{Concepto}}</summary>
+        <div class="body">
+          <p>{{Explicación. Usá <strong>término</strong> para resaltar.}}</p>
+        </div>
+      </details>
+
+      <div class="formula">{{regla o fórmula clave}}</div>
+      <div class="note info">{{aclaración o "fijate que…"}}</div>
+    </section>
+
+    <!-- ============ {{NUM}} {{TITULO}} (con simulador) ============ -->
+    <section class="block ej" id="s-{{slug-2}}">
+      <h2><span class="num">{{NUM}}</span> {{Titulo de la sección}}</h2>
+      <p class="sub">{{Una oración}}</p>
+      <div class="sim">
+        <div class="cfg">
+          <div><label for="ej-param">{{Parámetro}}</label><select id="ej-param"><option>…</option></select></div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn" id="ej-step">Siguiente paso</button>
+          <button type="button" class="btn ghost" id="ej-reset">Reiniciar</button>
+        </div>
+        <div class="msg" id="ej-msg" aria-live="polite">{{estado inicial}}</div>
+      </div>
+    </section>
+
+    <!-- ============ QUIZ ============ -->
+    <section class="block" id="s-quiz">
+      <h2><span class="num">✓</span> Quiz de repaso</h2>
+      <p class="sub">{{N}} preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
+      <div id="quizWrap"></div>
+      <p class="quiz-score" id="quizScore"></p>
+    </section>
+
+    <footer class="pagefoot">{{Fuente del material}}. Hecho como material de repaso; no reemplaza la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
+  </main>
+</div>
+
+<script>
+/* ==== STD:SCRIPT v1 ==== (tema, scroll-spy del nav lateral y motor del quiz) */
+(function () {
+  var btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  function sync() {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    var icon = btn.querySelector('.icon');
+    if (icon) icon.textContent = dark ? '☀️' : '🌙';
+  }
+  btn.addEventListener('click', function () {
+    var el = document.documentElement;
+    var next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+    el.dataset.theme = next;
+    try { localStorage.setItem('tw-theme', next); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.side a[href^="#"]'));
+  var targets = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+  links.forEach(function (a, i) {
+    a.addEventListener('click', function (e) {
+      // scroll manual: navegar por hash puede recargar la página dentro de visores embebidos
+      e.preventDefault();
+      if (targets[i]) targets[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try { history.replaceState(null, '', a.getAttribute('href')); } catch (err) {}
+    });
+  });
+  function onScroll() {
+    var y = window.scrollY + 120, current = -1;
+    targets.forEach(function (t, i) {
+      if (t && t.getBoundingClientRect().top + window.scrollY <= y) current = i;
+    });
+    links.forEach(function (a, i) { a.classList.toggle('active', i === current); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+// stdQuiz([{q, opts:[...], correct:<índice>, exp}], 'quizWrap', 'quizScore')
+function stdQuiz(items, wrapId, scoreId) {
+  var wrap = document.getElementById(wrapId || 'quizWrap');
+  var scoreEl = document.getElementById(scoreId || 'quizScore');
+  if (!wrap) return;
+  function score() {
+    var c = 0, a = 0;
+    wrap.querySelectorAll('.quiz-item').forEach(function (div) {
+      if (div.dataset.answered) { a++; if (div.dataset.right === '1') c++; }
+    });
+    if (scoreEl) scoreEl.textContent = 'Puntaje: ' + c + ' / ' + a + ' respondidas (de ' + items.length + ' preguntas)';
+  }
+  items.forEach(function (item, qi) {
+    var div = document.createElement('div');
+    div.className = 'quiz-item';
+    div.innerHTML = '<p class="q">' + (qi + 1) + '. ' + item.q + '</p><div class="opts">'
+      + item.opts.map(function (o, oi) {
+        return '<label><input type="radio" name="' + wrap.id + '-q' + qi + '" value="' + oi + '"><span>' + o + '</span></label>';
+      }).join('') + '</div><div class="fb" aria-live="polite"></div>';
+    wrap.appendChild(div);
+    div.querySelectorAll('input').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        var right = parseInt(inp.value, 10) === item.correct;
+        div.dataset.answered = '1';
+        div.dataset.right = right ? '1' : '0';
+        var fb = div.querySelector('.fb');
+        fb.className = 'fb ' + (right ? 'ok' : 'bad');
+        fb.textContent = (right ? '✓ Correcto. ' : '✗ No es correcto. ') + item.exp;
+        score();
+      });
+    });
+  });
+  score();
+}
+/* ==== /STD:SCRIPT ==== */
+</script>
+<script>
+/* ==== PAGE:SCRIPT ==== un IIFE por widget, ids con el prefijo de su sección */
+(function () {
+  var $ = function (id) { return document.getElementById('ej-' + id); };
+  if (!$('step')) return;
+  // …lógica del widget…
+})();
+
+stdQuiz([
+  { q: '{{Pregunta}}', opts: ['{{A}}', '{{B}}', '{{C}}', '{{D}}'], correct: 1, exp: '{{Por qué}}' },
+]);
+</script>
+</body>
+</html>
