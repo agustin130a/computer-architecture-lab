@@ -10,6 +10,7 @@ estudiar tocando: todo corre en el navegador y se despliega en **GitHub Pages**.
 | [Inicio](web/index.html) | Índice del sitio: una tarjeta por página con enlaces directos a cada sección. |
 | [Simulador de Tomasulo](web/tomasulo.html) | Planificación dinámica fuera de orden, ciclo a ciclo (Issue → Execute → Write Back). |
 | [Predicción de saltos](web/predictores.html) | Contador saturado de 2 bits, predictor local, global, comparación lado a lado, híbrido (juez) y quiz. |
+| [Coherencia de caché](web/coherencia.html) | Unidad 6: protocolo snoopy (dos estados, MSI, MESI) con simulador de tres cachés sobre un bus y quiz. |
 | [Jerarquía de memoria y caché](web/cache.html) | Unidad 5 completa: emplazamiento directo / N-way / totalmente asociativo, simulador de caché con caché de víctima, políticas, rendimiento, caché y memoria virtual (física, parcial y total) y memoria principal, con quiz. |
 
 ## Simulador de Tomasulo
@@ -46,7 +47,7 @@ temporización (que es lo relevante para Tomasulo).
 
 ## Guías interactivas
 
-`predictores.html` y `cache.html` son páginas HTML **autocontenidas** (CSS y JS
+`predictores.html`, `cache.html` y `coherencia.html` son páginas HTML **autocontenidas** (CSS y JS
 inline, sin dependencias externas): se pueden abrir directamente sin compilar.
 Comparten con el resto del sitio el tema claro/oscuro (`localStorage['tw-theme']`).
 
@@ -70,6 +71,7 @@ web/                 # sitio (TypeScript + Vite, multi-page)
   tomasulo.html      # simulador de Tomasulo (usa src/main.ts)
   predictores.html   # guía interactiva de predictores de salto (standalone)
   cache.html         # guía interactiva de jerarquía de memoria y caché (standalone)
+  coherencia.html    # guía interactiva de coherencia de caché / protocolo snoopy (standalone)
   src/engine/        # port del motor (mainLogic.ts, parseFile.ts)
   src/               # UI del simulador: main.ts, diagram.ts, examples.ts, style.css
   public/asm/        # corpus de ejemplos .s (assets estáticos)

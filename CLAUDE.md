@@ -21,13 +21,13 @@ falta regenerar el golden de referencia.
 
 ## Páginas del sitio y cómo agregar una nueva
 
-El sitio tiene cuatro páginas HTML servidas como multi-page app de Vite:
+El sitio tiene cinco páginas HTML servidas como multi-page app de Vite:
 
 - `web/index.html`: el home/índice del sitio (autocontenido, igual que las
   guías). Una tarjeta por página con enlaces directos a sus secciones.
 - `web/tomasulo.html`: el simulador de Tomasulo (usa `src/main.ts`, `diagram.ts`,
   `examples.ts` — requiere el bundle de Vite).
-- `web/predictores.html` y `web/cache.html`: guías interactivas
+- `web/predictores.html`, `web/cache.html` y `web/coherencia.html`: guías interactivas
   **autocontenidas** — CSS y JS inline en el propio archivo, sin imports de
   `src/`, sin dependencias externas (ni siquiera fuentes de Google Fonts).
 
@@ -58,14 +58,14 @@ redirigen a las secciones `s-*` equivalentes.
 
 ## Contrato de tema claro/oscuro
 
-Las cuatro páginas comparten el mismo mecanismo:
+Las cinco páginas comparten el mismo mecanismo:
 
 - Atributo `data-theme` (`"light"` / `"dark"`) en `<html>`, persistido en
   `localStorage['tw-theme']`.
 - Script inline en `<head>` que aplica el tema guardado (o el de
   `prefers-color-scheme`) *antes* del primer render, para evitar el
   parpadeo de tema equivocado.
-- Botón `#theme-toggle` con el mismo marcado en las cuatro páginas.
+- Botón `#theme-toggle` con el mismo marcado en las cinco páginas.
 - En las guías los tokens base viven en el bloque `STD:TOKENS` (nombres canónicos
   `--bg-panel`, `--line`, `--text`, `--highlight`, `--ok`/`--err`/`--warn`…) y los
   semánticos de cada página en `PAGE:TOKENS`, siempre con par claro/oscuro.
@@ -98,6 +98,6 @@ Pages deja de servirse, GitHub no la redirige).
 - El proyecto (código y prosa de las guías) está en voseo — mantenerlo al
   editar contenido existente o agregar secciones nuevas a las guías, para
   no mezclar registros dentro de la misma página.
-- Sin build step ni TypeScript en `index.html`/`predictores.html`/`cache.html` — es
+- Sin build step ni TypeScript en `index.html` y las guías (`predictores.html`, `cache.html`, `coherencia.html`) — es
   intencional (son documentos autocontenidos, fáciles de abrir sin
   compilar). No migrarlas a `src/` sin que se pida explícitamente.
