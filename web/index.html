@@ -48,6 +48,8 @@
     --c-pipe-soft: #e8eefc;
     --c-col: #15803d;
     --c-col-soft: #e7f6ec;
+    --warn: #b45309;
+    --warn-soft: #fdf2e3;
   }
   html[data-theme='dark']{
     /* ---- Tema oscuro (navy), tokens compartidos con predictores.html / cache.html ---- */
@@ -75,6 +77,8 @@
     --c-pipe-soft: #17243d;
     --c-col: #4ade80;
     --c-col-soft: #14301f;
+    --warn: #e2a640;
+    --warn-soft: #3a2c17;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
@@ -125,7 +129,7 @@
     display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin:28px 0 8px;
   }
   .path .stop{
-    flex:1 1 200px; display:flex; gap:12px; align-items:center;
+    flex:1 1 0; min-width:0; display:flex; gap:10px; align-items:center;
     background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
     box-shadow:var(--shadow-sm); text-decoration:none; color:var(--text);
   }
@@ -141,6 +145,9 @@
   /* ---------- Tarjetas por página ---------- */
   main{ padding:18px 0 60px; }
   .cards{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; margin-top:18px; align-items:start; }
+  /* Las guías van en dos columnas que se leen de arriba abajo, en el orden del recorrido, sin huecos entre tarjetas de distinto alto */
+  .cards.cards-cols{ display:block; columns:2; column-gap:18px; }
+  .cards.cards-cols .card{ break-inside:avoid; margin:0 0 18px; }
   .card{
     --c: var(--accent); --c-soft: var(--panel-2);
     display:flex; flex-direction:column;
@@ -187,12 +194,16 @@
   }
   .card .open:hover{ filter:brightness(1.08); }
 
+  .disclaimer{ max-width:68ch; margin:16px 0 0; padding:10px 14px; border-left:3px solid var(--warn); border-radius:0 8px 8px 0; background:var(--warn-soft); color:var(--text); font-size:.9rem; }
   footer.pagefoot{ color:var(--muted); font-size:.85rem; padding:10px 0 40px; border-top:1px solid var(--line); }
   footer.pagefoot p{ margin:16px 0 0; max-width:80ch; }
 
+  @media (max-width:980px){ .path .arrow{ display:none; } }
+  @media (max-width:760px){ .path .stop{ flex:1 1 200px; } }
   @media (max-width:680px){
     .wrap{ padding:0 16px; }
     .cards{ grid-template-columns:1fr; }
+    .cards.cards-cols{ columns:1; }
     .site-top{ flex-direction:column-reverse; }
     .path .arrow{ display:none; }
   }
@@ -222,6 +233,7 @@
       </button>
     </div>
     <p class="lede">Cinco piezas para ver por dentro cómo un procesador moderno evita quedarse esperando: segmenta la ejecución en etapas, ejecuta fuera de orden, adivina hacia dónde van los saltos, esconde la lentitud de la memoria detrás de la caché y, cuando hay varios procesadores, mantiene coherentes sus copias. Cada una se puede tocar: simuladores paso a paso, no solo texto. Si estás preparando el examen, empezá por la guía del <a href="coloquio.html">coloquio</a>.</p>
+    <p class="disclaimer" role="note"><b>Aviso:</b> el contenido no está validado de punta a punta y puede tener errores. Usalo como apoyo para estudiar y contrastalo con los apuntes y la bibliografía de la cátedra.</p>
 
     <nav class="path" aria-label="Recorrido sugerido">
       <a class="stop" href="#p-pipe"><span class="dot pipe">1</span><span class="txt"><b>Procesador segmentado</b><span>Pipeline, riesgos y planificación</span></span></a>
@@ -245,8 +257,8 @@
         <p class="desc">Cómo se toma el coloquio (papel y lápiz, tres temas, tiempo para preparar y presentar) y una lista de posibles temas recopilada (no oficial), marcando los que más salen, cada uno con un resumen y el enlace a la sección donde se desarrolla.</p>
         <h3>Contenido</h3>
         <ul class="toc">
-          <li><a href="coloquio.html#s-modalidad"><span class="n">1</span>Modalidad<span class="new">nuevo</span></a></li>
-          <li><a href="coloquio.html#s-temas"><span class="n">2</span>Temas del coloquio<span class="new">nuevo</span></a></li>
+          <li><a href="coloquio.html#s-modalidad"><span class="n">1</span>Modalidad</a></li>
+          <li><a href="coloquio.html#s-temas"><span class="n">2</span>Temas del coloquio</a></li>
           <li><a href="coloquio.html#s-multiproc"><span class="n">3</span>Coherencia de caché</a></li>
           <li><a href="coloquio.html#s-segmentado"><span class="n">4</span>Procesador segmentado</a></li>
           <li><a href="coloquio.html#s-planificacion"><span class="n">5</span>Planificación de instrucciones</a></li>
@@ -255,6 +267,9 @@
         </ul>
         <a class="open" href="coloquio.html">Abrir la guía →</a>
       </article>
+    </div>
+
+    <div class="cards cards-cols">
 
       <article class="card pipe" id="p-pipe">
         <span class="tag">Guía interactiva</span>
@@ -262,17 +277,17 @@
         <p class="desc">Unidades 2 a 4: del monociclo al pipeline, riesgos, loop unrolling y software pipelining, planificación estática y dinámica, excepciones precisas, Tomasulo, VLIW y multithreading, con simuladores y quiz.</p>
         <h3>Contenido</h3>
         <ul class="toc">
-          <li><a href="pipeline.html#s-ciclos"><span class="n">2.1</span>Monociclo y multiciclo<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-ciclos"><span class="n">2.1</span>Monociclo y multiciclo</a></li>
           <li><a href="pipeline.html#s-ciclos-calc"><span class="n">↳</span>Calculadora de tiempo total</a></li>
-          <li><a href="pipeline.html#s-pipeline"><span class="n">2.2–2.3</span>Pipeline segmentado<span class="new">nuevo</span></a></li>
-          <li><a href="pipeline.html#s-riesgos"><span class="n">2.3.1–2.4</span>Riesgos<span class="new">nuevo</span></a></li>
-          <li><a href="pipeline.html#s-loop"><span class="n">3.5</span>Unrolling y software pipelining<span class="new">nuevo</span></a></li>
-          <li><a href="pipeline.html#s-planificacion"><span class="n">3.2–3.3</span>Estática vs. dinámica<span class="new">nuevo</span></a></li>
-          <li><a href="pipeline.html#s-excepciones"><span class="n">2.5</span>Excepciones precisas<span class="new">nuevo</span></a></li>
-          <li><a href="pipeline.html#s-rob"><span class="n">3.4.2</span>Fuera de orden y ROB<span class="new">nuevo</span></a></li>
-          <li><a href="pipeline.html#s-tomasulo"><span class="n">3.6</span>Tomasulo, ciclo a ciclo<span class="new">nuevo</span></a></li>
-          <li><a href="pipeline.html#s-vliw"><span class="n">4.1–4.3</span>Superescalar y VLIW<span class="new">nuevo</span></a></li>
-          <li><a href="pipeline.html#s-mt"><span class="n">4.5–4.14</span>Multithreading<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-pipeline"><span class="n">2.2–2.3</span>Pipeline segmentado</a></li>
+          <li><a href="pipeline.html#s-riesgos"><span class="n">2.3.1–2.4</span>Riesgos</a></li>
+          <li><a href="pipeline.html#s-loop"><span class="n">3.5</span>Unrolling y software pipelining</a></li>
+          <li><a href="pipeline.html#s-planificacion"><span class="n">3.2–3.3</span>Estática vs. dinámica</a></li>
+          <li><a href="pipeline.html#s-excepciones"><span class="n">2.5</span>Excepciones precisas</a></li>
+          <li><a href="pipeline.html#s-rob"><span class="n">3.4.2</span>Fuera de orden y ROB</a></li>
+          <li><a href="pipeline.html#s-tomasulo"><span class="n">3.6</span>Tomasulo, ciclo a ciclo</a></li>
+          <li><a href="pipeline.html#s-vliw"><span class="n">4.1–4.3</span>Superescalar y VLIW</a></li>
+          <li><a href="pipeline.html#s-mt"><span class="n">4.5–4.14</span>Multithreading</a></li>
           <li><a href="pipeline.html#s-quiz"><span class="n">✓</span>Quiz de repaso</a></li>
         </ul>
         <a class="open" href="pipeline.html">Abrir la guía →</a>
@@ -300,12 +315,12 @@
         <ul class="toc">
           <li><a href="predictores.html#s-problema"><span class="n">0</span>Por qué hace falta predecir</a></li>
           <li><a href="predictores.html#s-contador"><span class="n">1</span>Contador saturado de 2 bits</a></li>
-          <li><a href="predictores.html#s-bits"><span class="n">↳</span>1 bit vs. 2 bits, BTAC y BTB<span class="new">nuevo</span></a></li>
+          <li><a href="predictores.html#s-bits"><span class="n">↳</span>1 bit vs. 2 bits, BTAC y BTB</a></li>
           <li><a href="predictores.html#s-local"><span class="n">2</span>Predictor de historia local</a></li>
           <li><a href="predictores.html#s-global"><span class="n">3</span>Predictor de historia global</a></li>
           <li><a href="predictores.html#s-comparacion"><span class="n">4</span>Local vs. global, lado a lado</a></li>
           <li><a href="predictores.html#s-hibrido"><span class="n">5</span>Híbrido: el juez (tournament)</a></li>
-          <li><a href="predictores.html#s-quiz"><span class="n">✓</span>Quiz de repaso<span class="new">nuevo</span></a></li>
+          <li><a href="predictores.html#s-quiz"><span class="n">✓</span>Quiz de repaso</a></li>
         </ul>
         <a class="open" href="predictores.html">Abrir la guía →</a>
       </article>
@@ -326,9 +341,9 @@
           <li><a href="cache.html#s-actualizacion"><span class="n">5.12–5.14</span>Write through / back</a></li>
           <li><a href="cache.html#s-rendimiento"><span class="n">5.15</span>Rendimiento y calculadora</a></li>
           <li><a href="cache.html#s-mejoras"><span class="n">5.16</span>Reducir la tasa de fallos</a></li>
-          <li><a href="cache.html#s-tiposfallo"><span class="n">↳</span>Simulador: las 3 C<span class="new">nuevo</span></a></li>
+          <li><a href="cache.html#s-tiposfallo"><span class="n">↳</span>Simulador: las 3 C</a></li>
           <li><a href="cache.html#s-penalizacion"><span class="n">5.17–5.19</span>Reducir la penalización</a></li>
-          <li><a href="cache.html#s-virtual"><span class="n">5.19.4–7</span>Caché y memoria virtual<span class="new">nuevo</span></a></li>
+          <li><a href="cache.html#s-virtual"><span class="n">5.19.4–7</span>Caché y memoria virtual</a></li>
           <li><a href="cache.html#s-principal"><span class="n">5.20</span>Memoria principal</a></li>
           <li><a href="cache.html#s-quiz"><span class="n">✓</span>Quiz de repaso</a></li>
         </ul>
@@ -343,12 +358,12 @@
         <ul class="toc">
           <li><a href="coherencia.html#s-problema"><span class="n">1</span>Copias que se desincronizan</a></li>
           <li><a href="coherencia.html#s-idea"><span class="n">2</span>Todos escuchan el bus</a></li>
-          <li><a href="coherencia.html#s-familias"><span class="n">3</span>Snoopy vs. directorios<span class="new">nuevo</span></a></li>
-          <li><a href="coherencia.html#s-vi"><span class="n">4</span>Dos estados (VI) + simulador<span class="new">nuevo</span></a></li>
-          <li><a href="coherencia.html#s-msi"><span class="n">5</span>MSI y MESI + simulador<span class="new">nuevo</span></a></li>
+          <li><a href="coherencia.html#s-familias"><span class="n">3</span>Snoopy vs. directorios</a></li>
+          <li><a href="coherencia.html#s-vi"><span class="n">4</span>Dos estados (VI) + simulador</a></li>
+          <li><a href="coherencia.html#s-msi"><span class="n">5</span>MSI y MESI + simulador</a></li>
           <li><a href="coherencia.html#s-estados"><span class="n">6</span>Los estados de MESI</a></li>
-          <li><a href="coherencia.html#s-directorio"><span class="n">7</span>Coherencia con directorio<span class="new">nuevo</span></a></li>
-          <li><a href="coherencia.html#s-consistencia"><span class="n">8</span>Consistencia de memoria<span class="new">nuevo</span></a></li>
+          <li><a href="coherencia.html#s-directorio"><span class="n">7</span>Coherencia con directorio</a></li>
+          <li><a href="coherencia.html#s-consistencia"><span class="n">8</span>Consistencia de memoria</a></li>
           <li><a href="coherencia.html#s-quiz"><span class="n">✓</span>Quiz de repaso</a></li>
         </ul>
         <a class="open" href="coherencia.html">Abrir la guía →</a>
@@ -358,7 +373,7 @@
   </main>
 
   <footer class="pagefoot">
-    <p>Material de repaso hecho con fines educativos; no reemplaza la bibliografía de cátedra. El simulador de Tomasulo está basado en Tomasulo-Visual (proyecto de curso UMass ENG668).</p>
+    <p>Material de repaso hecho con fines educativos, no validado de punta a punta; no reemplaza la bibliografía de cátedra. El simulador de Tomasulo está basado en Tomasulo-Visual (proyecto de curso UMass ENG668).</p>
   </footer>
 </div>
 
