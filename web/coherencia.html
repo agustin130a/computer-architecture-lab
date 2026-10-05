@@ -277,7 +277,7 @@
   @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
   /* ==== /STD:COMPONENTS ==== */
 
-  /* ==== PAGE:TOKENS ==== estados MESI, bus compartido y texto sobre los badges */
+  /* ==== PAGE:TOKENS ==== estados MESI, bus compartido, procesador que actúa y texto sobre los badges */
   :root{
     --m: #C0366B;
     --e: #6A47C7;
@@ -286,6 +286,7 @@
     --bus: #D99A00;
     --bus-soft: #FFF3D1;
     --badge-ink: #ffffff;
+    --act: #2457B3;
   }
   html[data-theme='dark']{
     --m: #F2729F;
@@ -295,6 +296,7 @@
     --bus: #F2BA34;
     --bus-soft: #3A2F12;
     --badge-ink: #0d1524;
+    --act: #7BA6F2;
   }
 
   /* ==== PAGE ==== ilustración del header y widgets de coherencia (todo bajo .coh) */
@@ -311,96 +313,81 @@
   .coh .props .panel{ margin:0; }
   .coh .props strong{ display:block; margin-bottom:4px; }
   .coh .props p{ margin:0; color:var(--muted); font-size:14px; }
-
-  /* Evolución de los protocolos */
-  .coh .steps{ list-style:none; margin:18px 0 0; padding:0; counter-reset:v; max-width:72ch; }
-  .coh .steps > li{ position:relative; padding:0 0 26px 52px; counter-increment:v; }
-  .coh .steps > li::before{
-    content:counter(v); position:absolute; left:0; top:-2px; width:36px; height:36px; border-radius:50%;
-    background:var(--text); color:var(--bg-panel); font-weight:700; display:grid; place-items:center;
-  }
-  .coh .steps > li::after{ content:""; position:absolute; left:17px; top:40px; bottom:6px; width:2px; background:var(--line); }
-  .coh .steps > li:last-child::after{ display:none; }
-  .coh .steps h3{ margin:4px 0 8px; }
-  .coh .chips{ display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 12px; }
-  .coh .chip{ font-size:12.5px; font-weight:600; padding:2px 10px; border-radius:999px; border:1.5px solid currentColor; }
-  .coh .limit{ font-size:14px; color:var(--muted); font-style:italic; }
-
-  /* Simulador */
-  .coh .sim-top{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center; margin-bottom:16px; }
-  .coh .seg{ display:inline-flex; background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px; gap:2px; }
-  .coh .seg button{ font:inherit; font-size:13.5px; font-weight:600; border:0; background:transparent; color:var(--muted); padding:7px 14px; border-radius:999px; cursor:pointer; }
-  .coh .seg button[aria-pressed="true"]{ background:var(--accent); color:var(--accent-ink); }
-  .coh .legend{ display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13.5px; color:var(--muted); margin:0 0 18px; }
-
-  .coh .procs{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(8px,2vw,18px); }
-  .coh .proc{ border:2px solid var(--line); border-radius:14px; padding:12px; background:var(--bg-panel); display:flex; flex-direction:column; gap:10px; transition:border-color .25s; }
-  .coh .proc-head{ display:flex; justify-content:space-between; align-items:baseline; font-weight:650; }
-  .coh .proc-head small{ font-weight:500; color:var(--muted); font-size:12px; }
-  .coh .state{ display:flex; align-items:center; gap:10px; }
-  .coh .badge{
-    width:48px; height:48px; flex:none; border-radius:12px; display:grid; place-items:center;
-    font-weight:750; font-size:24px; color:var(--badge-ink); background:var(--i); transition:background-color .3s;
-  }
-  .coh .badge.st-M{ background:var(--m); } .coh .badge.st-E{ background:var(--e); } .coh .badge.st-S, .coh .badge.st-V{ background:var(--s); }
-  .coh .state-txt{ font-size:13.5px; line-height:1.3; }
-  .coh .state-txt b{ display:block; font-size:14.5px; }
-  .coh .xval{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; color:var(--muted); }
-  .coh .acts{ display:grid; gap:6px; }
-  .coh .acts button{ font:inherit; font-weight:600; font-size:13px; border:1.5px solid var(--line); background:var(--bg-panel-2); color:var(--text); padding:7px 8px; border-radius:8px; cursor:pointer; }
-  .coh .acts button:hover{ border-color:var(--accent); }
-  .coh .acts button.w{ border-color:color-mix(in srgb, var(--m) 45%, var(--line)); }
-  .coh .proc.actor{ border-color:var(--accent); }
-  .coh .proc.snoop{ animation:coh-snoop .9s ease; }
-  @keyframes coh-snoop{ 0%,100%{ border-color:var(--line); } 30%{ border-color:var(--bus); box-shadow:0 0 0 4px var(--bus-soft); } }
-
-  .coh .taps{ display:grid; grid-template-columns:repeat(3,1fr); height:24px; }
-  .coh .taps span, .coh .mem-tap{ justify-self:center; width:2px; background:repeating-linear-gradient(var(--bus) 0 4px, transparent 4px 8px); }
-  .coh .mem-tap{ height:20px; margin:0 auto; }
-  .coh .bus{ position:relative; min-height:46px; border-radius:12px; background:var(--bus-soft); border:2px solid var(--bus); display:flex; align-items:center; justify-content:center; overflow:hidden; }
-  .coh .bus-label{ position:relative; z-index:1; font-weight:600; font-size:14px; padding:6px 12px; text-align:center; }
-  .coh .coh-tok{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.9em; background:var(--bg-panel); padding:1px 6px; border-radius:4px; }
-  .coh .spark{ position:absolute; top:0; bottom:0; width:40%; left:-40%; background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--bus) 55%, transparent), transparent); }
-  .coh .bus.go .spark{ animation:coh-sweep .8s ease-out; }
-  @keyframes coh-sweep{ to{ left:100%; } }
-  .coh .mem-row{ display:flex; justify-content:center; }
-  .coh .mem{ display:flex; align-items:center; gap:14px; border:2px solid var(--line); border-radius:12px; padding:10px 16px; background:var(--bg-panel); flex-wrap:wrap; justify-content:center; }
-  .coh .coh-pill{ font-size:12.5px; font-weight:600; padding:2px 10px; border-radius:999px; }
-  .coh .coh-pill.ok{ background:var(--ok-soft); color:var(--ok); }
-  .coh .coh-pill.stale{ background:var(--warn-soft); color:var(--warn); }
-
-  .coh .sim-bottom{ display:grid; grid-template-columns:1.4fr 1fr; gap:16px; margin-top:22px; }
-  .coh .coh-panel{ border:1px solid var(--line); border-radius:12px; padding:14px 16px; background:var(--bg-panel-2); }
-  .coh .coh-panel h3{ margin:0 0 8px; font-size:15px; }
-  .coh .narr{ margin:0; padding-left:18px; font-size:14px; }
-  .coh .narr li{ margin:4px 0; }
-  .coh .narr.empty{ list-style:none; padding:0; color:var(--muted); }
-  .coh .coh-stats{ display:flex; gap:20px; flex-wrap:wrap; margin:0 0 10px; }
-  .coh .coh-stats b{ font-size:28px; font-weight:720; display:block; line-height:1; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
-  .coh .coh-stats span{ font-size:12.5px; color:var(--muted); }
-  .coh .truth{ font-size:14px; margin:0; }
-  .coh .coh-panel select{ width:100%; margin-top:4px; }
-  .coh .scen-steps{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
-  .coh .scen-steps span{ font-size:12.5px; padding:2px 8px; border-radius:6px; border:1px solid var(--line); color:var(--muted); }
-  .coh .scen-steps span.done{ color:var(--text); border-color:var(--text); opacity:.55; }
-  .coh .scen-steps span.next{ color:var(--accent-ink); background:var(--accent); border-color:var(--accent); }
-  .coh .compare{ margin:10px 0 0; font-size:13.5px; color:var(--muted); }
-  .coh .compare b{ color:var(--text); }
-  .coh details.hist{ margin-top:12px; }
-  .coh details.hist summary{ cursor:pointer; font-weight:600; font-size:14px; }
-  .coh details.hist ol{ font-size:13px; color:var(--muted); max-height:12rem; overflow:auto; padding-left:22px; }
-
   .coh table.cmp td:first-child{ font-weight:750; font-size:16px; }
+  .coh table.coh-cmp{ min-width:560px; }
+  .coh table.coh-cmp td:first-child{ font-weight:600; font-size:13.5px; color:var(--muted); width:22%; }
 
-  @media (max-width:760px){ .coh .sim-bottom{ grid-template-columns:1fr; } }
+  /* Piezas comunes de los simuladores */
+  .coh .src{ font-size:13px; color:var(--muted); }
+  .coh .small{ margin:0; font-size:14px; }
+  .coh .panel h4{ margin:0 0 10px; font-size:15px; }
+  .coh .grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:18px; align-items:start; }
+  .coh .simgrid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.35fr); gap:20px; align-items:start; }
+  @media (max-width:1100px){ .coh .simgrid{ grid-template-columns:minmax(0,1fr); } }
+  .coh .sim-top{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .coh .sim-top h4{ margin:0; font-size:16px; }
+  .coh .sim-ctl{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .coh .seg{ display:inline-flex; background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px; gap:2px; }
+  .coh .seg button{ font:inherit; font-size:13.5px; font-weight:600; border:0; background:transparent; color:var(--muted); padding:6px 14px; border-radius:999px; cursor:pointer; }
+  .coh .seg button[aria-pressed="true"]{ background:var(--accent); color:var(--accent-ink); }
+  .coh .cpus{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+  .coh .cpus-2{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .coh .cpu{ border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:var(--bg-panel-2); }
+  .coh .cpu .name{ font-weight:700; display:flex; justify-content:space-between; align-items:center; }
+  .coh .badge{ display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; padding:0 8px; border-radius:9px; color:var(--badge-ink); background:var(--i); font-weight:800; font-size:17px; transition:background-color .25s; }
+  .coh .badge.M{ background:var(--m); } .coh .badge.E{ background:var(--e); } .coh .badge.S, .coh .badge.V{ background:var(--s); }
+  .coh .cpu .val{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; color:var(--muted); margin:8px 0; }
+  .coh .cpu .btns{ display:flex; flex-wrap:wrap; gap:6px; }
+  .coh .cpu .btns .btn{ padding:6px 10px; font-size:12.5px; }
+  .coh .memrow{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin:12px 0 4px; padding:10px 14px; border-radius:10px; background:var(--bg-panel-2); font-size:14px; }
+  .coh .memrow-col{ flex-direction:column; align-items:flex-start; gap:4px; }
+  .coh .mono{ font-size:13px; }
+  .coh .busbar{ flex:1; min-width:120px; height:10px; border-radius:5px; background:var(--line); position:relative; overflow:hidden; }
+  .coh .busbar i{ position:absolute; inset:0; background:var(--bus); transform:scaleX(0); transform-origin:left; transition:transform .35s; }
+  .coh .busbar.flash i{ transform:scaleX(1); }
+  .coh .log{ font:12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; background:var(--bg-panel-2); border-radius:10px; padding:10px 12px; max-height:190px; overflow:auto; margin:10px 0 0; }
+  .coh .log div{ border-bottom:1px dashed var(--line); padding:3px 0; }
+  .coh .log div:first-child{ color:var(--text); font-weight:600; }
+  .coh .log:empty::before{ content:"Las acciones aparecen acá. Elegí una operación en cualquier procesador."; color:var(--muted); }
+  .coh .tx{ color:var(--act); font-weight:600; }
+  .coh .legend{ display:flex; gap:6px 16px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin-top:8px; }
+  .coh .legend i{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+  .coh .k-act{ background:var(--act); } .coh .k-snoop{ background:var(--warn); }
+  .coh .k-m{ background:var(--m); } .coh .k-e{ background:var(--e); } .coh .k-s{ background:var(--s); } .coh .k-i{ background:var(--i); }
+  .coh .out{ font-size:24px; font-weight:700; margin-bottom:10px; }
+  .coh .out small{ display:block; font-size:13px; font-weight:400; color:var(--muted); }
+  .coh .sim-fields{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+  .coh .sim-fields label{ display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted); }
+  .coh .sim-fields b{ color:var(--text); }
+  .coh input[type=range]{ width:100%; accent-color:var(--accent); }
+
+  /* SVG: diagramas de estado, gráficos y red */
+  .coh svg text{ fill:var(--text); }
+  .coh svg.fsm, .coh svg.chart, .coh svg.net{ width:100%; height:auto; display:block; }
+  .coh .fsm .node circle{ stroke-width:3; fill:var(--bg-panel); }
+  .coh .fsm .node text{ font-weight:800; font-size:26px; }
+  .coh .fsm .edge path{ fill:none; stroke:var(--i); stroke-width:1.8; transition:stroke .2s, stroke-width .2s; }
+  .coh .fsm .edge text{ font-size:12.5px; paint-order:stroke; stroke:var(--bg-panel); stroke-width:4px; fill:var(--muted); }
+  .coh .fsm .edge.hot path{ stroke:var(--act); stroke-width:3.6; }
+  .coh .fsm .edge.hot text{ fill:var(--act); font-weight:700; }
+  .coh .fsm .edge.hot2 path{ stroke:var(--warn); stroke-width:3.2; stroke-dasharray:6 4; }
+  .coh .fsm .edge.hot2 text{ fill:var(--warn); font-weight:700; }
+  .coh .chart text{ font-size:12px; fill:var(--muted); }
+  .coh .chart .lbl{ fill:var(--text); font-weight:700; }
+
+  .coh .cs-list{ grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); }
+  .coh .cpu.cs-bad{ border:2px solid var(--err); }
+  .coh .cpu .val.cs-ord{ margin:0 0 6px; }
+  .coh .cs-tag{ font-size:11.5px; font-weight:700; color:var(--err); background:var(--err-soft); border-radius:999px; padding:2px 8px; }
+  .coh .cs-status{ margin-top:12px; padding:12px 14px; border-radius:10px; background:var(--bg-panel-2); border:1px solid var(--line); font-size:14px; }
+  .coh .cs-status.good{ background:var(--ok-soft); border-color:var(--ok); }
+  .coh .cs-status.bad{ background:var(--err-soft); border-color:var(--err); }
+
   @media (max-width:520px){
-    .coh .proc{ padding:8px; gap:7px; }
-    .coh .badge{ width:40px; height:40px; font-size:20px; border-radius:10px; }
-    .coh .state{ flex-direction:column; align-items:flex-start; gap:5px; }
-    .coh .acts button{ font-size:12px; padding:6px 4px; }
-    .coh .seg button{ padding:6px 10px; font-size:12.5px; }
+    .coh .cpus-2{ grid-template-columns:minmax(0,1fr); }
+    .coh .sim-fields{ grid-template-columns:minmax(0,1fr); }
   }
-  @media (prefers-reduced-motion:reduce){ .coh .proc.snoop, .coh .bus.go .spark{ animation:none; } .coh .badge{ transition:none; } }
+  @media (prefers-reduced-motion:reduce){ .coh .badge, .coh .busbar i, .coh .fsm .edge path{ transition:none; } }
 </style>
 </head>
 <body>
@@ -423,8 +410,8 @@
     </button>
   </div>
   <p class="kicker">Arquitectura de Computadoras — Unidad 6: Coherencia de caché</p>
-  <h1>Protocolo snoopy: coherencia espiando el bus</h1>
-  <p class="lede">Cómo varias cachés mantienen coherente un mismo dato sin un árbitro central: todas escuchan el bus y reaccionan a lo que hacen las demás. Vas a poder hacer leer, escribir y desalojar a tres procesadores y ver qué pasa por el bus con cada protocolo.</p>
+  <h1>Coherencia de caché: snoopy y directorios</h1>
+  <p class="lede">Cómo varias cachés mantienen coherente un mismo dato: con un bus, todas lo espían y reaccionan a lo que hacen las demás; sin bus, un directorio sabe quién tiene cada bloque. Vas a poder hacer leer, escribir y reemplazar bloques en los protocolos de dos estados, MSI y MESI, ver el diagrama de estados encenderse con cada transición y seguir los mensajes de un directorio por la red.</p>
   <div class="hero coh-hero">
     <svg viewBox="0 0 640 210" role="img" aria-label="Tres cachés conectadas a un bus compartido, que también conecta con la memoria">
       <rect class="box" x="40" y="10" width="140" height="62" rx="12"/><text class="lbl" x="110" y="38" text-anchor="middle">P1 + caché</text><text class="cap" x="110" y="58" text-anchor="middle">escucha el bus</text>
@@ -444,18 +431,27 @@
 <div class="shell">
 
   <nav class="side" id="sidenav" aria-label="Secciones de la guía">
-    <div class="brand">Coherencia de caché<small>Unidad 6 — protocolo snoopy</small></div>
+    <div class="brand">Coherencia de caché<small>Unidad 6 — snoopy, directorios y consistencia</small></div>
     <ol>
       <li class="grp">
         <p class="grp-title">El problema</p>
         <a href="#s-problema">1 Copias desincronizadas</a>
         <a href="#s-idea">2 Todos escuchan el bus</a>
+        <a href="#s-familias">3 Snoopy vs. directorios</a>
       </li>
       <li class="grp">
-        <p class="grp-title">Protocolos</p>
-        <a href="#s-evolucion">3 Dos estados, MSI y MESI</a>
-        <a href="#s-simulador">↳ Simulador</a>
-        <a href="#s-estados">4 Los estados de MESI</a>
+        <p class="grp-title">Snoopy</p>
+        <a href="#s-vi">4 Dos estados (VI)</a>
+        <a href="#s-msi">5 MSI y MESI</a>
+        <a href="#s-estados">6 Los estados de MESI</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Directorios</p>
+        <a href="#s-directorio">7 Coherencia con directorio</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Más allá de la coherencia</p>
+        <a href="#s-consistencia">8 Consistencia de memoria</a>
       </li>
       <li class="grp">
         <p class="grp-title">Autoevaluación</p>
@@ -463,6 +459,7 @@
       </li>
     </ol>
   </nav>
+
 
   <main id="main">
 
@@ -488,85 +485,123 @@
       <p>Ante una escritura hay dos políticas: <strong>invalidar</strong> las otras copias («escribí, descarten las suyas») o <strong>actualizarlas</strong> («escribí, este es el valor nuevo»). Los tres protocolos de abajo usan invalidación.</p>
     </section>
 
-    <!-- ============ 3 EVOLUCIÓN ============ -->
-    <section class="block coh" id="s-evolucion">
-      <h2><span class="num">3</span> Tres versiones, cada una arregla la anterior</h2>
-      <p class="sub">De write-through con dos estados a MESI: qué problema resuelve cada estado nuevo.</p>
-      <ol class="steps">
-        <li>
-          <h3>Dos estados, con write-through</h3>
-          <div class="chips"><span class="chip c-V">V válido</span><span class="chip c-I">I inválido</span></div>
-          <p>Usa escritura directa y no write allocate. Leer en I es un fallo: se trae de memoria y se pasa a V. Toda escritura va a memoria y se anuncia con <code>BusWr</code>; si el bloque estaba en I, sigue en I. Quien vea un <code>BusWr</code> sobre un bloque que tiene en V lo pasa a I.</p>
-          <p class="limit">Límite: cada escritura ocupa el bus. Con 2000 MHz, CPI 1 y un 15 % de stores de 8 bytes, cada procesador genera 2400 MB/s; un bus de 10 GB/s se satura con cuatro.</p>
-        </li>
-        <li>
-          <h3>MSI, con write-back</h3>
-          <div class="chips"><span class="chip c-M">M modificado</span><span class="chip c-S">S compartido</span><span class="chip c-I">I inválido</span></div>
-          <p>Se escribe solo en la caché y se vuelca después, así que la memoria puede quedar vieja. El estado M marca a la única caché con la versión buena: puede leer y escribir sin usar el bus. Aparecen <code>BusRdX</code> («leo para modificar, invaliden») y <code>Flush</code> («vuelco mi bloque modificado»). Si alguien pide un bloque que otra caché tiene en M, esa caché responde con <code>Flush</code>.</p>
-          <p class="limit">Límite: leer y luego escribir un dato que nadie más tiene cuesta dos transacciones, <code>BusRd</code> y <code>BusRdX</code>, aunque no haya a quién invalidar.</p>
-        </li>
-        <li>
-          <h3>MESI, con estado exclusivo</h3>
-          <div class="chips"><span class="chip c-M">M modificado</span><span class="chip c-E">E exclusivo</span><span class="chip c-S">S compartido</span><span class="chip c-I">I inválido</span></div>
-          <p>Al leer, se consulta en el bus si alguien más tiene el bloque mediante la señal S. Si alguien lo tiene, se entra en S; si nadie, en E. Desde E se pasa a M <strong>sin ninguna transacción de bus</strong>, porque ya se sabe que se es el único.</p>
-          <p class="limit">Límite general: como todos deben escucharlo todo, el bus no escala a muchos procesadores. Para eso existen los protocolos basados en directorio.</p>
-        </li>
-      </ol>
+    <!-- ============ 3 SNOOPY VS DIRECTORIOS ============ -->
+    <section class="block coh" id="s-familias">
+      <h2><span class="num">3</span> Dos familias: snoopy y directorios</h2>
+      <p class="sub">Qué hace falta para que haya coherencia y por qué la red de interconexión decide qué protocolo usar.</p>
+      <p>Un sistema de memoria es coherente si cada lectura devuelve el último valor escrito en esa posición, sin importar qué procesador lo escribió. Para lograrlo se necesitan dos cosas: <strong>propagación</strong> (toda escritura termina siendo visible para todos) y <strong>serialización</strong> (todos ven las escrituras a una misma posición en el mismo orden).</p>
+      <p>Hay dos familias de protocolos, y la diferencia entre ambas depende de la red de interconexión: si la red permite broadcast eficiente (un bus), se usa snoopy; si no (una red punto a punto, como en NUMA), se usa un directorio.</p>
+      <div class="note info"><strong>En una frase:</strong> en snoopy el estado de cada bloque está distribuido en las cachés y todas espían el bus; en directorios hay un lugar (el nodo home) que sabe quién tiene cada bloque y se le envían mensajes solo a esos nodos.</div>
+
+      <div class="table-scroll">
+        <table class="cmp coh-cmp">
+          <thead><tr><th></th><th>Snoopy (observación del bus)</th><th>Basado en directorio</th></tr></thead>
+          <tbody>
+            <tr><td>Dónde está el estado</td><td>Cada caché guarda el estado de sus bloques. No hay estado centralizado.</td><td>Un directorio con una entrada por bloque indica en qué cachés hay copia y en qué estado.</td></tr>
+            <tr><td>Interconexión</td><td>Bus o medio de broadcast. Todos los controladores observan todas las transacciones.</td><td>Red punto a punto. Los mensajes van al nodo home y de ahí solo a los nodos implicados.</td></tr>
+            <tr><td>Cómo se serializa</td><td>El arbitraje del bus impone un orden: una transacción a la vez, vista igual por todos.</td><td>El nodo home de cada bloque ordena las peticiones sobre ese bloque.</td></tr>
+            <tr><td>Hardware</td><td>Solo se amplía el controlador de caché. Memoria y cachés no cambian.</td><td>Memoria extra para el directorio (bits de presencia y estado) y controladores más complejos.</td></tr>
+            <tr><td>Escalabilidad</td><td>Limitada por el ancho de banda del bus.</td><td>Escala a muchos procesadores; el directorio se distribuye para no ser cuello de botella.</td></tr>
+            <tr><td>Invalidar una escritura</td><td>Una sola transacción en el bus llega a todos.</td><td>Un mensaje por cada nodo que comparte el bloque (se pueden mandar en paralelo).</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="s-familias-bus">Por qué el bus no escala: calculadora de saturación</h3>
+      <p>Los apuntes usan este ejemplo para mostrar el problema de snoopy con escritura directa: cada store va al bus. Cambiá los valores para ver cuántos procesadores soporta el bus antes de saturarse.</p>
+      <div class="sim">
+        <div class="cfg">
+          <div><label for="bw-f">Frecuencia (MHz)</label><input type="number" id="bw-f" value="2000" min="100" step="100"></div>
+          <div><label for="bw-c">CPI</label><input type="number" id="bw-c" value="1" min="0.25" step="0.25"></div>
+          <div><label for="bw-p">Stores (%)</label><input type="number" id="bw-p" value="15" min="1" max="100"></div>
+          <div><label for="bw-b">Bytes por store</label><input type="number" id="bw-b" value="8" min="1"></div>
+          <div><label for="bw-bus">Bus (GB/s)</label><input type="number" id="bw-bus" value="10" min="1" step="0.5"></div>
+        </div>
+        <div class="grid2">
+          <div><div class="out" id="bw-out1">—</div><div class="out" id="bw-out2">—</div></div>
+          <svg id="bw-chart" class="chart" viewBox="0 0 460 200" role="img" aria-label="Uso del bus según cantidad de procesadores"></svg>
+        </div>
+        <p class="src">Con los valores por defecto: 300 millones de stores por segundo × 8 B = 2400 MB/s por procesador, y un bus de 10 GB/s soporta solo 4. La solución es pasar a post-escritura (write-back), que obliga a usar más estados: de ahí nace MSI.</p>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 6.4, 6.7.3 a 6.7.5 y 6.9.1.</p>
     </section>
 
-    <!-- ============ ↳ SIMULADOR ============ -->
-    <section class="block coh" id="s-simulador">
-      <h2><span class="num">↳</span> Simulador: tres cachés y un bus</h2>
-      <p class="sub">Tres procesadores comparten la variable X. Hacé leer, escribir o desalojar a cada uno y observá qué pasa por el bus y cómo reaccionan los demás.</p>
+    <!-- ============ 4 DOS ESTADOS ============ -->
+    <section class="block coh" id="s-vi">
+      <h2><span class="num">4</span> Snoopy de dos estados (válido / inválido)</h2>
+      <p class="sub">El protocolo más simple: escritura directa, y cada bloque está válido o inválido.</p>
+      <p>Un solo nivel de caché, escritura directa (write-through) y sin asignación en escritura (no write-allocate). Cada bloque está <strong class="c-V">Válido</strong> o <strong class="c-I">Inválido</strong>; los bloques que no están en la caché se consideran inválidos. Como la memoria siempre está actualizada, nunca hace falta que una caché le pase un dato a otra.</p>
+      <div class="note info"><strong>En una frase:</strong> toda escritura sale al bus (<code>BusWr</code>) y actualiza la memoria; las demás cachés que la ven invalidan su copia. Funciona, pero cada store ocupa el bus.</div>
+
       <div class="sim">
-        <div class="sim-top">
-          <div class="seg" role="group" aria-label="Protocolo">
-            <button type="button" data-proto="VI">Dos estados</button>
-            <button type="button" data-proto="MSI">MSI</button>
-            <button type="button" data-proto="MESI" aria-pressed="true">MESI</button>
+        <div class="sim-top"><h4>Simulador: tres procesadores y un bloque X</h4><button type="button" class="btn ghost" id="vi-reset">Reiniciar</button></div>
+        <div class="grid2">
+          <div>
+            <div class="cpus" id="vi-cpus"></div>
+            <div class="memrow"><span>Memoria: <b class="mono" id="vi-mem"></b></span><div class="busbar" id="vi-bus" title="Bus"><i></i></div><span class="mono" id="vi-cnt"></span></div>
           </div>
+          <svg id="vi-fsm" class="fsm" viewBox="0 0 460 300" role="img" aria-label="Diagrama de estados Válido/Inválido"></svg>
         </div>
-        <div class="legend" id="coh-legend"></div>
+        <div class="log" id="vi-log" aria-live="polite"></div>
+        <div class="legend"><span><i class="k-act"></i>transición del procesador que actúa</span><span><i class="k-snoop"></i>transición en las otras cachés (por espiar el bus)</span></div>
+      </div>
 
-        <div class="procs" id="coh-procs"></div>
-        <div class="taps" aria-hidden="true"><span></span><span></span><span></span></div>
-        <div class="bus" id="coh-bus" aria-live="polite"><div class="spark"></div><div class="bus-label" id="coh-busLabel">Bus libre</div></div>
-        <div class="mem-tap" aria-hidden="true"></div>
-        <div class="mem-row"><div class="mem" id="coh-mem"></div></div>
-
-        <div class="sim-bottom">
-          <div class="coh-panel">
-            <h3>Qué acaba de pasar</h3>
-            <ul class="narr empty" id="coh-narr"><li>Todavía nadie tocó X. Todas las cachés arrancan en I y la memoria tiene X = 10.</li></ul>
-            <details class="hist"><summary>Historial</summary><ol id="coh-hist"></ol></details>
-          </div>
-          <div class="coh-panel">
-            <div class="coh-stats">
-              <div><b id="coh-busCount">0</b><span>transacciones de bus</span></div>
-              <div><b id="coh-opCount">0</b><span>operaciones</span></div>
-            </div>
-            <p class="truth" id="coh-truth"></p>
-            <h3 style="margin-top:16px">Escenarios guiados</h3>
-            <select id="coh-scen" aria-label="Escenario">
-              <option value="">Elegir un escenario…</option>
-              <option value="apuntes">Ejemplo de los apuntes</option>
-              <option value="privado">Dato que nadie comparte</option>
-              <option value="turnos">Dos escritores por turnos</option>
-            </select>
-            <div class="scen-steps" id="coh-scenSteps"></div>
-            <div class="actions">
-              <button class="btn" id="coh-next" type="button" disabled>Siguiente paso</button>
-              <button class="btn ghost" id="coh-reset" type="button">Reiniciar</button>
-            </div>
-            <p class="compare" id="coh-compare"></p>
-          </div>
+      <div class="grid2">
+        <div class="panel"><h4>Transiciones</h4>
+          <p class="small"><b>T1a</b> V + PrRd: acierto, sin bus. <b>T1b</b> V + PrWr: escribe caché y memoria, BusWr. <b>T2</b> I + PrRd: fallo, trae de memoria, pasa a V, BusRd. <b>T3</b> I + PrWr: escribe solo en memoria (no allocate), sigue en I, BusWr. <b>T4</b> V + BusWr observado: otro escribió, pasa a I.</p>
+        </div>
+        <div class="panel"><h4>Por qué da coherencia</h4>
+          <p class="small">Propagación: todos espían el bus, así que ven todas las escrituras. Serialización: el bus es atómico y el arbitraje fija un único orden de escrituras. Entre dos escrituras, las lecturas de cada procesador siguen el orden de su programa.</p>
         </div>
       </div>
+      <p class="src">Fuente: apuntes, sección 6.9.1.</p>
     </section>
 
-    <!-- ============ 4 ESTADOS ============ -->
+    <!-- ============ 5 MSI / MESI ============ -->
+    <section class="block coh" id="s-msi">
+      <h2><span class="num">5</span> MSI, el problema de MSI y por qué MESI</h2>
+      <p class="sub">Con post-escritura aparecen más estados; MESI agrega uno para no pagar transacciones inútiles.</p>
+      <p><strong>MSI</strong> es un protocolo de invalidación para cachés con post-escritura (y por lo tanto con asignación en escritura). Estados: <b class="c-M">M</b> (única copia válida, la memoria está desactualizada), <b class="c-S">S</b> (copia limpia, puede haber otras) e <b class="c-I">I</b>. Aparecen transacciones nuevas: <code>BusRdX</code> (lectura con intención de modificar, invalida al resto) y <code>Flush</code> (la caché que tiene el bloque en M lo vuelca al bus en lugar de que responda la memoria).</p>
+      <p><strong>El problema:</strong> en una aplicación secuencial que lee y después modifica un dato que nadie más tiene, MSI igual paga dos transacciones de bus: <code>BusRd</code> al leer (I → S) y <code>BusRdX</code> al escribir (S → M). La segunda es inútil porque no hay nadie a quien invalidar.</p>
+      <p><strong>MESI</strong> agrega el estado <b class="c-E">E</b> (única copia, limpia). En un fallo de lectura las demás cachés indican con la señal <b>S</b> (shared) si tienen copia: si nadie la activa, el bloque entra en E. Desde E se pasa a M sin ninguna transacción de bus.</p>
+      <div class="note info"><strong>En una frase:</strong> E le permite a la caché saber que es dueña única antes de escribir, y así ahorra el <code>BusRdX</code> en el patrón leer-modificar sobre datos privados.</div>
+
+      <div class="sim">
+        <div class="sim-top">
+          <h4>Simulador MSI / MESI</h4>
+          <div class="sim-ctl">
+            <div class="seg" role="group" aria-label="Protocolo"><button type="button" id="msi-p-msi" aria-pressed="true">MSI</button><button type="button" id="msi-p-mesi" aria-pressed="false">MESI</button></div>
+            <button type="button" class="btn ghost" id="msi-reset">Reiniciar</button>
+          </div>
+        </div>
+        <div class="simgrid">
+          <div>
+            <div class="cpus" id="msi-cpus"></div>
+            <div class="memrow"><span>Memoria: <b class="mono" id="msi-mem"></b></span><div class="busbar" id="msi-bus"><i></i></div><span class="mono" id="msi-cnt"></span></div>
+            <p class="src">Probá: en MSI hacé P0 Leer y luego P0 Escribir (2 transacciones). Cambiá a MESI y repetí (1 transacción).</p>
+          </div>
+          <svg id="msi-fsm" class="fsm" viewBox="0 0 540 440" role="img" aria-label="Diagrama de estados del protocolo"></svg>
+        </div>
+        <div class="log" id="msi-log" aria-live="polite"></div>
+        <div class="legend"><span><i class="k-act"></i>procesador que actúa</span><span><i class="k-snoop"></i>otras cachés reaccionando al bus</span></div>
+      </div>
+
+      <h3 id="s-msi-escenarios">Transacciones de bus por escenario</h3>
+      <p>El gráfico se calcula ejecutando cada escenario en el mismo motor del simulador. Cuenta <code>BusRd</code>, <code>BusRdX</code> y <code>Flush</code>.</p>
+      <div class="sim">
+        <svg id="msi-chart" class="chart" viewBox="0 0 720 300" role="img" aria-label="Comparación de transacciones MSI y MESI"></svg>
+        <div class="legend"><span><i class="k-m"></i>MSI</span><span><i class="k-e"></i>MESI</span></div>
+        <p class="src" id="msi-chart-notes"></p>
+      </div>
+
+      <div class="note"><strong>Detalle de los apuntes:</strong> la transición T10 (E + BusRd → S) indica un Flush. Como en E la memoria está actualizada, la caché no está obligada a proveer el dato (los mismos apuntes lo dicen en «sin pertenencia»). El simulador lo muestra como Flush opcional y no lo cuenta como transacción.</div>
+      <p class="src">Fuente: apuntes, secciones 6.10 a 6.10.7.</p>
+    </section>
+
+
+    <!-- ============ 6 ESTADOS ============ -->
     <section class="block coh" id="s-estados">
-      <h2><span class="num">4</span> Los cuatro estados de MESI</h2>
+      <h2><span class="num">6</span> Los cuatro estados de MESI</h2>
       <p class="sub">Qué sabe una caché sobre su copia en cada estado.</p>
       <div class="table-scroll">
         <table class="cmp">
@@ -579,15 +614,82 @@
       </div>
     </section>
 
+    <!-- ============ 7 DIRECTORIOS ============ -->
+    <section class="block coh" id="s-directorio">
+      <h2><span class="num">7</span> Coherencia basada en directorios</h2>
+      <p class="sub">Qué pasa cuando no hay un bus que espiar: un nodo home lleva la cuenta de quién tiene cada bloque.</p>
+      <p>En una máquina NUMA no hay bus que espiar. Cada bloque tiene un <strong>nodo home</strong> (fijado por la dirección del bloque) que guarda su entrada de directorio: un bit de presencia por procesador y un bit limpio/sucio. Los estados en cada caché siguen siendo <b class="c-M">M</b>, <b class="c-S">S</b> e <b class="c-I">I</b>, pero las transiciones se disparan con mensajes por la red.</p>
+      <p>En cada transacción participan el nodo <b>peticionario</b> (local), el <b>home</b> y los <b>remotos</b> que tienen copia (si está en M, uno solo: el owner).</p>
+
+      <div class="sim">
+        <div class="sim-top"><h4>Simulador: cuatro nodos, bloque X con home en P0</h4><button type="button" class="btn ghost" id="dir-reset">Reiniciar</button></div>
+        <div class="grid2">
+          <svg id="dir-net" class="net" viewBox="0 0 440 340" role="img" aria-label="Red de cuatro nodos"></svg>
+          <div>
+            <div class="cpus cpus-2" id="dir-cpus"></div>
+            <div class="memrow memrow-col">
+              <span>Directorio de X en P0: <b class="mono" id="dir-dir"></b></span>
+              <span class="mono" id="dir-cnt"></span>
+            </div>
+          </div>
+        </div>
+        <div class="log" id="dir-log" aria-live="polite"></div>
+        <div class="legend"><span><i class="k-act"></i>petición / datos</span><span><i class="k-snoop"></i>invalidación</span><span><i class="k-i"></i>ack</span></div>
+      </div>
+
+      <div class="grid2">
+        <div class="panel">
+          <h4 id="s-directorio-mensajes">Mensajes por escritura según cantidad de copias</h4>
+          <svg id="dir-msg-chart" class="chart" viewBox="0 0 420 240" role="img" aria-label="Mensajes y latencia según copias compartidas"></svg>
+          <div class="legend"><span><i class="k-act"></i>mensajes totales</span><span><i class="k-s"></i>latencia, basado en memoria</span><span><i class="k-m"></i>latencia, basado en caché (lista)</span></div>
+          <p class="src">Modelo simplificado: petición + datos + una invalidación y un ack por copia. En el esquema basado en memoria el home conoce a todos y envía en paralelo; en el basado en caché (lista enlazada SCI) hay que recorrer la lista, así que la latencia también crece con las copias.</p>
+        </div>
+        <div class="panel">
+          <h4 id="s-directorio-sobrecarga">Sobrecarga de almacenamiento del directorio</h4>
+          <div class="sim-fields">
+            <label>Nodos: <b class="mono" id="dir-ov-nv">64</b><input type="range" id="dir-ov-n" min="1" max="10" value="6"></label>
+            <label>Línea (bytes)<select id="dir-ov-l"><option>4</option><option>16</option><option>32</option><option selected>64</option><option>128</option></select></label>
+          </div>
+          <div class="out" id="dir-ov-out">—</div>
+          <svg id="dir-ov-chart" class="chart" viewBox="0 0 420 180" role="img" aria-label="Sobrecarga por cantidad de nodos"></svg>
+          <p class="src">Cálculo: N bits de presencia / bits de la línea (el bit sucio suma uno más, despreciable). Con línea de 64 B salen 64 nodos 12,5 %, 256 nodos 50 % y 1024 nodos 200 %, que son los valores de los apuntes. Ojo: los apuntes dicen «4 nodos», «25 nodos» y «línea de 4 bytes»; parecen erratas de 64, 256 y 64 bytes, porque con esos datos los números no cierran. Soluciones: un bit por nodo multiprocesador, punteros en lugar de bits (menos ancho) u organizar el directorio como caché (menos alto).</p>
+        </div>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 6.18 a 6.26.</p>
+    </section>
+
+    <!-- ============ 8 CONSISTENCIA ============ -->
+    <section class="block coh" id="s-consistencia">
+      <h2><span class="num">8</span> Consistencia de memoria</h2>
+      <p class="sub">Qué orden ven los procesadores entre escrituras a posiciones distintas, algo que la coherencia no garantiza.</p>
+      <p>La <strong>coherencia</strong> garantiza que las escrituras a <em>una</em> posición se vean en el mismo orden por todos, pero no dice nada del orden entre escrituras a posiciones <em>distintas</em>. Eso lo define el <strong>modelo de consistencia</strong>: un contrato entre programador y diseñador que limita qué reordenamientos pueden hacer el hardware y el compilador.</p>
+      <p>Un multiprocesador es <strong>secuencialmente consistente</strong> si el resultado es el mismo que si las operaciones de todos se ejecutaran en algún orden secuencial, respetando el orden de programa de cada procesador. Requiere orden de programa y <strong>atomicidad de las escrituras</strong> (una escritura es visible para todos antes de que se vea la siguiente).</p>
+      <div class="note info"><strong>En una frase:</strong> bajo consistencia secuencial, si P2 ve B = 2 entonces tiene que ver A = 1, porque P1 escribió A antes que B.</div>
+
+      <div class="sim">
+        <div class="sim-top">
+          <h4>P1: A = 1; B = 2 &nbsp;·&nbsp; P2: print B; print A</h4>
+          <div class="seg" role="group" aria-label="Modelo"><button type="button" id="cs-sc" aria-pressed="true">Consistencia secuencial</button><button type="button" id="cs-no" aria-pressed="false">Escrituras reordenadas</button></div>
+        </div>
+        <div id="cs-list" class="cpus cs-list"></div>
+        <div class="cs-status" id="cs-status" aria-live="polite"></div>
+        <p class="src">Valores iniciales A = B = 0. Se listan todos los órdenes globales posibles de las cuatro operaciones y el par (A, B) que imprime P2.</p>
+      </div>
+      <div class="panel"><h4>Condiciones suficientes para consistencia secuencial</h4>
+        <p class="small">Cada proceso emite sus accesos en orden de programa. Después de una escritura, espera a que se complete antes de emitir la siguiente operación. Después de una lectura, espera a que se complete la lectura y también la escritura que generó el valor leído, con respecto a todos los procesos.</p>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 6.12 a 6.17.</p>
+    </section>
+
     <!-- ============ QUIZ ============ -->
     <section class="block" id="s-quiz">
       <h2><span class="num">✓</span> Quiz de repaso</h2>
-      <p class="sub">Cinco preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
+      <p class="sub">Ocho preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
       <div id="quizWrap"></div>
       <p class="quiz-score" id="quizScore"></p>
     </section>
 
-    <footer class="pagefoot">Basado en los apuntes de Arquitectura de Computadoras (UNC, FCEFyN), unidad 6: coherencia de caché en multiprocesadores. Hecho como material de repaso; no reemplaza la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
+    <footer class="pagefoot">Basado en los apuntes de Arquitectura de Computadoras (UNC, FCEFyN), unidad 6: coherencia de caché en multiprocesadores (snoopy y directorios). Hecho como material de repaso; no reemplaza la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
   </main>
 </div>
 
@@ -671,220 +773,382 @@ function stdQuiz(items, wrapId, scoreId) {
 /* ==== /STD:SCRIPT ==== */
 </script>
 <script>
-/* ==== PAGE:SCRIPT ==== simulador de coherencia (motor del apunte, sin cambios) y quiz */
-(function(){
+/* ==== PAGE:SCRIPT ==== simuladores de coherencia (bus, dos estados, MSI/MESI, directorio) y quiz */
+// Hash de la versión anterior de la guía: #s-evolucion y #s-simulador pasaron a #s-vi y #s-msi.
+(function () {
+  var map = { 's-evolucion': 's-vi', 's-simulador': 's-msi' };
+  var h = location.hash.slice(1);
+  if (map[h]) {
+    try { history.replaceState(null, '', '#' + map[h]); } catch (e) {}
+    var t = document.getElementById(map[h]);
+    if (t) t.scrollIntoView();
+  }
+})();
+
+(function () {
   "use strict";
-  var NAMES = {M:"Modificado",E:"Exclusivo",S:"Compartido",V:"Válido",I:"Inválido"};
-  var LEGENDS = {
-    VI:[["V","válido: la copia sirve"],["I","inválido o ausente"]],
-    MSI:[["M","única copia, memoria vieja"],["S","copia limpia, puede haber otras"],["I","inválido o ausente"]],
-    MESI:[["M","única copia, memoria vieja"],["E","única copia, limpia"],["S","copia limpia compartida"],["I","inválido o ausente"]]
-  };
+  var $ = function (id) { return document.getElementById(id); };
+  if (!$('vi-cpus')) return;
+  var NS = "http://www.w3.org/2000/svg";
+  function S(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+  function H(tag, attrs, html) { var e = document.createElement(tag); if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]); if (html != null) e.innerHTML = html; return e; }
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function col(st) { return "var(--" + (st === "V" ? "s" : st.toLowerCase()) + ")"; }
+  function flashBus(el) { if (!el) return; el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); setTimeout(function () { el.classList.remove("flash"); }, 500); }
+  function logLine(box, html) { box.prepend(H("div", null, html)); }
+  function btn(p, o, label, extra) { return '<button type="button" class="btn ghost" data-p="' + p + '" data-o="' + o + '"' + (extra || "") + '>' + label + '</button>'; }
 
-  function fresh(protocol){
-    return {protocol:protocol, caches:[0,1,2].map(function(){return {st:"I",val:null};}), mem:10, latest:10, bus:0, ops:0};
-  }
-  function P(i){return "P"+(i+1);}
-
-  /* Motor: cada operación muta el estado y devuelve lo ocurrido */
-  function read(s,i){
-    var c=s.caches[i], out={lines:[],bus:[],snoop:[]};
-    s.ops++;
-    if(s.protocol==="VI"){
-      if(c.st==="V"){out.lines.push(P(i)+" lee X: acierto en estado V. No usa el bus.");return out;}
-      out.bus.push({who:i,op:"BusRd"}); s.bus++;
-      c.st="V"; c.val=s.mem;
-      out.lines.push(P(i)+" lee X: fallo. Emite BusRd y la memoria entrega X = "+s.mem+". Pasa de I a V.");
-      out.lines.push("Las demás cachés ven el BusRd, pero una lectura no las afecta.");
-      return out;
-    }
-    if(c.st!=="I"){out.lines.push(P(i)+" lee X: acierto en estado "+c.st+". No usa el bus.");return out;}
-    out.bus.push({who:i,op:"BusRd"}); s.bus++;
-    out.lines.push(P(i)+" lee X: fallo, estaba en I. Emite BusRd.");
-    s.caches.forEach(function(o,j){
-      if(j===i) return;
-      if(o.st==="M"){
-        s.mem=o.val; o.st="S"; out.snoop.push(j);
-        out.bus.push({who:j,op:"Flush"}); s.bus++;
-        out.lines.push(P(j)+" espiaba el bus y tiene X en M: hace Flush con X = "+o.val+". La memoria se actualiza y "+P(j)+" pasa de M a S.");
-      } else if(o.st==="E"){
-        o.st="S"; out.snoop.push(j);
-        out.lines.push(P(j)+" tenía X en E: ahora hay otra copia, así que pasa a S.");
-      } else if(o.st==="S"){
-        out.snoop.push(j);
-      }
+  /* ---------- diagramas de estado ---------- */
+  function defs(svg, id) {
+    var d = S("defs", {}, svg);
+    [["n", "var(--i)"], ["h", "var(--act)"], ["w", "var(--warn)"]].forEach(function (kc) {
+      var m = S("marker", { id: id + kc[0], viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "10", markerHeight: "10", markerUnits: "userSpaceOnUse", orient: "auto-start-reverse" }, d);
+      S("path", { d: "M0,0 L10,5 L0,10 z", fill: kc[1] }, m);
     });
-    var shared=s.caches.some(function(o,j){return j!==i && o.st!=="I";});
-    c.val=s.mem;
-    if(s.protocol==="MSI"){ c.st="S"; out.lines.push(P(i)+" recibe X = "+c.val+" y pasa de I a S."); }
-    else if(shared){ c.st="S"; out.lines.push("Otra caché activa la señal S: "+P(i)+" recibe X = "+c.val+" y pasa de I a S."); }
-    else { c.st="E"; out.lines.push("Nadie activa la señal S: "+P(i)+" recibe X = "+c.val+" y pasa de I a E, porque es la única copia."); }
-    return out;
   }
-
-  function write(s,i){
-    var c=s.caches[i], out={lines:[],bus:[],snoop:[]}, v=s.latest+1;
-    s.latest=v; s.ops++;
-    if(s.protocol==="VI"){
-      out.bus.push({who:i,op:"BusWr"}); s.bus++; s.mem=v;
-      if(c.st==="V"){ c.val=v; out.lines.push(P(i)+" escribe X = "+v+" en su caché y en memoria. Emite BusWr y sigue en V."); }
-      else out.lines.push(P(i)+" escribe X = "+v+" directo en memoria y emite BusWr. Sigue en I por no write allocate.");
-      s.caches.forEach(function(o,j){ if(j!==i && o.st==="V"){ o.st="I"; out.snoop.push(j); out.lines.push(P(j)+" ve el BusWr: su copia quedó vieja y pasa de V a I."); }});
-      return out;
-    }
-    if(c.st==="M"){ c.val=v; out.lines.push(P(i)+" escribe X = "+v+": acierto en M, escribe solo en su caché. Sin bus. La memoria sigue desactualizada."); return out; }
-    if(c.st==="E"){ c.st="M"; c.val=v; out.lines.push(P(i)+" escribe X = "+v+": estaba en E, sabe que es la única copia y pasa a M sin usar el bus."); return out; }
-    out.bus.push({who:i,op:"BusRdX"}); s.bus++;
-    out.lines.push(P(i)+" quiere escribir X y estaba en "+c.st+": emite BusRdX para que los demás invaliden.");
-    s.caches.forEach(function(o,j){
-      if(j===i) return;
-      if(o.st==="M"){
-        s.mem=o.val; out.bus.push({who:j,op:"Flush"}); s.bus++;
-        out.lines.push(P(j)+" tenía X en M: hace Flush con X = "+o.val+" y pasa a I.");
-        o.st="I"; out.snoop.push(j);
-      } else if(o.st!=="I"){
-        out.lines.push(P(j)+" ve el BusRdX y pasa de "+o.st+" a I.");
-        o.st="I"; out.snoop.push(j);
+  function drawFSM(svg, id, nodes, edges) {
+    svg.innerHTML = ""; defs(svg, id); var R = 34; var map = {};
+    var gE = S("g", {}, svg), gN = S("g", {}, svg);
+    edges.forEach(function (e) {
+      var g = S("g", { "class": "edge", "data-id": e.id }, gE); var p, lx, ly;
+      if (e.loop) {
+        var n = nodes[e.from]; var a = e.ang * Math.PI / 180, sp = .5;
+        var x1 = n.x + R * Math.cos(a - sp), y1 = n.y + R * Math.sin(a - sp), x2 = n.x + R * Math.cos(a + sp), y2 = n.y + R * Math.sin(a + sp);
+        var cx1 = n.x + (R + 60) * Math.cos(a - sp * 1.3), cy1 = n.y + (R + 60) * Math.sin(a - sp * 1.3), cx2 = n.x + (R + 60) * Math.cos(a + sp * 1.3), cy2 = n.y + (R + 60) * Math.sin(a + sp * 1.3);
+        p = "M" + x1 + "," + y1 + " C" + cx1 + "," + cy1 + " " + cx2 + "," + cy2 + " " + x2 + "," + y2;
+        lx = n.x + (R + 58) * Math.cos(a) + (e.dx || 0); ly = n.y + (R + 58) * Math.sin(a) + (e.dy || 0);
+      } else {
+        var A = nodes[e.from], B = nodes[e.to]; var dx = B.x - A.x, dy = B.y - A.y, L = Math.hypot(dx, dy); var nx = -dy / L, ny = dx / L; var c = e.c || 0;
+        var mx = (A.x + B.x) / 2 + nx * c, my = (A.y + B.y) / 2 + ny * c;
+        var t1 = Math.atan2(my - A.y, mx - A.x), t2 = Math.atan2(my - B.y, mx - B.x);
+        var X1 = A.x + R * Math.cos(t1), Y1 = A.y + R * Math.sin(t1), X2 = B.x + (R + 3) * Math.cos(t2), Y2 = B.y + (R + 3) * Math.sin(t2);
+        p = "M" + X1 + "," + Y1 + " Q" + mx + "," + my + " " + X2 + "," + Y2;
+        var tt = e.t == null ? .5 : e.t, u = 1 - tt;
+        lx = u * u * X1 + 2 * u * tt * mx + tt * tt * X2 + (e.dx || 0); ly = u * u * Y1 + 2 * u * tt * my + tt * tt * Y2 + (e.dy || 0);
       }
+      S("path", { d: p, "marker-end": "url(#" + id + "n)" }, g);
+      var lines = (e.id + "  " + e.label).split("\n");
+      var t = S("text", { x: lx, y: ly - (lines.length - 1) * 7, "text-anchor": "middle", "dominant-baseline": "middle" }, g);
+      lines.forEach(function (ln, i) { var ts = S("tspan", { x: lx, dy: i ? 14 : 0 }, t); ts.textContent = ln; });
+      map[e.id] = g;
     });
-    c.st="M"; c.val=v;
-    out.lines.push(P(i)+" escribe X = "+v+" en su caché y queda en M. La memoria no se toca.");
-    return out;
+    Object.keys(nodes).forEach(function (k) {
+      var n = nodes[k]; var g = S("g", { "class": "node" }, gN);
+      S("circle", { cx: n.x, cy: n.y, r: R, stroke: col(n.col || k) }, g);
+      var t = S("text", { x: n.x, y: n.y + 1, "text-anchor": "middle", "dominant-baseline": "middle", fill: col(n.col || k) }, g); t.textContent = k;
+    });
+    return {
+      hot: function (list) {
+        Object.keys(map).forEach(function (k) { var g = map[k]; g.classList.remove("hot", "hot2"); g.querySelector("path").setAttribute("marker-end", "url(#" + id + "n)"); });
+        list.forEach(function (ek) { var g = map[ek[0]]; if (!g) return; g.classList.add(ek[1]); g.querySelector("path").setAttribute("marker-end", "url(#" + id + (ek[1] === "hot" ? "h" : "w") + ")"); gE.appendChild(g); });
+      }
+    };
   }
 
-  function evict(s,i){
-    var c=s.caches[i], out={lines:[],bus:[],snoop:[]};
-    s.ops++;
-    if(c.st==="I"){ out.lines.push(P(i)+" no tiene X en caché: no hay nada que desalojar."); return out; }
-    if(c.st==="M"){
-      out.bus.push({who:i,op:"Flush"}); s.bus++; s.mem=c.val;
-      out.lines.push(P(i)+" desaloja X, que estaba en M: hace Flush con X = "+c.val+" para no perder el valor. Pasa a I.");
+  /* ---------- 3. saturación del bus ---------- */
+  function bw() {
+    var f = +$("bw-f").value, c = +$("bw-c").value || 1, p = +$("bw-p").value / 100, b = +$("bw-b").value, bus = +$("bw-bus").value;
+    var stores = f * 1e6 / c * p, mbs = stores * b / 1e6, maxP = Math.floor(bus * 1000 / mbs);
+    $("bw-out1").innerHTML = mbs.toLocaleString("es-AR", { maximumFractionDigits: 0 }) + " MB/s<small>de tráfico por procesador (" + (stores / 1e6).toLocaleString("es-AR", { maximumFractionDigits: 0 }) + " millones de stores/s)</small>";
+    $("bw-out2").innerHTML = maxP + " procesadores<small>como máximo antes de saturar el bus de " + bus + " GB/s</small>";
+    var svg = $("bw-chart"); svg.innerHTML = ""; var W = 460, l = 40, bt = 170, top = 16, n = 8, bwid = (W - l - 10) / n;
+    var maxV = Math.max(bus * 1000 * 1.25, mbs * n); var y = function (v) { return bt - (bt - top) * v / maxV; };
+    for (var i = 1; i <= n; i++) {
+      var v = mbs * i, over = v > bus * 1000;
+      S("rect", { x: l + (i - 1) * bwid + 6, y: y(v), width: bwid - 12, height: bt - y(v), rx: 4, fill: over ? "var(--err)" : "var(--act)" }, svg);
+      var t = S("text", { x: l + (i - .5) * bwid, y: bt + 16, "text-anchor": "middle" }, svg); t.textContent = i;
+    }
+    S("line", { x1: l, x2: W - 6, y1: y(bus * 1000), y2: y(bus * 1000), stroke: "var(--text)", "stroke-dasharray": "5 4" }, svg);
+    var t1 = S("text", { x: W - 8, y: y(bus * 1000) - 6, "text-anchor": "end", "class": "lbl" }, svg); t1.textContent = "capacidad del bus " + bus + " GB/s";
+    var t2 = S("text", { x: l, y: 12 }, svg); t2.textContent = "MB/s totales según cantidad de procesadores";
+    S("line", { x1: l, x2: W - 6, y1: bt, y2: bt, stroke: "var(--line)" }, svg);
+  }
+  ["bw-f", "bw-c", "bw-p", "bw-b", "bw-bus"].forEach(function (s) { $(s).addEventListener("input", bw); }); bw();
+
+  /* ---------- 4. protocolo de dos estados ---------- */
+  var vi = { c: [], mem: 10, next: 11, rd: 0, wr: 0 };
+  var viF = drawFSM($("vi-fsm"), "coh-vi", { I: { x: 120, y: 150 }, V: { x: 340, y: 150, col: "S" } }, [
+    { id: "T2", from: "I", to: "V", c: -55, label: "PrRd / BusRd", dy: -10 },
+    { id: "T4", from: "V", to: "I", c: -55, label: "BusWr / –", dy: 10 },
+    { id: "T3", from: "I", loop: 1, ang: -90, label: "PrWr / BusWr", dy: -8 },
+    { id: "T1a", from: "V", loop: 1, ang: -90, label: "PrRd / –", dy: -8 },
+    { id: "T1b", from: "V", loop: 1, ang: 90, label: "PrWr / BusWr", dy: 8 }]);
+  function viReset() { vi.c = [0, 1, 2].map(function () { return { s: "I", v: null }; }); vi.mem = 10; vi.next = 11; vi.rd = 0; vi.wr = 0; $("vi-log").innerHTML = ""; viF.hot([]); viRender(); }
+  function viRender() {
+    var box = $("vi-cpus"); box.innerHTML = "";
+    vi.c.forEach(function (c, i) {
+      box.appendChild(H("div", { "class": "cpu" }, '<div class="name">P' + i + '<span class="badge ' + c.s + '">' + c.s + '</span></div><div class="val">X = ' + (c.s === "V" ? c.v : "—") + '</div><div class="btns">' + btn(i, "r", "Leer") + btn(i, "w", "Escribir") + '</div>'));
+    });
+    $("vi-mem").textContent = "X = " + vi.mem; $("vi-cnt").textContent = "BusRd " + vi.rd + " · BusWr " + vi.wr;
+  }
+  $("vi-cpus").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return; var p = +b.dataset.p, c = vi.c[p]; var hot = []; var msg;
+    if (b.dataset.o === "r") {
+      if (c.s === "V") { msg = "P" + p + " lee X = " + c.v + ": acierto (T1a), sin bus."; hot.push(["T1a", "hot"]); }
+      else { c.s = "V"; c.v = vi.mem; vi.rd++; msg = "P" + p + ' lee X: fallo, <span class="tx">BusRd</span>, trae ' + vi.mem + " de memoria y pasa a V (T2)."; hot.push(["T2", "hot"]); flashBus($("vi-bus")); }
     } else {
-      out.lines.push(P(i)+" desaloja X, que estaba en "+c.st+": la memoria ya tiene ese valor, así que solo pasa a I sin usar el bus.");
+      var v = vi.next++; vi.mem = v; vi.wr++; flashBus($("vi-bus"));
+      if (c.s === "V") { c.v = v; msg = "P" + p + " escribe X = " + v + ' en caché y memoria, <span class="tx">BusWr</span> (T1b).'; hot.push(["T1b", "hot"]); }
+      else { msg = "P" + p + " escribe X = " + v + ' solo en memoria (no allocate), sigue en I, <span class="tx">BusWr</span> (T3).'; hot.push(["T3", "hot"]); }
+      var inv = []; vi.c.forEach(function (o, q) { if (q !== p && o.s === "V") { o.s = "I"; inv.push("P" + q); } });
+      if (inv.length) { msg += " " + inv.join(" y ") + " ve" + (inv.length > 1 ? "n" : "") + " el BusWr e invalida" + (inv.length > 1 ? "n" : "") + " (T4)."; hot.push(["T4", "hot2"]); }
     }
-    c.st="I"; c.val=null;
-    return out;
-  }
+    logLine($("vi-log"), msg); viF.hot(hot); viRender();
+  });
+  $("vi-reset").addEventListener("click", viReset); viReset();
 
-  var OPS={r:read,w:write,e:evict};
-  var OPNAME={r:"lee",w:"escribe",e:"desaloja"};
-
-  var SCEN={
-    apuntes:{steps:[["r",0],["r",1],["w",0],["r",1]]},
-    privado:{steps:[["r",0],["w",0],["w",0]]},
-    turnos:{steps:[["w",0],["w",1],["w",0],["r",2]]}
+  /* ---------- 5. motor MSI / MESI ---------- */
+  var TR = {
+    MSI: { rdHit: { M: "T4", S: "T8" }, rdMiss: "T2", busRdM: "T6", busRdS: "T8", wrHitM: "T4", wrI: "T1", wrS: "T3", rdxM: "T5", rdxS: "T7", repM: "T5", repS: "T7" },
+    MESI: { rdHit: { M: "T5", E: "T7", S: "T8" }, rdMissS: "T1", rdMissE: "T2", busRdM: "T11", busRdE: "T10", busRdS: "T8", wrHitM: "T5", wrE: "T6", wrI: "T3", wrS: "T4", rdxM: "T13", rdxE: "T12", rdxS: "T9", repM: "T13", repS: "T9", repE: "T12" }
   };
-
-  function countBus(protocol,steps){
-    var s=fresh(protocol); steps.forEach(function(st){OPS[st[0]](s,st[1]);}); return s.bus;
-  }
-
-  /* Estado de la interfaz */
-  var state=fresh("MESI"), hist=[], scen=null, scenIdx=0;
-  var $=function(id){return document.getElementById("coh-"+id);};
-  var root=document.getElementById("s-simulador");
-  if(!root) return;
-
-  function buildProcs(){
-    var html="";
-    for(var i=0;i<3;i++){
-      html+='<div class="proc" id="coh-proc'+i+'">'+
-        '<div class="proc-head">'+P(i)+' <small>caché privada</small></div>'+
-        '<div class="state"><div class="badge" id="coh-badge'+i+'">I</div><div class="state-txt"><b id="coh-stname'+i+'">Inválido</b><span class="xval" id="coh-xval'+i+'">sin copia</span></div></div>'+
-        '<div class="acts">'+
-          '<button type="button" data-op="r" data-i="'+i+'">Leer X</button>'+
-          '<button type="button" class="w" data-op="w" data-i="'+i+'">Escribir X</button>'+
-          '<button type="button" data-op="e" data-i="'+i+'">Desalojar</button>'+
-        '</div></div>';
+  function newState() { return { c: [0, 1, 2].map(function () { return { s: "I", v: null }; }), mem: 10, next: 11, cnt: { BusRd: 0, BusRdX: 0, Flush: 0 } }; }
+  function step(proto, st, p, op) {
+    var t = TR[proto], c = st.c[p], out = { msg: "", hot: [] };
+    var tx = function (k) { st.cnt[k]++; out.bus = true; };
+    var others = st.c.map(function (o, q) { return [o, q]; }).filter(function (oq) { return oq[1] !== p; });
+    var extra = [];
+    if (op === "r") {
+      if (c.s !== "I") { out.msg = "P" + p + " lee X = " + c.v + ": acierto en " + c.s + " (" + t.rdHit[c.s] + "), sin bus."; out.hot.push([t.rdHit[c.s], "hot"]); return out; }
+      tx("BusRd"); var shared = others.some(function (oq) { return oq[0].s !== "I"; });
+      others.forEach(function (oq) {
+        var o = oq[0], q = oq[1];
+        if (o.s === "M") { tx("Flush"); st.mem = o.v; o.s = "S"; extra.push("P" + q + ' estaba en M: <span class="tx">Flush</span> y pasa a S (' + t.busRdM + ")"); out.hot.push([t.busRdM, "hot2"]); }
+        else if (o.s === "E") { o.s = "S"; extra.push("P" + q + " estaba en E: pasa a S (" + t.busRdE + ", Flush opcional)"); out.hot.push([t.busRdE, "hot2"]); }
+        else if (o.s === "S") { extra.push("P" + q + " sigue en S (" + t.busRdS + ")"); out.hot.push([t.busRdS, "hot2"]); }
+      });
+      c.v = st.mem; var tid;
+      if (proto === "MSI") { c.s = "S"; tid = t.rdMiss; out.msg = "P" + p + ' lee X: fallo, <span class="tx">BusRd</span>, pasa a S (' + tid + ")."; }
+      else { c.s = shared ? "S" : "E"; tid = shared ? t.rdMissS : t.rdMissE; out.msg = "P" + p + ' lee X: fallo, <span class="tx">BusRd</span>. ' + (shared ? "Alguien activa la señal S" : "Nadie activa la señal S") + ", pasa a " + c.s + " (" + tid + ")."; }
+      out.hot.push([tid, "hot"]); if (extra.length) out.msg += " " + extra.join("; ") + "."; return out;
     }
-    $("procs").innerHTML=html;
+    if (op === "w") {
+      var v = st.next++;
+      if (c.s === "M") { c.v = v; out.msg = "P" + p + " escribe X = " + v + " en M (" + t.wrHitM + "), sin bus."; out.hot.push([t.wrHitM, "hot"]); return out; }
+      if (c.s === "E") { c.s = "M"; c.v = v; out.msg = "P" + p + " escribe X = " + v + ": estaba en E, pasa a M (" + t.wrE + ") <b>sin transacción de bus</b>."; out.hot.push([t.wrE, "hot"]); return out; }
+      tx("BusRdX"); var from = c.s;
+      others.forEach(function (oq) {
+        var o = oq[0], q = oq[1];
+        if (o.s === "M") { tx("Flush"); st.mem = o.v; extra.push("P" + q + ' hace <span class="tx">Flush</span> e invalida (' + t.rdxM + ")"); out.hot.push([t.rdxM, "hot2"]); }
+        else if (o.s === "E") { extra.push("P" + q + " invalida (" + t.rdxE + ")"); out.hot.push([t.rdxE, "hot2"]); }
+        else if (o.s === "S") { extra.push("P" + q + " invalida (" + t.rdxS + ")"); out.hot.push([t.rdxS, "hot2"]); }
+        if (o.s !== "I") o.s = "I";
+      });
+      var tw = from === "I" ? t.wrI : t.wrS; c.s = "M"; c.v = v;
+      out.msg = "P" + p + " escribe X = " + v + ": estaba en " + from + ', <span class="tx">BusRdX</span>, pasa a M (' + tw + ")."; out.hot.push([tw, "hot"]);
+      if (extra.length) out.msg += " " + extra.join("; ") + "."; return out;
+    }
+    if (op === "x") {
+      if (c.s === "I") { out.msg = "P" + p + " no tiene X, no hay nada que reemplazar."; return out; }
+      if (c.s === "M") { tx("Flush"); st.mem = c.v; out.msg = "P" + p + ' reemplaza X en M: <span class="tx">Flush</span> a memoria (X = ' + c.v + ") y pasa a I (" + t.repM + ")."; out.hot.push([t.repM, "hot"]); }
+      else { var k = c.s === "E" ? t.repE : t.repS; out.msg = "P" + p + " reemplaza X en " + c.s + ": pasa a I (" + k + ") sin bus, la memoria ya está al día."; out.hot.push([k, "hot"]); }
+      c.s = "I"; c.v = null; return out;
+    }
   }
 
-  function render(){
-    root.querySelectorAll(".seg button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.proto===state.protocol));});
-    $("legend").innerHTML=LEGENDS[state.protocol].map(function(l){return '<span><b class="c-'+l[0]+'">'+l[0]+'</b> '+l[1]+'</span>';}).join("");
-    state.caches.forEach(function(c,i){
-      var b=$("badge"+i); b.className="badge st-"+c.st; b.textContent=c.st;
-      $("stname"+i).textContent=NAMES[c.st];
-      $("xval"+i).textContent=c.st==="I"?"sin copia":"X = "+c.val;
+  var FSMDEF = {
+    MSI: [{ M: { x: 270, y: 80 }, S: { x: 440, y: 340 }, I: { x: 100, y: 340 } }, [
+      { id: "T1", from: "I", to: "M", c: 30, label: "PrWr / BusRdX", dx: -58 },
+      { id: "T5", from: "M", to: "I", c: 30, label: "BusRdX, Replace\n/ Flush", dx: 22, dy: 6 },
+      { id: "T2", from: "I", to: "S", c: -30, label: "PrRd / BusRd", dy: 16 },
+      { id: "T7", from: "S", to: "I", c: -30, label: "BusRdX, Replace / –", dy: -14 },
+      { id: "T3", from: "S", to: "M", c: 30, label: "PrWr / BusRdX", dx: 52 },
+      { id: "T6", from: "M", to: "S", c: 30, label: "BusRd / Flush", dx: -24, dy: 10 },
+      { id: "T4", from: "M", loop: 1, ang: -90, label: "PrRd, PrWr / –", dy: -6 },
+      { id: "T8", from: "S", loop: 1, ang: 30, label: "PrRd, BusRd\n/ –", dx: -6, dy: 30 }]],
+    MESI: [{ M: { x: 120, y: 95 }, E: { x: 420, y: 95 }, S: { x: 420, y: 345 }, I: { x: 120, y: 345 } }, [
+      { id: "T3", from: "I", to: "M", c: 30, label: "PrWr\n/ BusRdX", dx: -34 },
+      { id: "T13", from: "M", to: "I", c: 30, label: "BusRdX, Replace\n/ Flush", t: .3, dx: 66 },
+      { id: "T1", from: "I", to: "S", c: -28, label: "PrRd(S) / BusRd", dy: 28 },
+      { id: "T9", from: "S", to: "I", c: -28, label: "BusRdX, Replace / –", dy: -26 },
+      { id: "T2", from: "I", to: "E", c: -34, label: "PrRd(¬S)\n/ BusRd", t: .22, dx: 30, dy: -6 },
+      { id: "T12", from: "E", to: "I", c: -34, label: "BusRdX,\nReplace / –", t: .22, dx: -28, dy: 8 },
+      { id: "T4", from: "S", to: "M", c: -34, label: "PrWr / BusRdX", t: .22, dx: -30, dy: -10 },
+      { id: "T11", from: "M", to: "S", c: -34, label: "BusRd / Flush", t: .22, dx: 36, dy: 12 },
+      { id: "T6", from: "E", to: "M", c: -24, label: "PrWr / –", dy: -12 },
+      { id: "T10", from: "E", to: "S", c: -26, label: "BusRd\n/ Flush", dx: 30 },
+      { id: "T5", from: "M", loop: 1, ang: -135, label: "PrRd, PrWr / –", dx: 10, dy: -16 },
+      { id: "T7", from: "E", loop: 1, ang: -45, label: "PrRd / –", dx: -4, dy: -10 },
+      { id: "T8", from: "S", loop: 1, ang: 45, label: "PrRd, BusRd / –", dx: -20, dy: 14 }]]
+  };
+  var proto = "MSI", ms = newState(), mF;
+  function mDraw() { mF = drawFSM($("msi-fsm"), "coh-mf", FSMDEF[proto][0], FSMDEF[proto][1]); }
+  function mRender() {
+    var box = $("msi-cpus"); box.innerHTML = "";
+    ms.c.forEach(function (c, i) {
+      box.appendChild(H("div", { "class": "cpu" }, '<div class="name">P' + i + '<span class="badge ' + c.s + '">' + c.s + '</span></div><div class="val">X = ' + (c.s !== "I" ? c.v : "—") + '</div><div class="btns">' + btn(i, "r", "Leer") + btn(i, "w", "Escribir") + btn(i, "x", "Reemplazar", ' title="Reemplazar el bloque"') + '</div>'));
     });
-    var fresh_=state.mem===state.latest;
-    $("mem").innerHTML='<b>Memoria</b><span class="xval">X = '+state.mem+'</span><span class="pill '+(fresh_?"ok":"stale")+'">'+(fresh_?"actualizada":"desactualizada")+'</span>';
-    $("busCount").textContent=state.bus;
-    $("opCount").textContent=state.ops;
-    var holders=[];
-    state.caches.forEach(function(c,i){ if(c.st!=="I" && c.val===state.latest) holders.push(P(i)+" ("+c.st+")"); });
-    if(fresh_) holders.push("la memoria");
-    $("truth").innerHTML="Valor más reciente de X: <b>"+state.latest+"</b>. Lo tienen: "+holders.join(", ")+".";
-    renderScen();
+    $("msi-mem").textContent = "X = " + ms.mem; var k = ms.cnt;
+    $("msi-cnt").textContent = "BusRd " + k.BusRd + " · BusRdX " + k.BusRdX + " · Flush " + k.Flush + " · total " + (k.BusRd + k.BusRdX + k.Flush);
   }
+  $("msi-cpus").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return; var o = step(proto, ms, +b.dataset.p, b.dataset.o);
+    logLine($("msi-log"), "<b>" + proto + "</b> · " + o.msg); mF.hot(o.hot); if (o.bus) flashBus($("msi-bus")); mRender();
+  });
+  function setProto(p) { proto = p; $("msi-p-msi").setAttribute("aria-pressed", p === "MSI"); $("msi-p-mesi").setAttribute("aria-pressed", p === "MESI"); ms = newState(); $("msi-log").innerHTML = ""; mDraw(); mRender(); }
+  $("msi-p-msi").addEventListener("click", function () { setProto("MSI"); });
+  $("msi-p-mesi").addEventListener("click", function () { setProto("MESI"); });
+  $("msi-reset").addEventListener("click", function () { setProto(proto); }); setProto("MSI");
 
-  function renderScen(){
-    if(!scen){ $("scenSteps").innerHTML=""; $("next").disabled=true; $("compare").textContent=""; return; }
-    $("scenSteps").innerHTML=scen.steps.map(function(st,k){
-      var cls=k<scenIdx?"done":(k===scenIdx?"next":"");
-      return '<span class="'+cls+'">'+P(st[1])+" "+OPNAME[st[0]]+'</span>';
+  /* escenarios: se corren en el mismo motor */
+  var SCEN = [
+    { n: "Leer y modificar\ndato privado", ops: [[0, "r"], [0, "w"]] },
+    { n: "Bucle privado\n(5 lect. + escr.)", ops: [0, 1, 2, 3, 4].reduce(function (a) { return a.concat([[0, "r"], [0, "w"]]); }, []) },
+    { n: "Dato migratorio\n(P0, P1 y P2)", ops: [[0, "r"], [0, "w"], [1, "r"], [1, "w"], [2, "r"], [2, "w"]] },
+    { n: "Productor-consumidor\n(3 rondas)", ops: [[0, "w"], [1, "r"], [0, "w"], [1, "r"], [0, "w"], [1, "r"]] },
+    { n: "Lectura compartida\ny luego escritura", ops: [[0, "r"], [1, "r"], [2, "r"], [0, "w"]] }];
+  (function () {
+    var svg = $("msi-chart");
+    var res = SCEN.map(function (s) { return ["MSI", "MESI"].map(function (p) { var st = newState(); s.ops.forEach(function (qo) { step(p, st, qo[0], qo[1]); }); return st.cnt.BusRd + st.cnt.BusRdX + st.cnt.Flush; }); });
+    var W = 720, top = 20, bt = 220, l = 34, gw = (W - l) / SCEN.length;
+    var max = Math.max.apply(null, res.reduce(function (a, r) { return a.concat(r); }, [])) + 1;
+    var y = function (v) { return bt - (bt - top) * v / max; };
+    for (var v = 0; v <= max; v += 2) { S("line", { x1: l, x2: W, y1: y(v), y2: y(v), stroke: "var(--line)" }, svg); var t = S("text", { x: l - 8, y: y(v) + 4, "text-anchor": "end" }, svg); t.textContent = v; }
+    res.forEach(function (r, i) {
+      r.forEach(function (val, j) {
+        var x = l + i * gw + gw / 2 - 36 + j * 38;
+        S("rect", { x: x, y: y(val), width: 32, height: bt - y(val), rx: 4, fill: j ? "var(--e)" : "var(--m)" }, svg);
+        var tl = S("text", { x: x + 16, y: y(val) - 6, "text-anchor": "middle", "class": "lbl" }, svg); tl.textContent = val;
+      });
+      SCEN[i].n.split("\n").forEach(function (ln, k) { var tn = S("text", { x: l + i * gw + gw / 2, y: bt + 18 + k * 15, "text-anchor": "middle" }, svg); tn.textContent = ln; });
+    });
+    $("msi-chart-notes").textContent = "MESI solo ahorra cuando quien lee es el único que tiene el bloque. En el dato migratorio ahorra únicamente la primera transacción: después el bloque ya está en otra caché y entra en S, igual que en MSI. Con datos realmente compartidos (productor-consumidor) no hay diferencia.";
+  })();
+
+  /* ---------- 7. directorio ---------- */
+  var POS = [{ x: 70, y: 50 }, { x: 370, y: 50 }, { x: 370, y: 290 }, { x: 70, y: 290 }];
+  var dir = { c: [], pres: [0, 0, 0, 0], dirty: false, mem: 10, next: 11, msgs: 0, busy: false };
+  var net = $("dir-net");
+  function netBase() {
+    net.innerHTML = ""; S("ellipse", { cx: 220, cy: 170, rx: 95, ry: 52, fill: "var(--bg-panel-2)", stroke: "var(--line)" }, net);
+    var t = S("text", { x: 220, y: 174, "text-anchor": "middle", fill: "var(--muted)", "font-size": "13" }, net); t.textContent = "red de interconexión";
+    POS.forEach(function (p) { S("line", { x1: p.x, y1: p.y, x2: 220, y2: 170, stroke: "var(--line)", "stroke-width": 2 }, net); });
+    POS.forEach(function (p, i) {
+      var c = dir.c[i] || { s: "I" }; var g = S("g", {}, net);
+      S("rect", { x: p.x - 58, y: p.y - 30, width: 116, height: 60, rx: 12, fill: "var(--bg-panel)", stroke: col(c.s), "stroke-width": 3 }, g);
+      var t1 = S("text", { x: p.x, y: p.y - 6, "text-anchor": "middle", "font-weight": "700" }, g); t1.textContent = "P" + i + (i === 0 ? " (home)" : "");
+      var t2 = S("text", { x: p.x, y: p.y + 16, "text-anchor": "middle", "font-size": "14", "font-weight": "800", fill: col(c.s) }, g); t2.textContent = c.s;
+    });
+  }
+  function dReset() { dir.c = [0, 1, 2, 3].map(function () { return { s: "I", v: null }; }); dir.pres = [0, 0, 0, 0]; dir.dirty = false; dir.mem = 10; dir.next = 11; dir.msgs = 0; dir.busy = false; $("dir-log").innerHTML = ""; dRender(); }
+  function dRender() {
+    netBase(); var box = $("dir-cpus"); box.innerHTML = ""; var dis = dir.busy ? " disabled" : "";
+    dir.c.forEach(function (c, i) {
+      box.appendChild(H("div", { "class": "cpu" }, '<div class="name">P' + i + '<span class="badge ' + c.s + '">' + c.s + '</span></div><div class="val">X = ' + (c.s !== "I" ? c.v : "—") + '</div><div class="btns">' + btn(i, "r", "Leer", dis) + btn(i, "w", "Escribir", dis) + '</div>'));
+    });
+    $("dir-dir").textContent = "presencia [" + dir.pres.join(" ") + "] · " + (dir.dirty ? "sucio" : "limpio") + " · memoria X = " + dir.mem;
+    $("dir-cnt").textContent = "mensajes de red acumulados: " + dir.msgs;
+  }
+  function animate(phases, done) {
+    var real = phases.map(function (ph) { return ph.filter(function (m) { return m[0] !== m[1]; }); }).filter(function (ph) { return ph.length; });
+    if (reduce || !real.length) { done(); return; }
+    var i = 0;
+    var run = function () {
+      if (i >= real.length) { done(); return; }
+      var ph = real[i++];
+      var dots = ph.map(function (m) {
+        var lab = m[2]; var g = S("g", {}, net);
+        var c = S("circle", { r: 9, fill: lab.indexOf("Inv") === 0 ? "var(--warn)" : lab.indexOf("Ack") === 0 ? "var(--i)" : "var(--act)" }, g);
+        return { g: g, c: c, a: POS[m[0]], b: POS[m[1]] };
+      });
+      var t0 = performance.now(), D = 750;
+      var fr = function (now) {
+        var k = Math.min(1, (now - t0) / D);
+        dots.forEach(function (d) {
+          var x, y;
+          if (k < .5) { var q = k * 2; x = d.a.x + (220 - d.a.x) * q; y = d.a.y + (170 - d.a.y) * q; }
+          else { var q2 = (k - .5) * 2; x = 220 + (d.b.x - 220) * q2; y = 170 + (d.b.y - 170) * q2; }
+          d.c.setAttribute("cx", x); d.c.setAttribute("cy", y);
+        });
+        if (k < 1) requestAnimationFrame(fr); else { dots.forEach(function (d) { d.g.remove(); }); run(); }
+      };
+      requestAnimationFrame(fr);
+    };
+    run();
+  }
+  $("dir-cpus").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b || dir.busy) return; var p = +b.dataset.p, c = dir.c[p], H0 = 0; var phases = [], msg, o;
+    if (b.dataset.o === "r") {
+      if (c.s !== "I") { logLine($("dir-log"), "P" + p + " lee X = " + c.v + ": acierto, sin mensajes."); return; }
+      phases.push([[p, H0, "Petición de lectura"]]);
+      if (!dir.dirty) { phases.push([[H0, p, "Datos"]]); msg = "P" + p + " lee X: el directorio dice limpio, el home responde con el dato."; }
+      else {
+        o = dir.pres.indexOf(1); phases.push([[H0, o, "Reenvío al owner"]]); phases.push([[o, H0, "Datos (actualiza memoria)"], [o, p, "Datos"]]);
+        dir.mem = dir.c[o].v; dir.c[o].s = "S"; dir.dirty = false;
+        msg = "P" + p + " lee X: está sucio en P" + o + ". El home reenvía la petición, P" + o + " manda el dato al home y a P" + p + ", y pasa a S.";
+      }
+      dir.pres[p] = 1; c.s = "S"; c.v = dir.mem;
+    } else {
+      if (c.s === "M") { c.v = dir.next++; logLine($("dir-log"), "P" + p + " escribe X = " + c.v + " en M: acierto, sin mensajes."); dRender(); return; }
+      phases.push([[p, H0, "Petición de escritura"]]);
+      if (dir.dirty) {
+        o = dir.pres.indexOf(1); phases.push([[H0, o, "Reenvío + invalidar"]]); phases.push([[o, p, "Datos"]]); dir.c[o].s = "I"; dir.pres[o] = 0;
+        msg = "P" + p + " escribe X: estaba sucio en P" + o + ". El home reenvía, P" + o + " entrega el dato y se invalida.";
+      } else {
+        var sh = dir.pres.map(function (v, i) { return v && i !== p ? i : -1; }).filter(function (i) { return i >= 0; });
+        phases.push([[H0, p, c.s === "S" ? "Permiso + cantidad de acks" : "Datos + cantidad de acks"]].concat(sh.map(function (q) { return [H0, q, "Invalidación"]; })));
+        if (sh.length) phases.push(sh.map(function (q) { return [q, p, "Ack"]; }));
+        sh.forEach(function (q) { dir.c[q].s = "I"; dir.pres[q] = 0; });
+        msg = "P" + p + " escribe X: el home envía " + (sh.length ? "invalidaciones en paralelo a " + sh.map(function (q) { return "P" + q; }).join(", ") + ", que responden con ack a P" + p : "el dato; no hay otras copias que invalidar") + ".";
+      }
+      dir.pres = [0, 0, 0, 0]; dir.pres[p] = 1; dir.dirty = true; c.s = "M"; c.v = dir.next++; msg += " P" + p + " queda en M con X = " + c.v + ".";
+    }
+    var net0 = phases.map(function (ph) { return ph.filter(function (m) { return m[0] !== m[1]; }); });
+    var n = net0.reduce(function (a, ph) { return a + ph.length; }, 0), lat = net0.filter(function (ph) { return ph.length; }).length; dir.msgs += n;
+    msg += ' <span class="tx">' + n + " mensaje" + (n === 1 ? "" : "s") + " de red, " + lat + " salto" + (lat === 1 ? "" : "s") + " en el camino crítico</span>" + (p === 0 ? " (P0 es el home: su consulta al directorio es local)" : "") + ".";
+    dir.busy = true; dRender();
+    animate(phases, function () { dir.busy = false; logLine($("dir-log"), msg); dRender(); });
+  });
+  $("dir-reset").addEventListener("click", dReset); dReset();
+
+  (function () {
+    var svg = $("dir-msg-chart"), W = 420, l = 36, top = 14, bt = 200, n = 8;
+    var x = function (k) { return l + (W - l - 12) * k / (n - 1); }, max = 2 + 2 * (n - 1);
+    var y = function (v) { return bt - (bt - top) * v / max; };
+    for (var v = 0; v <= max; v += 4) { S("line", { x1: l, x2: W - 10, y1: y(v), y2: y(v), stroke: "var(--line)" }, svg); var t = S("text", { x: l - 6, y: y(v) + 4, "text-anchor": "end" }, svg); t.textContent = v; }
+    var series = [[function (k) { return 2 + 2 * k; }, "var(--act)"], [function (k) { return k ? 3 : 2; }, "var(--s)"], [function (k) { return 2 + k; }, "var(--m)"]];
+    series.forEach(function (sc) {
+      var pts = []; for (var k = 0; k < n; k++) pts.push(x(k) + "," + y(sc[0](k)));
+      S("polyline", { points: pts.join(" "), fill: "none", stroke: sc[1], "stroke-width": 3 }, svg);
+      for (var k2 = 0; k2 < n; k2++) S("circle", { cx: x(k2), cy: y(sc[0](k2)), r: 3.5, fill: sc[1] }, svg);
+    });
+    for (var k = 0; k < n; k++) { var tk = S("text", { x: x(k), y: bt + 16, "text-anchor": "middle" }, svg); tk.textContent = k; }
+    var tt = S("text", { x: (W + l) / 2, y: bt + 34, "text-anchor": "middle" }, svg); tt.textContent = "otras copias del bloque al escribir";
+  })();
+
+  function ov() {
+    var N = Math.pow(2, +$("dir-ov-n").value), L = +$("dir-ov-l").value; $("dir-ov-nv").textContent = N; var pct = N / (8 * L) * 100;
+    $("dir-ov-out").innerHTML = pct.toLocaleString("es-AR", { maximumFractionDigits: 2 }) + " %<small>" + N + " bits de presencia por cada línea de " + L + " B (" + 8 * L + " bits)</small>";
+    var svg = $("dir-ov-chart"); svg.innerHTML = ""; var Ns = [4, 16, 64, 256, 1024], W = 420, l = 10, bt = 140, top = 18, bw2 = (W - l) / Ns.length;
+    var vals = Ns.map(function (n) { return n / (8 * L) * 100; }); var mx = Math.max.apply(null, vals);
+    vals.forEach(function (v, i) {
+      var h = (bt - top) * Math.log10(1 + v) / Math.log10(1 + mx);
+      S("rect", { x: l + i * bw2 + 14, y: bt - h, width: bw2 - 28, height: h, rx: 4, fill: Ns[i] === N ? "var(--act)" : "var(--i)" }, svg);
+      var a = S("text", { x: l + (i + .5) * bw2, y: bt - h - 5, "text-anchor": "middle", "class": "lbl" }, svg); a.textContent = v < 10 ? v.toFixed(1) + "%" : Math.round(v) + "%";
+      var b = S("text", { x: l + (i + .5) * bw2, y: bt + 16, "text-anchor": "middle" }, svg); b.textContent = Ns[i] + " nodos";
+    });
+    var t = S("text", { x: l, y: 12 }, svg); t.textContent = "Línea de " + L + " B (escala logarítmica)";
+  }
+  $("dir-ov-n").addEventListener("input", ov); $("dir-ov-l").addEventListener("change", ov); ov();
+  /* ---------- 8. consistencia ---------- */
+  var csSC = true;
+  function perms(ops) { if (ops.length <= 1) return [ops]; return ops.reduce(function (acc, o, i) { return acc.concat(perms(ops.filter(function (_, j) { return j !== i; })).map(function (p) { return [o].concat(p); })); }, []); }
+  function cs() {
+    var OPS = { "1a": "A = 1", "1b": "B = 2", "2a": "print B", "2b": "print A" };
+    var all = perms(Object.keys(OPS)).filter(function (p) { return p.indexOf("2a") < p.indexOf("2b") && (!csSC || p.indexOf("1a") < p.indexOf("1b")); });
+    var res = all.map(function (p) { var A = 0, B = 0, pa, pb; p.forEach(function (o) { if (o === "1a") A = 1; if (o === "1b") B = 2; if (o === "2a") pb = B; if (o === "2b") pa = A; }); return { p: p, r: [pa, pb] }; });
+    $("cs-list").innerHTML = res.map(function (x) {
+      var bad = x.r[0] === 0 && x.r[1] === 2; var prog = x.p.indexOf("1a") < x.p.indexOf("1b");
+      return '<div class="cpu' + (bad ? " cs-bad" : "") + '"><div class="val cs-ord">' + x.p.map(function (o) { return o + " " + OPS[o]; }).join(" → ") + '</div><div class="name">(A, B) = (' + x.r[0] + ", " + x.r[1] + ")" + (bad ? '<span class="cs-tag">imposible en SC</span>' : "") + "</div>" + (prog ? "" : '<div class="src">P1 hizo visible B antes que A</div>') + "</div>";
     }).join("");
-    $("next").disabled=scenIdx>=scen.steps.length;
-    $("next").textContent=scenIdx>=scen.steps.length?"Escenario terminado":"Siguiente paso";
-    var n={VI:countBus("VI",scen.steps),MSI:countBus("MSI",scen.steps),MESI:countBus("MESI",scen.steps)};
-    $("compare").innerHTML="Transacciones de bus en este escenario: dos estados <b>"+n.VI+"</b>, MSI <b>"+n.MSI+"</b>, MESI <b>"+n.MESI+"</b>. Cambiá de protocolo para verlo paso a paso.";
+    var outs = res.map(function (x) { return "(" + x.r[0] + ", " + x.r[1] + ")"; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+    var st = $("cs-status"); st.className = "cs-status " + (csSC ? "good" : "bad");
+    st.innerHTML = csSC ? "<b>" + res.length + " órdenes posibles, resultados " + outs.join(", ") + ".</b> (0, 2) no aparece: B = 2 exige 1b antes de 2a, y A = 0 exige 2b antes de 1a; con el orden de programa (1a antes de 1b, 2a antes de 2b) queda un ciclo imposible."
+      : "<b>" + res.length + " órdenes, resultados " + outs.join(", ") + ".</b> Si la escritura de B se hace visible antes que la de A (por ejemplo, P1 sigue sin esperar a que se invalide A en la caché de P2), aparece (0, 2). Las cachés son coherentes, pero el sistema no es secuencialmente consistente.";
   }
-
-  var reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function animate(out,actor){
-    root.querySelectorAll(".proc").forEach(function(p){p.classList.remove("actor","snoop");});
-    $("proc"+actor).classList.add("actor");
-    var bus=$("bus");
-    if(out.bus.length){
-      $("busLabel").innerHTML=out.bus.map(function(b){return P(b.who)+' emite <span class="coh-tok">'+b.op+'</span>';}).join(" y luego ");
-      bus.classList.remove("go"); void bus.offsetWidth; bus.classList.add("go");
-    } else {
-      $("busLabel").textContent="Bus libre: esta operación no generó transacciones";
-    }
-    if(!reduce){
-      out.snoop.forEach(function(j){ var el=$("proc"+j); void el.offsetWidth; el.classList.add("snoop"); });
-    }
-  }
-
-  function run(op,i){
-    var out=OPS[op](state,i);
-    var narr=$("narr"); narr.classList.remove("empty");
-    narr.innerHTML=out.lines.map(function(l){return "<li>"+l+"</li>";}).join("");
-    var li=document.createElement("li");
-    li.textContent="["+(state.protocol==="VI"?"Dos estados":state.protocol)+"] "+out.lines[0];
-    $("hist").appendChild(li);
-    animate(out,i);
-    render();
-  }
-
-  function reset(keepScen){
-    state=fresh(state.protocol);
-    $("hist").innerHTML="";
-    var narr=$("narr"); narr.className="narr empty";
-    narr.innerHTML="<li>Todas las cachés arrancan en I y la memoria tiene X = 10.</li>";
-    $("busLabel").textContent="Bus libre";
-    root.querySelectorAll(".proc").forEach(function(p){p.classList.remove("actor","snoop");});
-    scenIdx=0;
-    if(!keepScen){ scen=null; $("scen").value=""; }
-    render();
-  }
-
-  buildProcs();
-  $("procs").addEventListener("click",function(e){
-    var b=e.target.closest("button[data-op]"); if(!b) return;
-    run(b.dataset.op,Number(b.dataset.i));
-  });
-  root.querySelectorAll(".seg button").forEach(function(b){
-    b.addEventListener("click",function(){ state.protocol=b.dataset.proto; reset(true); });
-  });
-  $("reset").addEventListener("click",function(){ reset(true); });
-  $("scen").addEventListener("change",function(e){ scen=SCEN[e.target.value]||null; reset(true); });
-  $("next").addEventListener("click",function(){
-    if(!scen || scenIdx>=scen.steps.length) return;
-    var st=scen.steps[scenIdx]; scenIdx++; run(st[0],st[1]);
-  });
-  render();
+  $("cs-sc").addEventListener("click", function () { csSC = true; $("cs-sc").setAttribute("aria-pressed", true); $("cs-no").setAttribute("aria-pressed", false); cs(); });
+  $("cs-no").addEventListener("click", function () { csSC = false; $("cs-sc").setAttribute("aria-pressed", false); $("cs-no").setAttribute("aria-pressed", true); cs(); });
+  cs();
 })();
 
 stdQuiz([
@@ -902,7 +1166,16 @@ stdQuiz([
      exp:"Con write-through, cada store viaja a memoria por el bus. Con unos pocos procesadores el ancho de banda se agota."},
     {q:"¿Qué garantiza que todas las cachés vean las escrituras en el mismo orden?",
      opts:["El bit de validez","La señal S","Que el bus atiende una transacción por vez y el arbitraje fija el orden","El Flush"],correct:2,
-     exp:"Es la propiedad de serialización: el bus es atómico y todos observan sus transacciones en la misma secuencia."}
+     exp:"Es la propiedad de serialización: el bus es atómico y todos observan sus transacciones en la misma secuencia."},
+    {q:"En un protocolo basado en directorio, ¿quién fija el orden de las peticiones sobre un bloque?",
+     opts:["El arbitraje del bus","El nodo home del bloque","La caché que tiene el bloque en S","El procesador que pidió primero"],correct:1,
+     exp:"No hay bus que serialice: cada bloque tiene un nodo home, fijado por su dirección, que guarda la entrada del directorio y ordena las peticiones sobre ese bloque."},
+    {q:"Directorio con un bit de presencia por nodo, 256 nodos y línea de 64 B. ¿Cuánto ocupa respecto de los datos?",
+     opts:["12,5 %","25 %","50 %","200 %"],correct:2,
+     exp:"256 bits de presencia por cada línea de 64 B = 512 bits: 256 / 512 = 50 %. La sobrecarga crece con la cantidad de nodos; por eso se usan punteros o se organiza el directorio como caché."},
+    {q:"P1 ejecuta A = 1; B = 2 y P2 ejecuta print B; print A (A y B arrancan en 0). ¿Qué resultado es imposible bajo consistencia secuencial?",
+     opts:["(A, B) = (0, 0)","(A, B) = (1, 0)","(A, B) = (0, 2)","(A, B) = (1, 2)"],correct:2,
+     exp:"Si P2 ve B = 2, la escritura de B ya ocurrió y, por orden de programa, también la de A: no puede leer A = 0. Con escrituras reordenadas sí puede pasar, aunque las cachés sean coherentes."}
   ]);
 </script>
 </body>
