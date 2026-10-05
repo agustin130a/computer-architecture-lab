@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coloquio | Computer Architecture Lab</title>
+<meta
+  name="description"
+  content="Modalidad del coloquio de Arquitectura de Computadoras y los temas que más salen, con un resumen y un enlace a la sección del sitio donde se desarrolla cada uno."
+/>
+<script>
+  // Aplica el tema guardado/del sistema antes del render para evitar parpadeo.
+  (function () {
+    try {
+      var t = localStorage.getItem('tw-theme');
+      if (!t) {
+        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  })();
+</script>
+<style>
+  /* ==== STD:TOKENS v1 ==== (no editar a mano: se sincroniza desde el template de la skill guia-arquitectura) */
+  :root{
+    --bg: #f4f6fb;
+    --bg-grad: radial-gradient(1200px 520px at 50% -160px, #e9eefb 0%, var(--bg) 70%);
+    --bg-panel: #ffffff;
+    --bg-panel-2: #eef2f7;
+    --line: #d8dee6;
+    --line-soft: #e4e9f0;
+    --text: #1d2433;
+    --muted: #4a5568;
+    --accent: #1f6feb;
+    --accent-ink: #ffffff;
+    --focus: #0a4bce;
+    --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
+    --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+    --highlight: #b45309;
+    --ok: #0f766e;
+    --ok-soft: #e6f4f2;
+    --err: #c0392b;
+    --err-soft: #fbeae7;
+    --warn: #b45309;
+    --warn-soft: #fdf2e3;
+  }
+  html[data-theme='dark']{
+    --bg: #0d1524;
+    --bg-grad: radial-gradient(1200px 560px at 50% -160px, #172236 0%, var(--bg) 68%);
+    --bg-panel: #131d2e;
+    --bg-panel-2: #1a2942;
+    --line: #2a3a52;
+    --line-soft: #223047;
+    --text: #e7edf3;
+    --muted: #9fb0c8;
+    --accent: #4d9fff;
+    --accent-ink: #06121f;
+    --focus: #7bb8ff;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.35);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+    --highlight: #e2a640;
+    --ok: #4fc9b8;
+    --ok-soft: #163431;
+    --err: #e2664f;
+    --err-soft: #3a2019;
+    --warn: #e2a640;
+    --warn-soft: #3a2c17;
+  }
+  /* ==== /STD:TOKENS ==== */
+
+  /* ==== STD:SHELL v1 ==== (header, nav lateral, secciones, footer) */
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; background:var(--bg); }
+  body{
+    margin:0;
+    background:var(--bg);
+    background:var(--bg-grad);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height:1.55;
+    transition:background-color .2s ease, color .2s ease;
+  }
+  code, .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a{ color:var(--accent); }
+  :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+
+  .skip-link{
+    position:absolute; left:-999px; top:0;
+    background:var(--accent); color:var(--accent-ink); padding:8px 12px; z-index:20;
+    border-radius:0 0 6px 0;
+  }
+  .skip-link:focus{ left:8px; top:8px; }
+
+  header.site{
+    padding:20px 24px;
+    background:var(--bg-panel);
+    border-bottom:1px solid var(--line);
+    box-shadow:var(--shadow-sm);
+  }
+  .site-top{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    margin-bottom:6px;
+  }
+  .backlink{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--accent); text-decoration:none; font-size:.9rem; font-weight:600;
+  }
+  .backlink:hover{ text-decoration:underline; }
+  header.site .kicker{ color:var(--muted); font-size:.9rem; margin:0; }
+  header.site h1{ margin:10px 0 0; font-size:clamp(24px,3vw,34px); letter-spacing:-.01em; max-width:24ch; }
+  header.site .lede{ color:var(--muted); font-size:1rem; max-width:72ch; margin:10px 0 22px; }
+  header.site .lede b{ color:var(--text); }
+  header.site .hero{ max-width:760px; overflow-x:auto; }
+
+  .theme-toggle{
+    flex:0 0 auto;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border:1px solid var(--line); background:var(--bg-panel-2); color:var(--text);
+    border-radius:999px; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer;
+    transition:border-color .15s ease, background-color .2s ease;
+  }
+  .theme-toggle:hover{ border-color:var(--muted); }
+  .theme-toggle .icon{ font-size:1rem; line-height:1; }
+  .theme-toggle .theme-label-dark{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-light{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-dark{ display:inline; }
+
+  .shell{ display:grid; grid-template-columns:260px minmax(0,1fr); min-height:100vh; }
+  nav.side{
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    background:var(--bg-panel);
+    border-right:1px solid var(--line);
+    padding:22px 16px 40px;
+  }
+  nav.side .brand{ font-weight:700; font-size:15px; letter-spacing:.2px; margin-bottom:2px; }
+  nav.side .brand small{ display:block; color:var(--muted); font-weight:400; font-size:12px; margin-top:3px; }
+  nav.side ol{ list-style:none; margin:22px 0 0; padding:0; }
+  nav.side .grp{ margin-bottom:18px; }
+  nav.side .grp-title{
+    color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    margin:0 0 6px 2px; font-weight:600;
+  }
+  nav.side a{
+    display:block; color:var(--text); text-decoration:none; font-size:13.5px;
+    padding:5px 8px; border-radius:6px; opacity:.82;
+  }
+  nav.side a:hover{ background:var(--bg-panel-2); opacity:1; }
+  nav.side a.active{ background:var(--bg-panel-2); color:var(--accent); opacity:1; }
+
+  main{ padding:0 0 100px; min-width:0; }
+  section.block{
+    padding:40px 48px;
+    border-bottom:1px solid var(--line);
+    max-width:1080px;
+    scroll-margin-top:12px;
+  }
+  section.block h2{ font-size:22px; margin:0 0 6px; display:flex; align-items:baseline; gap:10px; }
+  section.block h2 .num{ color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; flex:0 0 auto; }
+  section.block .sub{ color:var(--muted); font-size:14px; margin:0 0 22px; max-width:66ch; }
+  section.block h3{ font-size:17px; margin:30px 0 6px; scroll-margin-top:12px; }
+  section.block p{ max-width:72ch; }
+
+  footer.pagefoot{ padding:30px 48px; color:var(--muted); font-size:12.5px; }
+
+  @media (max-width:860px){
+    .shell{ grid-template-columns:minmax(0,1fr); }
+    nav.side{ position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line); }
+    section.block{ padding:28px 20px; }
+    footer.pagefoot{ padding:24px 20px; }
+  }
+  @media (max-width:640px){
+    header.site{ padding:16px; }
+    header.site .site-top{ flex-direction:column; }
+  }
+  /* ==== /STD:SHELL ==== */
+
+  /* ==== STD:COMPONENTS v1 ==== (piezas reutilizables dentro de las secciones) */
+  /* Tarjeta desplegable de teoría */
+  details.card{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    margin-bottom:10px; overflow:hidden;
+  }
+  details.card summary{
+    cursor:pointer; padding:14px 18px; font-weight:600; font-size:14.5px;
+    display:flex; align-items:center; gap:10px; list-style:none;
+  }
+  details.card summary::-webkit-details-marker{ display:none; }
+  details.card summary::before{
+    content:"+"; color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; width:14px;
+  }
+  details.card[open] summary::before{ content:"–"; }
+  details.card .body{ padding:0 18px 18px; font-size:14.5px; }
+  details.card .body p{ margin:0 0 12px; }
+  details.card .body ul{ margin:0 0 12px; padding-left:20px; }
+  details.card .body li{ margin-bottom:6px; }
+  details.card .body strong{ color:var(--highlight); }
+
+  /* Caja de contenido fija (texto + diagrama, sin desplegar) */
+  .panel{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px 22px; margin:14px 0; box-shadow:var(--shadow-sm);
+  }
+  .panel > h3:first-child{ margin-top:0; }
+
+  /* Tabla comparativa */
+  .table-scroll{ overflow-x:auto; }
+  table.cmp{ width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:13.5px; }
+  table.cmp th, table.cmp td{ border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top; }
+  table.cmp th{ background:var(--bg-panel-2); color:var(--muted); font-weight:600; }
+  table.cmp td.hi{ color:var(--ok); }
+
+  /* Fórmula / regla destacada */
+  .formula{
+    background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
+  }
+
+  /* Nota al margen (.info para una aclaración, sin variante para un "ojo con esto") */
+  .note{
+    border-left:3px solid var(--warn); border-radius:0 8px 8px 0;
+    padding:12px 16px; background:var(--warn-soft);
+    font-size:13.5px; margin:14px 0; color:var(--text); max-width:80ch;
+  }
+  .note.info{ border-left-color:var(--ok); background:var(--ok-soft); }
+
+  /* Etiquetas */
+  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px; }
+  .pill{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:12.5px; color:var(--muted); }
+  .pill b{ color:var(--text); }
+
+  /* Panel de simulador / widget interactivo */
+  .sim{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:24px; margin:10px 0 16px; }
+  .sim .cfg{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px; }
+  .sim .cfg label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  .sim select, .sim input[type=text], .sim input[type=number]{
+    width:100%; background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
+    padding:9px 10px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px;
+  }
+  .sim .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+  .sim .msg{ padding:11px 14px; border-radius:8px; font-size:13.5px; margin:12px 0; background:var(--bg-panel-2); border:1px solid var(--line); }
+  .sim .msg.ok{ background:var(--ok-soft); border-color:var(--ok); color:var(--ok); }
+  .sim .msg.err{ background:var(--err-soft); border-color:var(--err); color:var(--err); }
+  button.btn{
+    background:var(--accent); color:var(--accent-ink); border:1px solid var(--accent); font-weight:600; font-size:13.5px;
+    padding:9px 16px; border-radius:8px; cursor:pointer; font-family:inherit;
+  }
+  button.btn:hover{ filter:brightness(1.08); }
+  button.btn.ghost{ background:transparent; color:var(--text); border-color:var(--line); }
+  button.btn.ghost:hover{ background:var(--bg-panel-2); filter:none; }
+  button.btn.ghost.sel{ border-color:var(--accent); color:var(--accent); background:var(--bg-panel-2); }
+  button.btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  /* Contadores */
+  .stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 18px; min-width:110px; }
+  .stat .n{ font-size:22px; font-weight:700; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .stat .l{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stat.ok .n{ color:var(--ok); }
+  .stat.err .n{ color:var(--err); }
+
+  /* Quiz de repaso (lo arma stdQuiz() a partir de un array) */
+  .quiz-item{ background:var(--bg-panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:14px; }
+  .quiz-item p.q{ font-weight:600; margin:0 0 12px; font-size:14.5px; }
+  .quiz-item .opts{ display:flex; flex-direction:column; gap:8px; }
+  .quiz-item label{
+    display:flex; gap:10px; align-items:flex-start; background:var(--bg-panel-2); border:1px solid var(--line);
+    padding:9px 12px; border-radius:8px; cursor:pointer; font-size:13.5px;
+  }
+  .quiz-item label:hover{ border-color:var(--muted); }
+  .quiz-item label input{ margin-top:3px; }
+  .quiz-item .fb{ margin-top:10px; padding:10px 12px; border-radius:8px; font-size:13px; display:none; }
+  .quiz-item .fb.ok{ background:var(--ok-soft); border:1px solid var(--ok); color:var(--ok); display:block; }
+  .quiz-item .fb.bad{ background:var(--err-soft); border:1px solid var(--err); color:var(--err); display:block; }
+  .quiz-score{ font-size:14px; color:var(--muted); margin-top:6px; }
+
+  @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
+  /* ==== /STD:COMPONENTS ==== */
+
+  /* ==== PAGE:TOKENS ==== sin tokens propios: "sale seguido" usa --ok y "en el temario" los neutros */
+
+  /* ==== PAGE ==== modalidad y fichas de temas (todo bajo .col) */
+  .col .steps{ list-style:none; margin:16px 0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); gap:12px; counter-reset:paso; }
+  .col .steps li{ counter-increment:paso; background:var(--bg-panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px 14px 52px; position:relative; font-size:14.5px; }
+  .col .steps li::before{
+    content:counter(paso); position:absolute; left:14px; top:13px; width:26px; height:26px; border-radius:50%;
+    background:var(--accent); color:var(--accent-ink); font-weight:700; font-size:13px; display:grid; place-items:center;
+  }
+  .col .steps li b{ display:block; margin-bottom:2px; }
+
+  .col table.cmp td a{ font-weight:600; }
+  .col .st{ display:inline-block; font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; white-space:nowrap; background:var(--bg-panel-2); color:var(--muted); }
+  .col .st.ok{ background:var(--ok-soft); color:var(--ok); }
+
+  .col .topics{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:14px; margin-top:8px; }
+  .col .topic{ background:var(--bg-panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px; display:flex; flex-direction:column; gap:8px; box-shadow:var(--shadow-sm); }
+  .col .topic h3{ margin:0; font-size:16.5px; display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .col .topic h3 a{ color:var(--text); text-decoration:none; }
+  .col .topic h3 a:hover{ color:var(--accent); text-decoration:underline; }
+  .col .topic p{ margin:0; font-size:14px; }
+  .col .topic .where{ color:var(--muted); font-size:12.5px; }
+  .col .links{ display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:6px; }
+  .col .links a{ font-size:13px; font-weight:600; text-decoration:none; border:1px solid var(--line); border-radius:999px; padding:4px 12px; background:var(--bg-panel-2); }
+  .col .links a:hover{ border-color:var(--accent); }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site">
+  <div class="site-top">
+    <a class="backlink" href="index.html">&larr; Inicio</a>
+    <button
+      id="theme-toggle"
+      class="theme-toggle"
+      type="button"
+      aria-pressed="false"
+      title="Cambiar entre modo claro y oscuro"
+    >
+      <span class="icon" aria-hidden="true">🌙</span>
+      <span class="theme-label-light">Modo oscuro</span>
+      <span class="theme-label-dark">Modo claro</span>
+    </button>
+  </div>
+  <p class="kicker">Arquitectura de Computadoras — Coloquio</p>
+  <h1>Coloquio: cómo es y qué temas entran</h1>
+  <p class="lede">La modalidad del examen y los temas que más se toman, cada uno con un resumen corto y un enlace a la sección del sitio donde se desarrolla en profundidad, con su simulador cuando lo hay.</p>
+</header>
+
+<div class="shell">
+
+  <nav class="side" id="sidenav" aria-label="Secciones de la guía">
+    <div class="brand">Coloquio<small>Modalidad y temas frecuentes</small></div>
+    <ol>
+      <li class="grp">
+        <p class="grp-title">El examen</p>
+        <a href="#s-modalidad">1 Modalidad</a>
+        <a href="#s-temas">2 Temas del coloquio</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Temas</p>
+        <a href="#s-multiproc">3 Coherencia de caché</a>
+        <a href="#s-segmentado">4 Procesador segmentado</a>
+        <a href="#s-planificacion">5 Planificación</a>
+        <a href="#s-paralelismo">6 Lanzamiento múltiple</a>
+        <a href="#s-memoria">7 Caché y consistencia</a>
+      </li>
+    </ol>
+  </nav>
+
+  <main id="main">
+
+    <!-- ============ 1 MODALIDAD ============ -->
+    <section class="block col" id="s-modalidad">
+      <h2><span class="num">1</span> Modalidad</h2>
+      <p class="sub">Cómo se toma el coloquio (vigente a octubre de 2026).</p>
+      <p>Te presentás con <strong>papel y lápiz</strong>. El profesor te da <strong>tres temas</strong> y tenés un tiempo para prepararlos —anotar, diagramar, armar el hilo de lo que vas a contar— antes de presentarlos.</p>
+      <ol class="steps">
+        <li><b>Recibís tres temas</b>Los elige el profesor.</li>
+        <li><b>Preparás</b>Tenés un tiempo para anotar, dibujar diagramas y ordenar la exposición en papel.</li>
+        <li><b>Presentás</b>Explicás cada tema apoyándote en lo que preparaste.</li>
+      </ol>
+      <div class="note">La modalidad puede cambiar de un turno a otro: confirmala con la cátedra antes de la fecha.</div>
+    </section>
+
+    <!-- ============ 2 TEMAS ============ -->
+    <section class="block col" id="s-temas">
+      <h2><span class="num">2</span> Temas del coloquio</h2>
+      <p class="sub">La lista completa, con dónde se desarrolla cada tema en el sitio.</p>
+      <p>Los marcados como <span class="st ok">sale seguido</span> son los que más se repiten. El resto también está en el temario y puede tocar.</p>
+      <div class="table-scroll">
+        <table class="cmp">
+          <thead><tr><th>Tema</th><th>Dónde se ve</th><th>Simulador</th><th>Frecuencia</th></tr></thead>
+          <tbody>
+            <tr><td><a href="#t-snoopy">Coherencia de caché: snoopy</a></td><td>Coherencia de caché</td><td>Dos estados, MSI / MESI, saturación del bus</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-directorios">Coherencia de caché: directorios</a></td><td>Coherencia de caché</td><td>Red de cuatro nodos, sobrecarga</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-ciclos">Monociclo y multiciclo</a></td><td>Procesador y paralelismo</td><td>Diagrama temporal</td><td><span class="st">en el temario</span></td></tr>
+            <tr><td><a href="#t-pipeline">Pipeline segmentado</a></td><td>Procesador y paralelismo</td><td>Calculadora de speedup</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-riesgos">Riesgos estructurales y de control</a></td><td>Procesador y paralelismo</td><td>Pipeline con riesgos, dominio y rango</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-unrolling">Loop unrolling</a></td><td>Procesador y paralelismo</td><td>Ciclos del bucle por versión</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-swp">Software pipelining</a></td><td>Procesador y paralelismo</td><td>Ciclos del bucle por versión</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-estatica">Planificación estática</a></td><td>Procesador y paralelismo</td><td>Sin planificar / estática / dinámica</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-dinamica">Planificación dinámica: ventajas y desventajas</a></td><td>Procesador y paralelismo</td><td>Sin planificar / estática / dinámica</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-excepciones">Excepciones precisas</a></td><td>Procesador y paralelismo</td><td>Vector de estado y ROB</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-tomasulo">Tomasulo</a></td><td>Procesador y paralelismo · Simulador de Tomasulo</td><td>Ejemplo de los apuntes y simulador completo</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-predictores">Predictores de salto</a></td><td>Predicción de saltos</td><td>1 bit vs. 2 bits, local, global, híbrido</td><td><span class="st ok">sale seguido</span></td></tr>
+            <tr><td><a href="#t-vliw">Superescalar y VLIW</a></td><td>Procesador y paralelismo</td><td>Empaquetado VLIW</td><td><span class="st">en el temario</span></td></tr>
+            <tr><td><a href="#t-mt">Multithreading</a></td><td>Procesador y paralelismo</td><td>Ocupación de vías por modelo</td><td><span class="st">en el temario</span></td></tr>
+            <tr><td><a href="#t-cache">Memoria caché</a></td><td>Jerarquía de memoria y caché</td><td>Simulador de caché, tipos de fallo</td><td><span class="st">en el temario</span></td></tr>
+            <tr><td><a href="#t-consistencia">Consistencia de memoria</a></td><td>Coherencia de caché</td><td>Órdenes posibles con y sin SC</td><td><span class="st">en el temario</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 3 COHERENCIA ============ -->
+    <section class="block col" id="s-multiproc">
+      <h2><span class="num">3</span> Coherencia de caché</h2>
+      <p class="sub">Unidad 6: varios procesadores con caché propia y un mismo dato.</p>
+      <div class="topics">
+        <article class="topic" id="t-snoopy">
+          <h3><a href="coherencia.html#s-familias">Coherencia snoopy</a><span class="st ok">sale seguido</span></h3>
+          <p>Con un bus, cada caché guarda el estado de sus bloques y espía todas las transacciones; el arbitraje del bus serializa las escrituras. El protocolo de dos estados (write-through) ocupa el bus en cada store y no escala; MSI pasa a write-back con BusRdX y Flush; MESI agrega E para escribir sin bus cuando nadie más tiene el bloque.</p>
+          <div class="links"><a href="coherencia.html#s-familias">Snoopy vs. directorios →</a><a href="coherencia.html#s-vi">Simulador de dos estados →</a><a href="coherencia.html#s-msi">Simulador MSI / MESI →</a></div>
+        </article>
+        <article class="topic" id="t-directorios">
+          <h3><a href="coherencia.html#s-directorio">Coherencia con directorios</a><span class="st ok">sale seguido</span></h3>
+          <p>Sin bus (NUMA), cada bloque tiene un nodo home con su entrada de directorio: bits de presencia y un bit limpio/sucio. Los mensajes van al home y de ahí solo a los nodos con copia. Escala mejor que el bus, a cambio de memoria extra para el directorio, que crece con la cantidad de nodos.</p>
+          <div class="links"><a href="coherencia.html#s-directorio">Ver en profundidad →</a><a href="coherencia.html#s-directorio-sobrecarga">Sobrecarga del directorio →</a></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ 4 PROCESADOR SEGMENTADO ============ -->
+    <section class="block col" id="s-segmentado">
+      <h2><span class="num">4</span> Procesador segmentado</h2>
+      <p class="sub">Unidad 2: cómo se implementa el procesador y qué frena al pipeline.</p>
+      <div class="topics">
+        <article class="topic" id="t-ciclos">
+          <h3><a href="pipeline.html#s-ciclos">Monociclo y multiciclo</a><span class="st">en el temario</span></h3>
+          <p>Monociclo: un ciclo largo, que dura lo que la instrucción más lenta, y CPI = 1. Multiciclo: ciclos cortos (lo que dura la etapa más lenta), cada instrucción usa solo las etapas que necesita y el control es una máquina de estados. Ninguno solapa instrucciones.</p>
+          <div class="links"><a href="pipeline.html#s-ciclos">Diagrama temporal →</a><a href="pipeline.html#s-ciclos-calc">Calculadora →</a></div>
+        </article>
+        <article class="topic" id="t-pipeline">
+          <h3><a href="pipeline.html#s-pipeline">Pipeline segmentado</a><span class="st ok">sale seguido</span></h3>
+          <p>Registros de segmentación entre etapas para que cada una trabaje sobre una instrucción distinta. No acorta una instrucción: mejora el throughput. El speedup ideal es la cantidad de etapas, pero baja por el desbalance entre etapas, el retardo de los registros, el llenado y los riesgos.</p>
+          <div class="links"><a href="pipeline.html#s-pipeline">Calculadora de speedup →</a></div>
+        </article>
+        <article class="topic" id="t-riesgos">
+          <h3><a href="pipeline.html#s-riesgos">Riesgos estructurales y de control</a><span class="st ok">sale seguido</span></h3>
+          <p>Estructurales: dos instrucciones quieren el mismo recurso (se evitan por construcción). De datos: LDE se resuelve con cortocircuito, salvo load-use, que necesita una burbuja. De control: resolver el salto en MEM cuesta 3 ciclos, en ID 1, y con salto retardado o predicción menos.</p>
+          <div class="links"><a href="pipeline.html#s-riesgos-teorema">Dominio y rango →</a><a href="pipeline.html#s-riesgos-sim">Pipeline con riesgos →</a><a href="pipeline.html#s-riesgos-cpi">Costo en el CPI →</a></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ 5 PLANIFICACIÓN ============ -->
+    <section class="block col" id="s-planificacion">
+      <h2><span class="num">5</span> Planificación de instrucciones</h2>
+      <p class="sub">Unidad 3: reordenar instrucciones para no frenar el pipeline, en el compilador o en el hardware.</p>
+      <div class="topics">
+        <article class="topic" id="t-unrolling">
+          <h3><a href="pipeline.html#s-loop">Loop unrolling</a><span class="st ok">sale seguido</span></h3>
+          <p>El compilador replica el cuerpo del bucle con registros distintos: elimina saltos y decrementos y, planificado, separa cada LD de su ADDD y cada ADDD de su SD. Cuesta más registros y código más largo. En el ejemplo de los apuntes pasa de 10 a 3,5 ciclos por elemento.</p>
+          <div class="links"><a href="pipeline.html#s-loop">Ciclos por versión →</a></div>
+        </article>
+        <article class="topic" id="t-swp">
+          <h3><a href="pipeline.html#s-loop">Software pipelining</a><span class="st ok">sale seguido</span></h3>
+          <p>Cada vuelta del bucle nuevo mezcla instrucciones de iteraciones distintas (el SD de la i, el ADDD de la i+1, el LD de la i+2). Mantiene los saltos, pero elimina las esperas sin agrandar el cuerpo; necesita prólogo y epílogo.</p>
+          <div class="links"><a href="pipeline.html#s-loop">Superposición de iteraciones →</a></div>
+        </article>
+        <article class="topic" id="t-estatica">
+          <h3><a href="pipeline.html#s-planificacion">Planificación estática</a><span class="st ok">sale seguido</span></h3>
+          <p>El compilador reordena antes de ejecutar: sin hardware ni consumo extra, pero sin información de ejecución (fallos de caché, dependencias de memoria) y con código que puede rendir mal en otro procesador.</p>
+          <div class="links"><a href="pipeline.html#s-planificacion">Ejemplo con MULTD →</a></div>
+        </article>
+        <article class="topic" id="t-dinamica">
+          <h3><a href="pipeline.html#s-planificacion">Planificación dinámica: ventajas y desventajas</a><span class="st ok">sale seguido</span></h3>
+          <p>El hardware emite en orden pero ejecuta cada instrucción apenas tiene sus operandos. Se adapta al código y a lo que pasa en ejecución; paga en área, consumo y complejidad, y como termina fuera de orden complica las excepciones.</p>
+          <div class="links"><a href="pipeline.html#s-planificacion">Tabla estática vs. dinámica →</a></div>
+        </article>
+        <article class="topic" id="t-excepciones">
+          <h3><a href="pipeline.html#s-excepciones">Excepciones precisas</a><span class="st ok">sale seguido</span></h3>
+          <p>Una excepción es precisa si las instrucciones anteriores ya terminaron y la que la causó y las siguientes se comportan como si no hubieran empezado. En el pipeline en orden se marca en un vector de estado y se atiende recién en WB; fuera de orden, el ROB hace lo mismo al hacer commit en orden.</p>
+          <div class="links"><a href="pipeline.html#s-excepciones">Pipeline en orden →</a><a href="pipeline.html#s-rob">Fuera de orden y ROB →</a></div>
+        </article>
+        <article class="topic" id="t-tomasulo">
+          <h3><a href="pipeline.html#s-tomasulo">Tomasulo</a><span class="st ok">sale seguido</span></h3>
+          <p>Estaciones de reserva por unidad funcional; al emitir, cada operando se copia o se reemplaza por la etiqueta de quien lo va a producir (renombrado, que elimina EDL y EDE). Ejecuta cuando están los operandos (resuelve LDE) y difunde el resultado por el CDB, un resultado por ciclo.</p>
+          <div class="links"><a href="pipeline.html#s-tomasulo">Ejemplo de los apuntes →</a><a href="tomasulo.html">Simulador completo →</a></div>
+        </article>
+        <article class="topic" id="t-predictores">
+          <h3><a href="predictores.html#s-problema">Predictores de salto</a><span class="st ok">sale seguido</span></h3>
+          <p>Predictor de dirección (BHT) y de destino (BTAC, o BTB si guarda bits de predicción). El de 1 bit repite lo último; el de 2 bits necesita fallar dos veces para cambiar. El predictor local indexa con la historia de cada salto, el global con un registro compartido (GHR) y el híbrido usa un juez.</p>
+          <div class="links"><a href="predictores.html#s-bits">1 bit vs. 2 bits →</a><a href="predictores.html#s-local">Local →</a><a href="predictores.html#s-global">Global →</a><a href="predictores.html#s-hibrido">Híbrido →</a></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ 6 LANZAMIENTO MÚLTIPLE ============ -->
+    <section class="block col" id="s-paralelismo">
+      <h2><span class="num">6</span> Lanzamiento múltiple y multithreading</h2>
+      <p class="sub">Unidad 4: bajar el CPI de 1 emitiendo varias instrucciones o varios hilos por ciclo.</p>
+      <div class="topics">
+        <article class="topic" id="t-vliw">
+          <h3><a href="pipeline.html#s-vliw">Superescalar y VLIW</a><span class="st">en el temario</span></h3>
+          <p>El superescalar encuentra el paralelismo en hardware y emite lo que puede por ciclo; el VLIW lo encuentra en compilación, con un campo por unidad funcional, y rellena con NOP lo que no pudo llenar: hardware simple, compilador complejo y menos densidad de código.</p>
+          <div class="links"><a href="pipeline.html#s-vliw">Empaquetado VLIW →</a></div>
+        </article>
+        <article class="topic" id="t-mt">
+          <h3><a href="pipeline.html#s-mt">Multithreading</a><span class="st">en el temario</span></h3>
+          <p>El ILP de un hilo tiene un límite; varios hilos comparten las unidades funcionales. Grano fino cambia de hilo cada ciclo, grano grueso solo ante paradas largas, y SMT mezcla hilos en el mismo ciclo y llena también las vías vacías.</p>
+          <div class="links"><a href="pipeline.html#s-mt">Ocupación por modelo →</a></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ 7 MEMORIA ============ -->
+    <section class="block col" id="s-memoria">
+      <h2><span class="num">7</span> Memoria: caché y consistencia</h2>
+      <p class="sub">Unidades 5 y 6: la jerarquía de memoria y qué orden ven los procesadores.</p>
+      <div class="topics">
+        <article class="topic" id="t-cache">
+          <h3><a href="cache.html#s-fundamentos">Memoria caché</a><span class="st">en el temario</span></h3>
+          <p>Emplazamiento directo, asociativo por conjuntos o totalmente asociativo; reemplazo aleatorio, FIFO, LRU o LFU; write-through o write-back. Fallos iniciales, de capacidad y de conflicto. Tiempo de CPU = IC × (CPI + accesos por instrucción × tasa de fallos × penalización) × Tc.</p>
+          <div class="links"><a href="cache.html#s-simulador">Simulador de caché →</a><a href="cache.html#s-tiposfallo">Tipos de fallo →</a><a href="cache.html#s-rendimiento">Calculadora →</a></div>
+        </article>
+        <article class="topic" id="t-consistencia">
+          <h3><a href="coherencia.html#s-consistencia">Consistencia de memoria</a><span class="st">en el temario</span></h3>
+          <p>La coherencia ordena las escrituras a una misma posición; la consistencia, las escrituras a posiciones distintas. Bajo consistencia secuencial el resultado es el de algún orden secuencial que respeta el orden de programa de cada procesador, con escrituras atómicas.</p>
+          <div class="links"><a href="coherencia.html#s-consistencia">Órdenes posibles →</a></div>
+        </article>
+      </div>
+    </section>
+
+    <footer class="pagefoot">Modalidad y temas frecuentes según lo informado a octubre de 2026; los resúmenes salen de las guías del sitio, basadas en los apuntes de Arquitectura de Computadoras (FCEFyN, UNC). Hecho como material de repaso; no reemplaza la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
+  </main>
+</div>
+
+<script>
+/* ==== STD:SCRIPT v1 ==== (tema, scroll-spy del nav lateral y motor del quiz) */
+(function () {
+  var btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  function sync() {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    var icon = btn.querySelector('.icon');
+    if (icon) icon.textContent = dark ? '☀️' : '🌙';
+  }
+  btn.addEventListener('click', function () {
+    var el = document.documentElement;
+    var next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+    el.dataset.theme = next;
+    try { localStorage.setItem('tw-theme', next); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.side a[href^="#"]'));
+  var targets = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+  links.forEach(function (a, i) {
+    a.addEventListener('click', function (e) {
+      // scroll manual: navegar por hash puede recargar la página dentro de visores embebidos
+      e.preventDefault();
+      if (targets[i]) targets[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try { history.replaceState(null, '', a.getAttribute('href')); } catch (err) {}
+    });
+  });
+  function onScroll() {
+    var y = window.scrollY + 120, current = -1;
+    targets.forEach(function (t, i) {
+      if (t && t.getBoundingClientRect().top + window.scrollY <= y) current = i;
+    });
+    links.forEach(function (a, i) { a.classList.toggle('active', i === current); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+// stdQuiz([{q, opts:[...], correct:<índice>, exp}], 'quizWrap', 'quizScore')
+function stdQuiz(items, wrapId, scoreId) {
+  var wrap = document.getElementById(wrapId || 'quizWrap');
+  var scoreEl = document.getElementById(scoreId || 'quizScore');
+  if (!wrap) return;
+  function score() {
+    var c = 0, a = 0;
+    wrap.querySelectorAll('.quiz-item').forEach(function (div) {
+      if (div.dataset.answered) { a++; if (div.dataset.right === '1') c++; }
+    });
+    if (scoreEl) scoreEl.textContent = 'Puntaje: ' + c + ' / ' + a + ' respondidas (de ' + items.length + ' preguntas)';
+  }
+  items.forEach(function (item, qi) {
+    var div = document.createElement('div');
+    div.className = 'quiz-item';
+    div.innerHTML = '<p class="q">' + (qi + 1) + '. ' + item.q + '</p><div class="opts">'
+      + item.opts.map(function (o, oi) {
+        return '<label><input type="radio" name="' + wrap.id + '-q' + qi + '" value="' + oi + '"><span>' + o + '</span></label>';
+      }).join('') + '</div><div class="fb" aria-live="polite"></div>';
+    wrap.appendChild(div);
+    div.querySelectorAll('input').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        var right = parseInt(inp.value, 10) === item.correct;
+        div.dataset.answered = '1';
+        div.dataset.right = right ? '1' : '0';
+        var fb = div.querySelector('.fb');
+        fb.className = 'fb ' + (right ? 'ok' : 'bad');
+        fb.textContent = (right ? '✓ Correcto. ' : '✗ No es correcto. ') + item.exp;
+        score();
+      });
+    });
+  });
+  score();
+}
+/* ==== /STD:SCRIPT ==== */
+</script>
+</body>
+</html>
