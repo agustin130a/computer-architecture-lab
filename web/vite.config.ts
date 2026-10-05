@@ -18,6 +18,8 @@ export default defineConfig({
         predictores: resolve(root, 'predictores.html'),
         cache: resolve(root, 'cache.html'),
         coherencia: resolve(root, 'coherencia.html'),
+        pipeline: resolve(root, 'pipeline.html'),
+        coloquio: resolve(root, 'coloquio.html'),
       },
     },
   },

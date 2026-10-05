@@ -44,6 +44,10 @@
     --c-mem-soft: #e6f4f2;
     --c-coh: #be185d;
     --c-coh-soft: #fce7f3;
+    --c-pipe: #1d4ed8;
+    --c-pipe-soft: #e8eefc;
+    --c-col: #15803d;
+    --c-col-soft: #e7f6ec;
   }
   html[data-theme='dark']{
     /* ---- Tema oscuro (navy), tokens compartidos con predictores.html / cache.html ---- */
@@ -67,6 +71,10 @@
     --c-mem-soft: #163431;
     --c-coh: #f472b6;
     --c-coh-soft: #3b1a2c;
+    --c-pipe: #7ba6f2;
+    --c-pipe-soft: #17243d;
+    --c-col: #4ade80;
+    --c-col-soft: #14301f;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
@@ -143,10 +151,15 @@
   .card.pred{ --c: var(--c-pred); --c-soft: var(--c-pred-soft); }
   .card.mem{ --c: var(--c-mem); --c-soft: var(--c-mem-soft); }
   .card.coh{ --c: var(--c-coh); --c-soft: var(--c-coh-soft); }
+  .card.pipe{ --c: var(--c-pipe); --c-soft: var(--c-pipe-soft); }
+  .card.col{ --c: var(--c-col); --c-soft: var(--c-col-soft); }
+  .card.wide{ grid-column:1 / -1; }
+  .card.wide ul.toc{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:2px 24px; }
   .dot.tomasulo{ background:var(--c-tomasulo-soft); color:var(--c-tomasulo); }
   .dot.pred{ background:var(--c-pred-soft); color:var(--c-pred); }
   .dot.mem{ background:var(--c-mem-soft); color:var(--c-mem); }
   .dot.coh{ background:var(--c-coh-soft); color:var(--c-coh); }
+  .dot.pipe{ background:var(--c-pipe-soft); color:var(--c-pipe); }
 
   .card .tag{
     align-self:flex-start; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
@@ -208,21 +221,62 @@
         <span class="theme-label-dark">Modo claro</span>
       </button>
     </div>
-    <p class="lede">Cuatro piezas para ver por dentro cómo un procesador moderno evita quedarse esperando: ejecuta fuera de orden, adivina hacia dónde van los saltos, esconde la lentitud de la memoria detrás de la caché y, cuando hay varios procesadores, mantiene coherentes sus copias. Cada una se puede tocar: simuladores paso a paso, no solo texto.</p>
+    <p class="lede">Cinco piezas para ver por dentro cómo un procesador moderno evita quedarse esperando: segmenta la ejecución en etapas, ejecuta fuera de orden, adivina hacia dónde van los saltos, esconde la lentitud de la memoria detrás de la caché y, cuando hay varios procesadores, mantiene coherentes sus copias. Cada una se puede tocar: simuladores paso a paso, no solo texto. Si estás preparando el examen, empezá por la guía del <a href="coloquio.html">coloquio</a>.</p>
 
     <nav class="path" aria-label="Recorrido sugerido">
-      <a class="stop" href="#p-tomasulo"><span class="dot tomasulo">1</span><span class="txt"><b>Ejecución fuera de orden</b><span>Tomasulo: Issue → Exe → WB</span></span></a>
+      <a class="stop" href="#p-pipe"><span class="dot pipe">1</span><span class="txt"><b>Procesador segmentado</b><span>Pipeline, riesgos y planificación</span></span></a>
       <span class="arrow" aria-hidden="true">→</span>
-      <a class="stop" href="#p-pred"><span class="dot pred">2</span><span class="txt"><b>Predicción de saltos</b><span>Que el pipeline no se vacíe</span></span></a>
+      <a class="stop" href="#p-tomasulo"><span class="dot tomasulo">2</span><span class="txt"><b>Ejecución fuera de orden</b><span>Tomasulo: Issue → Exe → WB</span></span></a>
       <span class="arrow" aria-hidden="true">→</span>
-      <a class="stop" href="#p-mem"><span class="dot mem">3</span><span class="txt"><b>Jerarquía de memoria</b><span>Caché y memoria virtual</span></span></a>
+      <a class="stop" href="#p-pred"><span class="dot pred">3</span><span class="txt"><b>Predicción de saltos</b><span>Que el pipeline no se vacíe</span></span></a>
       <span class="arrow" aria-hidden="true">→</span>
-      <a class="stop" href="#p-coh"><span class="dot coh">4</span><span class="txt"><b>Coherencia de caché</b><span>Varios procesadores, un dato</span></span></a>
+      <a class="stop" href="#p-mem"><span class="dot mem">4</span><span class="txt"><b>Jerarquía de memoria</b><span>Caché y memoria virtual</span></span></a>
+      <span class="arrow" aria-hidden="true">→</span>
+      <a class="stop" href="#p-coh"><span class="dot coh">5</span><span class="txt"><b>Coherencia de caché</b><span>Varios procesadores, un dato</span></span></a>
     </nav>
   </header>
 
   <main id="main">
     <div class="cards">
+
+      <article class="card col wide" id="p-col">
+        <span class="tag">Examen</span>
+        <h2><a href="coloquio.html">Coloquio</a></h2>
+        <p class="desc">Cómo se toma el coloquio (papel y lápiz, tres temas, tiempo para preparar y presentar) y todos los temas que entran, marcando los que más salen, cada uno con un resumen y el enlace a la sección donde se desarrolla.</p>
+        <h3>Contenido</h3>
+        <ul class="toc">
+          <li><a href="coloquio.html#s-modalidad"><span class="n">1</span>Modalidad<span class="new">nuevo</span></a></li>
+          <li><a href="coloquio.html#s-temas"><span class="n">2</span>Temas del coloquio<span class="new">nuevo</span></a></li>
+          <li><a href="coloquio.html#s-multiproc"><span class="n">3</span>Coherencia de caché</a></li>
+          <li><a href="coloquio.html#s-segmentado"><span class="n">4</span>Procesador segmentado</a></li>
+          <li><a href="coloquio.html#s-planificacion"><span class="n">5</span>Planificación de instrucciones</a></li>
+          <li><a href="coloquio.html#s-paralelismo"><span class="n">6</span>Lanzamiento múltiple y multithreading</a></li>
+          <li><a href="coloquio.html#s-memoria"><span class="n">7</span>Caché y consistencia</a></li>
+        </ul>
+        <a class="open" href="coloquio.html">Abrir la guía →</a>
+      </article>
+
+      <article class="card pipe" id="p-pipe">
+        <span class="tag">Guía interactiva</span>
+        <h2><a href="pipeline.html">Procesador y paralelismo</a></h2>
+        <p class="desc">Unidades 2 a 4: del monociclo al pipeline, riesgos, loop unrolling y software pipelining, planificación estática y dinámica, excepciones precisas, Tomasulo, VLIW y multithreading, con simuladores y quiz.</p>
+        <h3>Contenido</h3>
+        <ul class="toc">
+          <li><a href="pipeline.html#s-ciclos"><span class="n">2.1</span>Monociclo y multiciclo<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-ciclos-calc"><span class="n">↳</span>Calculadora de tiempo total</a></li>
+          <li><a href="pipeline.html#s-pipeline"><span class="n">2.2–2.3</span>Pipeline segmentado<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-riesgos"><span class="n">2.3.1–2.4</span>Riesgos<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-loop"><span class="n">3.5</span>Unrolling y software pipelining<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-planificacion"><span class="n">3.2–3.3</span>Estática vs. dinámica<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-excepciones"><span class="n">2.5</span>Excepciones precisas<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-rob"><span class="n">3.4.2</span>Fuera de orden y ROB<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-tomasulo"><span class="n">3.6</span>Tomasulo, ciclo a ciclo<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-vliw"><span class="n">4.1–4.3</span>Superescalar y VLIW<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-mt"><span class="n">4.5–4.14</span>Multithreading<span class="new">nuevo</span></a></li>
+          <li><a href="pipeline.html#s-quiz"><span class="n">✓</span>Quiz de repaso</a></li>
+        </ul>
+        <a class="open" href="pipeline.html">Abrir la guía →</a>
+      </article>
 
       <article class="card tomasulo" id="p-tomasulo">
         <span class="tag">Simulador</span>
@@ -246,6 +300,7 @@
         <ul class="toc">
           <li><a href="predictores.html#s-problema"><span class="n">0</span>Por qué hace falta predecir</a></li>
           <li><a href="predictores.html#s-contador"><span class="n">1</span>Contador saturado de 2 bits</a></li>
+          <li><a href="predictores.html#s-bits"><span class="n">↳</span>1 bit vs. 2 bits, BTAC y BTB<span class="new">nuevo</span></a></li>
           <li><a href="predictores.html#s-local"><span class="n">2</span>Predictor de historia local</a></li>
           <li><a href="predictores.html#s-global"><span class="n">3</span>Predictor de historia global</a></li>
           <li><a href="predictores.html#s-comparacion"><span class="n">4</span>Local vs. global, lado a lado</a></li>
@@ -271,6 +326,7 @@
           <li><a href="cache.html#s-actualizacion"><span class="n">5.12–5.14</span>Write through / back</a></li>
           <li><a href="cache.html#s-rendimiento"><span class="n">5.15</span>Rendimiento y calculadora</a></li>
           <li><a href="cache.html#s-mejoras"><span class="n">5.16</span>Reducir la tasa de fallos</a></li>
+          <li><a href="cache.html#s-tiposfallo"><span class="n">↳</span>Simulador: las 3 C<span class="new">nuevo</span></a></li>
           <li><a href="cache.html#s-penalizacion"><span class="n">5.17–5.19</span>Reducir la penalización</a></li>
           <li><a href="cache.html#s-virtual"><span class="n">5.19.4–7</span>Caché y memoria virtual<span class="new">nuevo</span></a></li>
           <li><a href="cache.html#s-principal"><span class="n">5.20</span>Memoria principal</a></li>
@@ -282,14 +338,17 @@
       <article class="card coh" id="p-coh">
         <span class="tag">Guía interactiva</span>
         <h2><a href="coherencia.html">Coherencia de caché</a></h2>
-        <p class="desc">Unidad 6: cómo varias cachés mantienen coherente un mismo dato espiando el bus, del protocolo de dos estados a MSI y MESI, con simulador de tres procesadores.</p>
+        <p class="desc">Unidad 6: cómo varias cachés mantienen coherente un mismo dato, espiando el bus (dos estados, MSI y MESI, con diagrama de estados) o con un directorio, y qué orden garantiza la consistencia de memoria, con simuladores y quiz.</p>
         <h3>Contenido</h3>
         <ul class="toc">
           <li><a href="coherencia.html#s-problema"><span class="n">1</span>Copias que se desincronizan</a></li>
           <li><a href="coherencia.html#s-idea"><span class="n">2</span>Todos escuchan el bus</a></li>
-          <li><a href="coherencia.html#s-evolucion"><span class="n">3</span>Dos estados, MSI y MESI</a></li>
-          <li><a href="coherencia.html#s-simulador"><span class="n">↳</span>Simulador: tres cachés y un bus<span class="new">nuevo</span></a></li>
-          <li><a href="coherencia.html#s-estados"><span class="n">4</span>Los estados de MESI</a></li>
+          <li><a href="coherencia.html#s-familias"><span class="n">3</span>Snoopy vs. directorios<span class="new">nuevo</span></a></li>
+          <li><a href="coherencia.html#s-vi"><span class="n">4</span>Dos estados (VI) + simulador<span class="new">nuevo</span></a></li>
+          <li><a href="coherencia.html#s-msi"><span class="n">5</span>MSI y MESI + simulador<span class="new">nuevo</span></a></li>
+          <li><a href="coherencia.html#s-estados"><span class="n">6</span>Los estados de MESI</a></li>
+          <li><a href="coherencia.html#s-directorio"><span class="n">7</span>Coherencia con directorio<span class="new">nuevo</span></a></li>
+          <li><a href="coherencia.html#s-consistencia"><span class="n">8</span>Consistencia de memoria<span class="new">nuevo</span></a></li>
           <li><a href="coherencia.html#s-quiz"><span class="n">✓</span>Quiz de repaso</a></li>
         </ul>
         <a class="open" href="coherencia.html">Abrir la guía →</a>
