@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procesador y paralelismo | Computer Architecture Lab</title>
+<meta
+  name="description"
+  content="Unidades 2 a 4: pipeline, riesgos, loop unrolling y software pipelining, planificación estática y dinámica, excepciones precisas, Tomasulo, VLIW y multithreading, con simuladores ciclo a ciclo."
+/>
+<script>
+  // Aplica el tema guardado/del sistema antes del render para evitar parpadeo.
+  (function () {
+    try {
+      var t = localStorage.getItem('tw-theme');
+      if (!t) {
+        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  })();
+</script>
+<style>
+  /* ==== STD:TOKENS v1 ==== (no editar a mano: se sincroniza desde el template de la skill guia-arquitectura) */
+  :root{
+    --bg: #f4f6fb;
+    --bg-grad: radial-gradient(1200px 520px at 50% -160px, #e9eefb 0%, var(--bg) 70%);
+    --bg-panel: #ffffff;
+    --bg-panel-2: #eef2f7;
+    --line: #d8dee6;
+    --line-soft: #e4e9f0;
+    --text: #1d2433;
+    --muted: #4a5568;
+    --accent: #1f6feb;
+    --accent-ink: #ffffff;
+    --focus: #0a4bce;
+    --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
+    --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+    --highlight: #b45309;
+    --ok: #0f766e;
+    --ok-soft: #e6f4f2;
+    --err: #c0392b;
+    --err-soft: #fbeae7;
+    --warn: #b45309;
+    --warn-soft: #fdf2e3;
+  }
+  html[data-theme='dark']{
+    --bg: #0d1524;
+    --bg-grad: radial-gradient(1200px 560px at 50% -160px, #172236 0%, var(--bg) 68%);
+    --bg-panel: #131d2e;
+    --bg-panel-2: #1a2942;
+    --line: #2a3a52;
+    --line-soft: #223047;
+    --text: #e7edf3;
+    --muted: #9fb0c8;
+    --accent: #4d9fff;
+    --accent-ink: #06121f;
+    --focus: #7bb8ff;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.35);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+    --highlight: #e2a640;
+    --ok: #4fc9b8;
+    --ok-soft: #163431;
+    --err: #e2664f;
+    --err-soft: #3a2019;
+    --warn: #e2a640;
+    --warn-soft: #3a2c17;
+  }
+  /* ==== /STD:TOKENS ==== */
+
+  /* ==== STD:SHELL v1 ==== (header, nav lateral, secciones, footer) */
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; background:var(--bg); }
+  body{
+    margin:0;
+    background:var(--bg);
+    background:var(--bg-grad);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height:1.55;
+    transition:background-color .2s ease, color .2s ease;
+  }
+  code, .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a{ color:var(--accent); }
+  :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+
+  .skip-link{
+    position:absolute; left:-999px; top:0;
+    background:var(--accent); color:var(--accent-ink); padding:8px 12px; z-index:20;
+    border-radius:0 0 6px 0;
+  }
+  .skip-link:focus{ left:8px; top:8px; }
+
+  header.site{
+    padding:20px 24px;
+    background:var(--bg-panel);
+    border-bottom:1px solid var(--line);
+    box-shadow:var(--shadow-sm);
+  }
+  .site-top{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    margin-bottom:6px;
+  }
+  .backlink{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--accent); text-decoration:none; font-size:.9rem; font-weight:600;
+  }
+  .backlink:hover{ text-decoration:underline; }
+  header.site .kicker{ color:var(--muted); font-size:.9rem; margin:0; }
+  header.site h1{ margin:10px 0 0; font-size:clamp(24px,3vw,34px); letter-spacing:-.01em; max-width:24ch; }
+  header.site .lede{ color:var(--muted); font-size:1rem; max-width:72ch; margin:10px 0 22px; }
+  header.site .lede b{ color:var(--text); }
+  header.site .hero{ max-width:760px; overflow-x:auto; }
+
+  .theme-toggle{
+    flex:0 0 auto;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border:1px solid var(--line); background:var(--bg-panel-2); color:var(--text);
+    border-radius:999px; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer;
+    transition:border-color .15s ease, background-color .2s ease;
+  }
+  .theme-toggle:hover{ border-color:var(--muted); }
+  .theme-toggle .icon{ font-size:1rem; line-height:1; }
+  .theme-toggle .theme-label-dark{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-light{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-dark{ display:inline; }
+
+  .shell{ display:grid; grid-template-columns:260px minmax(0,1fr); min-height:100vh; }
+  nav.side{
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    background:var(--bg-panel);
+    border-right:1px solid var(--line);
+    padding:22px 16px 40px;
+  }
+  nav.side .brand{ font-weight:700; font-size:15px; letter-spacing:.2px; margin-bottom:2px; }
+  nav.side .brand small{ display:block; color:var(--muted); font-weight:400; font-size:12px; margin-top:3px; }
+  nav.side ol{ list-style:none; margin:22px 0 0; padding:0; }
+  nav.side .grp{ margin-bottom:18px; }
+  nav.side .grp-title{
+    color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    margin:0 0 6px 2px; font-weight:600;
+  }
+  nav.side a{
+    display:block; color:var(--text); text-decoration:none; font-size:13.5px;
+    padding:5px 8px; border-radius:6px; opacity:.82;
+  }
+  nav.side a:hover{ background:var(--bg-panel-2); opacity:1; }
+  nav.side a.active{ background:var(--bg-panel-2); color:var(--accent); opacity:1; }
+
+  main{ padding:0 0 100px; min-width:0; }
+  section.block{
+    padding:40px 48px;
+    border-bottom:1px solid var(--line);
+    max-width:1080px;
+    scroll-margin-top:12px;
+  }
+  section.block h2{ font-size:22px; margin:0 0 6px; display:flex; align-items:baseline; gap:10px; }
+  section.block h2 .num{ color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; flex:0 0 auto; }
+  section.block .sub{ color:var(--muted); font-size:14px; margin:0 0 22px; max-width:66ch; }
+  section.block h3{ font-size:17px; margin:30px 0 6px; scroll-margin-top:12px; }
+  section.block p{ max-width:72ch; }
+
+  footer.pagefoot{ padding:30px 48px; color:var(--muted); font-size:12.5px; }
+
+  @media (max-width:860px){
+    .shell{ grid-template-columns:minmax(0,1fr); }
+    nav.side{ position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line); }
+    section.block{ padding:28px 20px; }
+    footer.pagefoot{ padding:24px 20px; }
+  }
+  @media (max-width:640px){
+    header.site{ padding:16px; }
+    header.site .site-top{ flex-direction:column; }
+  }
+  /* ==== /STD:SHELL ==== */
+
+  /* ==== STD:COMPONENTS v1 ==== (piezas reutilizables dentro de las secciones) */
+  /* Tarjeta desplegable de teoría */
+  details.card{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    margin-bottom:10px; overflow:hidden;
+  }
+  details.card summary{
+    cursor:pointer; padding:14px 18px; font-weight:600; font-size:14.5px;
+    display:flex; align-items:center; gap:10px; list-style:none;
+  }
+  details.card summary::-webkit-details-marker{ display:none; }
+  details.card summary::before{
+    content:"+"; color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; width:14px;
+  }
+  details.card[open] summary::before{ content:"–"; }
+  details.card .body{ padding:0 18px 18px; font-size:14.5px; }
+  details.card .body p{ margin:0 0 12px; }
+  details.card .body ul{ margin:0 0 12px; padding-left:20px; }
+  details.card .body li{ margin-bottom:6px; }
+  details.card .body strong{ color:var(--highlight); }
+
+  /* Caja de contenido fija (texto + diagrama, sin desplegar) */
+  .panel{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px 22px; margin:14px 0; box-shadow:var(--shadow-sm);
+  }
+  .panel > h3:first-child{ margin-top:0; }
+
+  /* Tabla comparativa */
+  .table-scroll{ overflow-x:auto; }
+  table.cmp{ width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:13.5px; }
+  table.cmp th, table.cmp td{ border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top; }
+  table.cmp th{ background:var(--bg-panel-2); color:var(--muted); font-weight:600; }
+  table.cmp td.hi{ color:var(--ok); }
+
+  /* Fórmula / regla destacada */
+  .formula{
+    background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
+  }
+
+  /* Nota al margen (.info para una aclaración, sin variante para un "ojo con esto") */
+  .note{
+    border-left:3px solid var(--warn); border-radius:0 8px 8px 0;
+    padding:12px 16px; background:var(--warn-soft);
+    font-size:13.5px; margin:14px 0; color:var(--text); max-width:80ch;
+  }
+  .note.info{ border-left-color:var(--ok); background:var(--ok-soft); }
+
+  /* Etiquetas */
+  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px; }
+  .pill{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:12.5px; color:var(--muted); }
+  .pill b{ color:var(--text); }
+
+  /* Panel de simulador / widget interactivo */
+  .sim{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:24px; margin:10px 0 16px; }
+  .sim .cfg{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px; }
+  .sim .cfg label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  .sim select, .sim input[type=text], .sim input[type=number]{
+    width:100%; background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
+    padding:9px 10px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px;
+  }
+  .sim .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+  .sim .msg{ padding:11px 14px; border-radius:8px; font-size:13.5px; margin:12px 0; background:var(--bg-panel-2); border:1px solid var(--line); }
+  .sim .msg.ok{ background:var(--ok-soft); border-color:var(--ok); color:var(--ok); }
+  .sim .msg.err{ background:var(--err-soft); border-color:var(--err); color:var(--err); }
+  button.btn{
+    background:var(--accent); color:var(--accent-ink); border:1px solid var(--accent); font-weight:600; font-size:13.5px;
+    padding:9px 16px; border-radius:8px; cursor:pointer; font-family:inherit;
+  }
+  button.btn:hover{ filter:brightness(1.08); }
+  button.btn.ghost{ background:transparent; color:var(--text); border-color:var(--line); }
+  button.btn.ghost:hover{ background:var(--bg-panel-2); filter:none; }
+  button.btn.ghost.sel{ border-color:var(--accent); color:var(--accent); background:var(--bg-panel-2); }
+  button.btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  /* Contadores */
+  .stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 18px; min-width:110px; }
+  .stat .n{ font-size:22px; font-weight:700; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .stat .l{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stat.ok .n{ color:var(--ok); }
+  .stat.err .n{ color:var(--err); }
+
+  /* Quiz de repaso (lo arma stdQuiz() a partir de un array) */
+  .quiz-item{ background:var(--bg-panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:14px; }
+  .quiz-item p.q{ font-weight:600; margin:0 0 12px; font-size:14.5px; }
+  .quiz-item .opts{ display:flex; flex-direction:column; gap:8px; }
+  .quiz-item label{
+    display:flex; gap:10px; align-items:flex-start; background:var(--bg-panel-2); border:1px solid var(--line);
+    padding:9px 12px; border-radius:8px; cursor:pointer; font-size:13.5px;
+  }
+  .quiz-item label:hover{ border-color:var(--muted); }
+  .quiz-item label input{ margin-top:3px; }
+  .quiz-item .fb{ margin-top:10px; padding:10px 12px; border-radius:8px; font-size:13px; display:none; }
+  .quiz-item .fb.ok{ background:var(--ok-soft); border:1px solid var(--ok); color:var(--ok); display:block; }
+  .quiz-item .fb.bad{ background:var(--err-soft); border:1px solid var(--err); color:var(--err); display:block; }
+  .quiz-score{ font-size:14px; color:var(--muted); margin-top:6px; }
+
+  @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
+  /* ==== /STD:COMPONENTS ==== */
+
+  /* ==== PAGE:TOKENS ==== etapas útiles, tiempo desperdiciado, las tres implementaciones, gris de descarte y texto sobre rellenos */
+  :root{
+    --act: #2457B3;
+    --waste: #E9C9C4;
+    --waste-line: #C0392B;
+    --t-mono: #C0392B;
+    --t-multi: #7B4BC4;
+    --t-pipe: #20835A;
+    --on-fill: #ffffff;
+    --gray: #8C95A4;
+    --act-soft: #e8eefb;
+  }
+  html[data-theme='dark']{
+    --act: #7BA6F2;
+    --waste: #4A2F2C;
+    --waste-line: #F07062;
+    --t-mono: #F07062;
+    --t-multi: #AE90F2;
+    --t-pipe: #4DC48C;
+    --on-fill: #0d1524;
+    --gray: #7D8797;
+    --act-soft: #1b2a45;
+  }
+
+  /* ==== PAGE ==== diagramas temporales y simuladores de excepciones (todo bajo .pipe) */
+  .pipe .src{ font-size:13px; color:var(--muted); }
+  .pipe .sim-top{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .pipe .sim-top h4{ margin:0; font-size:16px; }
+  .pipe .seg{ display:inline-flex; flex-wrap:wrap; background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px; gap:2px; }
+  .pipe .seg button{ font:inherit; font-size:13.5px; font-weight:600; border:0; background:transparent; color:var(--muted); padding:6px 14px; border-radius:999px; cursor:pointer; }
+  .pipe .seg button[aria-pressed="true"]{ background:var(--accent); color:var(--accent-ink); }
+  .pipe .btns{ display:flex; flex-wrap:wrap; gap:8px; }
+  .pipe .scroll{ overflow-x:auto; }
+  .pipe svg{ display:block; height:auto; }
+  .pipe svg.wide{ width:100%; min-width:640px; }
+  .pipe svg.chart{ width:100%; }
+  .pipe svg text{ fill:var(--text); }
+  .pipe .chart text{ font-size:12px; fill:var(--muted); }
+  .pipe .chart .lbl{ fill:var(--text); font-weight:700; }
+  .pipe svg .on-fill{ fill:var(--on-fill); }
+  .pipe .legend{ display:flex; gap:6px 16px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin-top:8px; }
+  .pipe .legend i{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+  .pipe .k-act{ background:var(--act); } .pipe .k-waste{ background:var(--waste); } .pipe .k-ok{ background:var(--ok); } .pipe .k-err{ background:var(--err); }
+
+  /* Tabla del pipeline en orden */
+  .pipe table.ptab{ border-collapse:separate; border-spacing:3px; font-size:13px; min-width:640px; }
+  .pipe table.ptab th{ font-weight:600; color:var(--muted); padding:2px 4px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }
+  .pipe table.ptab td{ width:42px; height:30px; text-align:center; border-radius:6px; font:600 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pipe table.ptab td.ins{ width:auto; text-align:left; padding-right:10px; white-space:nowrap; }
+  .pipe table.ptab td.st{ background:var(--bg-panel-2); }
+  .pipe table.ptab td.now{ outline:2px solid var(--act); }
+  .pipe table.ptab td.exc{ background:var(--err); color:var(--on-fill); }
+  .pipe table.ptab td.fl{ background:repeating-linear-gradient(45deg, var(--bg-panel-2) 0 4px, transparent 4px 8px); color:var(--muted); }
+  .pipe table.ptab td.done{ background:var(--ok); color:var(--on-fill); }
+  .pipe table.ptab td.vec{ width:auto; padding:0 8px; letter-spacing:.12em; }
+  .pipe .status{ margin-top:12px; padding:12px 14px; border-radius:10px; background:var(--bg-panel-2); border:1px solid var(--line); font-size:14px; }
+  .pipe .status.good{ background:var(--ok-soft); border-color:var(--ok); }
+  .pipe .status.bad{ background:var(--err-soft); border-color:var(--err); }
+
+  /* ROB */
+  .pipe .rob-cyc{ display:flex; align-items:center; gap:10px; min-width:240px; font-size:13.5px; color:var(--muted); }
+  .pipe .rob-cyc b{ color:var(--text); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pipe input[type=range]{ width:100%; accent-color:var(--accent); }
+  .pipe .regs{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .pipe .reg{ font:600 13px ui-monospace, SFMono-Regular, Menlo, monospace; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg-panel-2); }
+  .pipe .reg.w{ background:var(--ok); color:var(--on-fill); border-color:var(--ok); }
+
+  /* Riesgos, bucles, planificación, Tomasulo, VLIW y multithreading */
+  .pipe .out{ font-size:22px; font-weight:700; margin-bottom:10px; }
+  .pipe .out small{ display:block; font-size:13px; font-weight:400; color:var(--muted); }
+  .pipe .grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:18px; align-items:start; margin:12px 0; }
+  .pipe .simgrid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.35fr); gap:20px; align-items:start; }
+  @media (max-width:1000px){ .pipe .simgrid{ grid-template-columns:minmax(0,1fr); } }
+  .pipe .panel h4{ margin:0 0 10px; font-size:15px; }
+  .pipe .tbl-h{ margin:14px 0 6px; font-size:14.5px; }
+  .pipe .lbl-sm{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  .pipe textarea{ width:100%; font:600 13.5px ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--text); background:var(--bg-panel); border:1px solid var(--line); border-radius:8px; padding:8px; resize:vertical; }
+  .pipe .opts{ display:flex; flex-direction:column; gap:10px; font-size:14px; }
+  .pipe .ex-row{ margin:12px 0 0; }
+  .pipe .t-err{ color:var(--err); }
+  .pipe .tx{ color:var(--act); font-weight:600; }
+  .pipe .mono{ font-size:13px; }
+  .pipe .k-stage{ background:var(--bg-panel-2); border:1px solid var(--line); }
+  .pipe .k-stall{ background:repeating-linear-gradient(45deg, var(--err) 0 3px, transparent 3px 6px); }
+  .pipe .k-gray{ background:var(--gray); }
+  .pipe .k-warn{ background:var(--warn); }
+  .pipe .k-empty{ background:var(--bg-panel-2); border:1px solid var(--line); }
+  .pipe .k-flush{ background:repeating-linear-gradient(45deg, var(--gray) 0 3px, transparent 3px 6px); }
+  .pipe table.ptab td.stall{ background:repeating-linear-gradient(45deg, var(--err-soft) 0 3px, transparent 3px 6px); box-shadow:inset 0 0 0 1px var(--err); color:var(--muted); }
+  .pipe table.ptab td.flush{ background:var(--gray); color:var(--on-fill); }
+  .pipe table.ptab.vw td.op{ width:auto; padding:0 8px; white-space:nowrap; }
+  .pipe table.ptab.vw td.nop{ width:auto; padding:0 8px; color:var(--muted); background:repeating-linear-gradient(45deg, var(--bg-panel-2) 0 3px, transparent 3px 6px); }
+  .pipe .log{ font:12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; background:var(--bg-panel-2); border-radius:10px; padding:10px 12px; white-space:pre; overflow-x:auto; }
+  .pipe .log .src{ white-space:normal; font-family:inherit; margin-top:8px; }
+  .pipe .cards2{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .pipe .statc{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .pipe .statc .l{ font-size:12px; color:var(--muted); }
+  .pipe .statc .n{ font-size:20px; font-weight:700; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pipe table.cmp.tm{ margin:0; }
+  .pipe table.cmp.tm th, .pipe table.cmp.tm td{ padding:5px 8px; font-size:12.5px; white-space:nowrap; }
+  .pipe table.cmp.tm tr.busy td{ background:var(--act-soft); }
+  .pipe table.cmp.tm td.q{ color:var(--err); font-weight:700; }
+  .pipe table.cmp.tm td.qi{ color:var(--act); font-weight:700; }
+  .pipe .tm-cyc{ margin:0 0 12px; max-width:420px; }
+  .pipe svg.mtw{ min-width:700px; }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site">
+  <div class="site-top">
+    <a class="backlink" href="index.html">&larr; Inicio</a>
+    <button
+      id="theme-toggle"
+      class="theme-toggle"
+      type="button"
+      aria-pressed="false"
+      title="Cambiar entre modo claro y oscuro"
+    >
+      <span class="icon" aria-hidden="true">🌙</span>
+      <span class="theme-label-light">Modo oscuro</span>
+      <span class="theme-label-dark">Modo claro</span>
+    </button>
+  </div>
+  <p class="kicker">Arquitectura de Computadoras — Unidades 2 a 4: procesador segmentado y paralelismo</p>
+  <h1>Procesador: pipeline, planificación y paralelismo</h1>
+  <p class="lede">Del monociclo al pipeline, los riesgos que lo frenan y cómo se los ataca: reordenando en el compilador (unrolling, software pipelining) o en el hardware (Tomasulo), manteniendo las excepciones precisas, y emitiendo varias instrucciones o varios hilos por ciclo. Cada tema trae un simulador para probar casos.</p>
+</header>
+
+<div class="shell">
+
+  <nav class="side" id="sidenav" aria-label="Secciones de la guía">
+    <div class="brand">Procesador y paralelismo<small>Unidades 2 a 4</small></div>
+    <ol>
+      <li class="grp">
+        <p class="grp-title">Segmentación</p>
+        <a href="#s-ciclos">2.1 Monociclo y multiciclo</a>
+        <a href="#s-ciclos-calc">↳ Calculadora de tiempo</a>
+        <a href="#s-pipeline">2.2 Pipeline segmentado</a>
+        <a href="#s-riesgos">2.3.1 Riesgos</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Planificación</p>
+        <a href="#s-loop">3.5 Unrolling y software pipelining</a>
+        <a href="#s-planificacion">3.2 Estática vs. dinámica</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Excepciones</p>
+        <a href="#s-excepciones">2.5 Excepciones precisas</a>
+        <a href="#s-rob">3.4.2 Fuera de orden y ROB</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Planificación dinámica</p>
+        <a href="#s-tomasulo">3.6 Tomasulo</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Lanzamiento múltiple</p>
+        <a href="#s-vliw">4.1 Superescalar y VLIW</a>
+        <a href="#s-mt">4.5 Multithreading</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Autoevaluación</p>
+        <a href="#s-quiz">Quiz de repaso</a>
+      </li>
+    </ol>
+  </nav>
+
+  <main id="main">
+
+    <!-- ============ 2.1 MONOCICLO Y MULTICICLO ============ -->
+    <section class="block pipe" id="s-ciclos">
+      <h2><span class="num">2.1</span> Monociclo y multiciclo</h2>
+      <p class="sub">Cuánto dura el ciclo de reloj y cuántos ciclos usa cada instrucción en cada implementación.</p>
+
+      <details class="card" open>
+        <summary>Monociclo: un ciclo largo por instrucción</summary>
+        <div class="body">
+          <p>Toda la instrucción se ejecuta en un único ciclo de reloj, que debe durar lo que la instrucción más lenta (45 ns en el ejemplo). Las instrucciones cortas desperdician el resto del ciclo. <strong>CPI = 1</strong>.</p>
+        </div>
+      </details>
+      <details class="card" open>
+        <summary>Multiciclo: varios ciclos cortos</summary>
+        <div class="body">
+          <p>La instrucción se divide en etapas (IF, ID, EX, MEM, WB) y cada etapa usa un ciclo corto (10 ns, lo que dura la etapa más lenta). Cada instrucción usa solo las etapas que necesita, así que las cortas terminan antes. A cambio, las etapas rápidas desperdician parte de su ciclo: un <code>lw</code> de 5 etapas tarda 50 ns contra 45 ns en monociclo. El control pasa a ser una <strong>máquina de estados</strong>.</p>
+        </div>
+      </details>
+      <div class="note info"><strong>En una frase:</strong> monociclo tiene ciclo largo y CPI 1; multiciclo tiene ciclo corto y CPI mayor que 1. Cuál gana depende de la mezcla de instrucciones. Ninguno solapa instrucciones; eso lo hace la segmentación.</div>
+
+      <div class="sim">
+        <div class="sim-top"><h4>Diagrama temporal: lw, add, sw, beq</h4>
+          <div class="seg" role="group" aria-label="Mostrar">
+            <button type="button" class="td-btn" data-m="all" aria-pressed="true">Los tres</button>
+            <button type="button" class="td-btn" data-m="mono" aria-pressed="false">Monociclo</button>
+            <button type="button" class="td-btn" data-m="multi" aria-pressed="false">Multiciclo</button>
+            <button type="button" class="td-btn" data-m="pipe" aria-pressed="false">Segmentado</button>
+          </div>
+        </div>
+        <div class="scroll"><svg id="td-svg" class="wide" viewBox="0 0 900 520" role="img" aria-label="Diagrama temporal de las tres implementaciones"></svg></div>
+        <div class="legend"><span><i class="k-act"></i>etapa útil</span><span><i class="k-waste"></i>tiempo desperdiciado</span></div>
+        <p class="src">Duraciones supuestas para el diagrama: IF 10, ID 5, EX 10, MEM 10, WB 10 ns (suman los 45 ns de los apuntes). <code>lw</code> usa 5 etapas, <code>add</code> y <code>sw</code> 4, <code>beq</code> 3.</p>
+      </div>
+
+      <h3 id="s-ciclos-calc">Calculadora de tiempo total</h3>
+      <div class="formula">monociclo = T<sub>mono</sub> × N &nbsp;·&nbsp; multiciclo = T<sub>ciclo</sub> × CPI × N &nbsp;·&nbsp; segmentado = T<sub>ciclo</sub> × (N + k − 1)</div>
+      <div class="sim">
+        <div class="cfg">
+          <div><label for="cc-n">Instrucciones</label><input type="number" id="cc-n" value="100" min="1"></div>
+          <div><label for="cc-tm">Ciclo monociclo (ns)</label><input type="number" id="cc-tm" value="45" min="1"></div>
+          <div><label for="cc-tk">Ciclo multiciclo (ns)</label><input type="number" id="cc-tk" value="10" min="1"></div>
+          <div><label for="cc-cpi">CPI multiciclo</label><input type="number" id="cc-cpi" value="4.6" min="1" step="0.1"></div>
+          <div><label for="cc-k">Etapas del pipeline</label><input type="number" id="cc-k" value="5" min="2"></div>
+        </div>
+        <svg id="cc-chart" class="chart" viewBox="0 0 640 170" role="img" aria-label="Tiempo total por implementación"></svg>
+        <p class="src">Con los valores de los apuntes: monociclo 45 × 100 = 4500 ns; multiciclo 10 × 4,6 × 100 = 4600 ns; segmentado 10 × (100 + 4) = 1040 ns.</p>
+      </div>
+      <div class="note"><strong>Complemento (no está en los apuntes, viene de Patterson y Hennessy):</strong> el multiciclo también permite reutilizar unidades dentro de una instrucción, por ejemplo una sola ALU y una sola memoria, porque se usan en ciclos distintos. Para eso agrega registros intermedios (IR, MDR, A, B, ALUout).</div>
+      <p class="src">Fuente: apuntes, secciones 2.1.1 a 2.1.3.</p>
+    </section>
+
+    <!-- ============ 2.2–2.3 PIPELINE ============ -->
+    <section class="block pipe" id="s-pipeline">
+      <h2><span class="num">2.2–2.3</span> Pipeline segmentado</h2>
+      <p class="sub">Cómo la segmentación mejora el throughput y por qué el speedup real queda por debajo de la cantidad de etapas.</p>
+      <p>La segmentación aprovecha que, mientras una instrucción está en una etapa, el hardware de las otras cuatro queda ocioso. Se separan las etapas con <strong>registros de segmentación</strong> (IF/ID, ID/EX, EX/MEM, MEM/WB) que guardan al final de cada ciclo lo que produjo cada etapa, y así cada etapa trabaja en una instrucción distinta. Es invisible para el programador.</p>
+      <p>No acorta el tiempo de una instrucción: mejora el <strong>throughput</strong>. En el caso ideal, con etapas balanceadas, el tiempo por instrucción se divide por la cantidad de etapas (100 ns con 5 etapas pasa a 20 ns) y el CPI tiende a 1 una vez lleno el pipeline.</p>
+      <p>Limitaciones prácticas: el ciclo dura lo que la etapa más lenta; los registros de segmentación agregan retardo; las instrucciones tipo R pasan por una etapa MEM vacía para que todas tengan la misma cantidad de etapas; y aparecen los <strong>riesgos</strong>, que impiden iniciar una instrucción por ciclo.</p>
+      <div class="note info"><strong>En una frase:</strong> el speedup ideal es igual a la cantidad de etapas, pero en la práctica baja por el desbalance entre etapas, el retardo de los registros de segmentación, el llenado del pipeline y los riesgos.</div>
+
+      <div class="formula">speedup(N) = N × tiempo sin pipeline / ((N + etapas − 1) × ciclo)</div>
+      <div class="sim">
+        <div class="sim-top"><h4>Calculadora de speedup</h4></div>
+        <div class="cfg" id="ps-cfg">
+          <div><label for="ps-if">IF (ps)</label><input type="number" class="ps-st" id="ps-if" value="200" min="1"></div>
+          <div><label for="ps-id">ID (ps)</label><input type="number" class="ps-st" id="ps-id" value="100" min="1"></div>
+          <div><label for="ps-ex">EX (ps)</label><input type="number" class="ps-st" id="ps-ex" value="200" min="1"></div>
+          <div><label for="ps-mem">MEM (ps)</label><input type="number" class="ps-st" id="ps-mem" value="200" min="1"></div>
+          <div><label for="ps-wb">WB (ps)</label><input type="number" class="ps-st" id="ps-wb" value="100" min="1"></div>
+          <div><label for="ps-latch">Registro de segmentación (ps)</label><input type="number" id="ps-latch" value="0" min="0"></div>
+        </div>
+        <div class="grid2">
+          <div><div class="out" id="ps-out1">—</div><div class="out" id="ps-out2">—</div></div>
+          <svg id="ps-chart" class="chart" viewBox="0 0 460 220" role="img" aria-label="Speedup según cantidad de instrucciones"></svg>
+        </div>
+        <p class="src">Con etapas desbalanceadas (200/100/200/200/100) el máximo es 4, no 5. Probá poner todas en 160 ps para ver el caso balanceado.</p>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 2.2, 2.3 y 2.3.1.</p>
+    </section>
+
+    <!-- ============ 2.3.1–2.4 RIESGOS ============ -->
+    <section class="block pipe" id="s-riesgos">
+      <h2><span class="num">2.3.1–2.4</span> Riesgos en la segmentación</h2>
+      <p class="sub">Qué impide iniciar una instrucción por ciclo: recursos compartidos, datos que no están listos y saltos.</p>
+      <details class="card" open>
+        <summary>Estructurales</summary>
+        <div class="body"><p>Dos instrucciones quieren el mismo recurso en el mismo ciclo. Se resuelven por construcción: memoria de instrucciones separada de la de datos, banco de registros con dos puertos de lectura y escritura en la primera mitad del ciclo, y un sumador extra para el PC.</p></div>
+      </details>
+      <details class="card" open>
+        <summary>De datos</summary>
+        <div class="body"><p>Una instrucción usa un dato que todavía no está listo. <strong>LDE (RAW)</strong> es el único que aparece en el pipeline en orden; EDL (WAR) y EDE (WAW) solo son problema con ejecución fuera de orden, porque WB siempre es la última etapa. LDE entre tipo R se resuelve con <strong>cortocircuito (forwarding)</strong>; el caso <strong>load-use</strong> no, porque el dato sale de MEM y la siguiente lo necesita en EX: la unidad de detección de riesgos, en ID, inserta una burbuja.</p></div>
+      </details>
+      <details class="card" open>
+        <summary>De control</summary>
+        <div class="body"><p>Al buscar la instrucción siguiente a un salto no se sabe si el salto se toma ni su destino. Si se resuelve en MEM se pierden 3 ciclos; con comparador y sumador en ID, 1 ciclo; con salto retardado o predicción, menos (ver la <a href="predictores.html">guía de predicción de saltos</a>).</p></div>
+      </details>
+
+      <h3 id="s-riesgos-teorema">Teorema de riesgos: dominio y rango</h3>
+      <p>Escribí dos instrucciones (i antes que j). El dominio D son los operandos que se leen y el rango R es el resultado.</p>
+      <div class="sim">
+        <div class="cfg">
+          <div><label for="hz-i">Instrucción i</label><input type="text" id="hz-i" value="ADD r1,r2,r3"></div>
+          <div><label for="hz-j">Instrucción j</label><input type="text" id="hz-j" value="SUB r4,r1,r5"></div>
+        </div>
+        <div id="hz-out"></div>
+        <div class="actions ex-row"><span class="src">Ejemplos:</span>
+          <button type="button" class="btn ghost hz-ex" data-i="ADD r1,r2,r3" data-j="ADD r4,r1,r2">LDE</button>
+          <button type="button" class="btn ghost hz-ex" data-i="ADD r1,r4,r3" data-j="ADD r4,r1,r2">EDL</button>
+          <button type="button" class="btn ghost hz-ex" data-i="ADD r4,r2,r3" data-j="ADD r4,r1,r2">EDE</button>
+          <button type="button" class="btn ghost hz-ex" data-i="LW r1,0(r2)" data-j="SW r1,8(r2)">LW y SW</button>
+        </div>
+      </div>
+
+      <h3 id="s-riesgos-sim">Simulador de pipeline con riesgos</h3>
+      <div class="sim">
+        <div class="actions" role="group" aria-label="Ejemplos">
+          <button type="button" class="btn ghost pz-p" data-k="raw">Cadena LDE del apunte</button>
+          <button type="button" class="btn ghost pz-p" data-k="lu">Load-use</button>
+          <button type="button" class="btn ghost pz-p" data-k="br">Salto</button>
+          <button type="button" class="btn ghost pz-p" data-k="st">Estructural</button>
+        </div>
+        <div class="grid2">
+          <div><label class="lbl-sm" for="pz-code">Código (una instrucción por línea)</label><textarea id="pz-code" rows="6" spellcheck="false"></textarea></div>
+          <div class="opts">
+            <label><input type="checkbox" id="pz-fwd" checked> Cortocircuito (forwarding)</label>
+            <label><input type="checkbox" id="pz-mem"> Memoria única para instrucciones y datos</label>
+            <div><label class="lbl-sm" for="pz-br">Manejo de saltos</label><select id="pz-br">
+              <option value="mem">Detener hasta MEM (3 ciclos)</option>
+              <option value="id" selected>Comparador en ID (1 ciclo)</option>
+              <option value="delay">Salto retardado (delay slot)</option>
+              <option value="pnt">Predecir no tomado</option></select></div>
+            <label><input type="checkbox" id="pz-taken" checked> El salto se toma</label>
+          </div>
+        </div>
+        <div class="scroll"><table class="ptab" id="pz-table"></table></div>
+        <div class="status" id="pz-status" aria-live="polite"></div>
+        <div class="legend"><span><i class="k-stage"></i>etapa</span><span><i class="k-stall"></i>detenida (burbuja)</span><span><i class="k-gray"></i>descartada (flush)</span></div>
+      </div>
+
+      <h3 id="s-riesgos-cpi">Costo de los saltos en el CPI</h3>
+      <div class="formula">CPI real = 1 + frecuencia de saltos × penalización &nbsp;·&nbsp; speedup = etapas / CPI</div>
+      <div class="sim">
+        <div class="cfg">
+          <div><label for="cp-f">Saltos en el programa: <b id="cp-fv">30 %</b></label><input type="range" id="cp-f" min="0" max="50" value="30"></div>
+          <div><label for="cp-k">Etapas del pipeline</label><input type="number" id="cp-k" value="5" min="2"></div>
+        </div>
+        <svg id="cp-chart" class="chart" viewBox="0 0 640 180" role="img" aria-label="Speedup según penalización por salto"></svg>
+        <p class="src">Ejemplo de los apuntes: 30 % de saltos con 1 ciclo de penalización da CPI 1,3 y speedup 3,84, un 24 % menos que el ideal.</p>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 2.3.1 a 2.4.4.</p>
+    </section>
+
+    <!-- ============ 3.5 UNROLLING / SWP ============ -->
+    <section class="block pipe" id="s-loop">
+      <h2><span class="num">3.5</span> Loop unrolling y software pipelining</h2>
+      <p class="sub">Dos técnicas del compilador para sacar paralelismo entre iteraciones de un bucle.</p>
+      <p>Son técnicas estáticas: las hace el compilador. Las dos parten del mismo bucle, <code>x[i] = x[i] + s</code>, cuyo cuerpo tiene instrucciones muy dependientes entre sí (un bloque básico tiene en promedio unas cuatro instrucciones), así que hay que buscar paralelismo entre iteraciones.</p>
+      <details class="card" open>
+        <summary>Loop unrolling</summary>
+        <div class="body"><p>Se replica el cuerpo varias veces (con registros distintos) y se ajustan los desplazamientos. Elimina saltos y decrementos y, junto con la planificación, permite separar cada LD de su ADDD y cada ADDD de su SD. <strong>Costo:</strong> más registros y código más largo.</p></div>
+      </details>
+      <details class="card" open>
+        <summary>Software pipelining</summary>
+        <div class="body"><p>Cada vuelta del bucle nuevo toma una instrucción de iteraciones distintas (el SD de la i, el ADDD de la i+1, el LD de la i+2). No reduce los saltos, pero elimina las esperas sin agrandar el cuerpo. Necesita un <strong>prólogo</strong> (llenado) y un <strong>epílogo</strong> (vaciado).</p></div>
+      </details>
+      <div class="note info"><strong>En una frase:</strong> unrolling ataca los saltos y expone paralelismo a costa de registros y tamaño de código; software pipelining ataca las paradas por datos manteniendo los saltos y el tamaño del cuerpo.</div>
+
+      <div class="sim">
+        <div class="sim-top">
+          <h4>Ciclos del bucle según la versión</h4>
+          <div class="seg" role="group" aria-label="Versión" id="lp-ver">
+            <button type="button" data-v="orig" aria-pressed="true">Original</button><button type="button" data-v="sched" aria-pressed="false">Planificado</button><button type="button" data-v="unroll" aria-pressed="false">Desenrollado ×4</button><button type="button" data-v="unsched" aria-pressed="false">Desenrollado + planificado</button><button type="button" data-v="swp" aria-pressed="false">Software pipelining</button>
+          </div>
+        </div>
+        <div class="simgrid">
+          <div class="log" id="lp-list"></div>
+          <div>
+            <div class="cards2" id="lp-stats"></div>
+            <svg id="lp-chart" class="chart" viewBox="0 0 520 230" role="img" aria-label="Ciclos por elemento según la versión"></svg>
+          </div>
+        </div>
+        <p class="src">Latencias usadas (ciclos de espera entre productora y consumidora, modelo clásico de Hennessy y Patterson): suma FP → suma FP 3; suma FP → store 2; load → suma FP 1; load → store 0; entera → salto 1. Salto retardado con un delay slot: si no hay una instrucción útil se pierde un ciclo. Con este modelo salen los mismos valores que en los apuntes: 10, 6 y 3,5 ciclos.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="panel">
+          <h4>Cómo se superponen las iteraciones</h4>
+          <svg id="swp-svg" class="chart" viewBox="0 0 420 250" role="img" aria-label="Superposición de iteraciones en software pipelining"></svg>
+          <p class="src">Cada columna es una vuelta del bucle nuevo. Las columnas grises son el prólogo y el epílogo; en el núcleo, cada vuelta ejecuta un LD, un ADDD y un SD de tres iteraciones distintas, que no dependen entre sí.</p>
+        </div>
+        <div class="panel">
+          <h4>Comparación</h4>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th></th><th>Unrolling</th><th>Software pipelining</th></tr></thead>
+              <tbody>
+                <tr><td>Saltos</td><td>Los reduce</td><td>Los mantiene</td></tr>
+                <tr><td>Paradas por datos</td><td>Las reduce si se planifica</td><td>Las elimina en el núcleo</td></tr>
+                <tr><td>Tamaño de código</td><td>Crece con el factor</td><td>Cuerpo igual, más prólogo y epílogo</td></tr>
+                <tr><td>Registros</td><td>Muchos más</td><td>Pocos extra</td></tr>
+                <tr><td>Overhead</td><td>Llenado y vaciado en cada vuelta</td><td>Llenado y vaciado una sola vez</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 3.1, 3.3.2 y 3.5 a 3.5.5.</p>
+    </section>
+
+    <!-- ============ 3.2–3.3 ESTÁTICA / DINÁMICA ============ -->
+    <section class="block pipe" id="s-planificacion">
+      <h2><span class="num">3.2–3.3</span> Planificación estática y dinámica</h2>
+      <p class="sub">Quién reordena las instrucciones —el compilador o el hardware— y qué gana y pierde cada uno.</p>
+      <details class="card" open>
+        <summary>Estática (compilador)</summary>
+        <div class="body"><p>El compilador reordena las instrucciones antes de ejecutar. No agrega hardware ni consumo, pero no conoce lo que pasa en ejecución (un fallo de caché, una dependencia de memoria que depende de un dato) y el código optimizado para un procesador puede rendir mal en otro. Las instrucciones se emiten en el orden en que quedaron en el programa.</p></div>
+      </details>
+      <details class="card" open>
+        <summary>Dinámica (hardware)</summary>
+        <div class="body"><p>El hardware ejecuta fuera de orden: las instrucciones se emiten en orden, pero empiezan a ejecutarse apenas tienen sus operandos. Para eso la etapa ID se divide en <em>issue</em> (decodifica y verifica riesgos estructurales) y <em>lectura de operandos</em>. Se adapta al código y a lo que pasa en ejecución, pero cuesta área, consumo y complejidad (<a href="#s-tomasulo">Tomasulo</a>, IBM 1967), y como termina fuera de orden complica las excepciones.</p></div>
+      </details>
+      <div class="note info"><strong>En una frase:</strong> la estática pone la inteligencia en el compilador y se queda sin información de ejecución; la dinámica la pone en el hardware y paga en consumo y complejidad.</div>
+
+      <div class="sim">
+        <div class="sim-top">
+          <h4>El ejemplo de los apuntes: MULTD con latencia 5</h4>
+          <div class="seg" role="group" aria-label="Modo" id="sd-mode">
+            <button type="button" data-m="none" aria-pressed="true">Sin planificación</button><button type="button" data-m="static" aria-pressed="false">Estática (compilador)</button><button type="button" data-m="dyn" aria-pressed="false">Dinámica (hardware)</button>
+          </div>
+        </div>
+        <div class="scroll"><svg id="sd-svg" class="wide" viewBox="0 0 760 230" role="img" aria-label="Diagrama de ejecución"></svg></div>
+        <div class="legend"><span><i class="k-stage"></i>IF / ID</span><span><i class="k-stall"></i>esperando</span><span><i class="k-act"></i>ejecución</span><span><i class="k-ok"></i>WB</span></div>
+        <div class="status" id="sd-status" aria-live="polite"></div>
+        <p class="src">Modelo: una instrucción emitida por ciclo, sin cortocircuito (el operando se lee cuando la productora hace WB), multiplicación de 5 ciclos y suma o resta de 2, unidades segmentadas. Reproduce los 13 ciclos de los apuntes.</p>
+      </div>
+
+      <div class="table-scroll">
+        <table class="cmp">
+          <thead><tr><th></th><th>Estática (software)</th><th>Dinámica (hardware)</th></tr></thead>
+          <tbody>
+            <tr><td>Cuándo</td><td>En compilación: se repite cada vez que se compila.</td><td>En ejecución: se repite cada vez que se ejecuta.</td></tr>
+            <tr><td>Información</td><td>Solo lo que ve en el código. Las dependencias de memoria son difíciles de determinar.</td><td>Todo lo que ocurre en ejecución, incluidos fallos de caché y direcciones reales.</td></tr>
+            <tr><td>Costo</td><td>Sin hardware extra. Compilador más complejo.</td><td>Más lógica, área y consumo. Compilador más simple.</td></tr>
+            <tr><td>Portabilidad</td><td>Optimizado para un procesador puede rendir mal en otro.</td><td>El mismo binario se adapta a cada implementación.</td></tr>
+            <tr><td>Técnicas</td><td>Planificación del compilador, unrolling, software pipelining, predicción estática.</td><td>Tomasulo, predicción dinámica, lanzamiento múltiple, especulación, desambiguación de memoria.</td></tr>
+            <tr><td>Dónde se usa</td><td>Embebidos que siempre corren el mismo programa; Itanium.</td><td>Procesadores de propósito general (Intel, AMD, IBM).</td></tr>
+            <tr><td>Efecto colateral</td><td>Código más largo y más registros.</td><td>Terminación fuera de orden: puede dar excepciones imprecisas (ver <a href="#s-rob">ROB</a> más abajo).</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 3.2, 3.3 y 3.6.</p>
+    </section>
+
+    <!-- ============ 2.5 EXCEPCIONES PRECISAS ============ -->
+    <section class="block pipe" id="s-excepciones">
+      <h2><span class="num">2.5</span> Excepciones precisas en el pipeline</h2>
+      <p class="sub">Qué significa que una excepción sea precisa y cómo lo logra un pipeline en orden.</p>
+      <p>Una excepción es <strong>precisa</strong> si, al atenderla, todas las instrucciones anteriores ya terminaron y modificaron el estado arquitectónico, y la instrucción que la causó y las siguientes se comportan como si no hubieran empezado. Así el sistema operativo puede resolverla y reanudar desde el EPC.</p>
+      <p>El problema en un pipeline es que las excepciones pueden detectarse fuera de orden: una instrucción más nueva puede fallar en IF o ID antes de que una más vieja falle en MEM. Con ejecución fuera de orden es peor: una excepción es <strong>imprecisa</strong> si ya se completaron instrucciones posteriores o si todavía no se completaron anteriores.</p>
+      <div class="note info"><strong>En una frase:</strong> en el pipeline en orden se marca la excepción en un vector de estado y se atiende recién en WB, en orden de programa; fuera de orden, el ROB hace lo mismo al confirmar (commit) en orden.</div>
+
+      <div class="sim">
+        <div class="sim-top">
+          <div class="seg" role="group" aria-label="Política"><button type="button" id="ex-vec" aria-pressed="true">Con vector (precisa)</button><button type="button" id="ex-imm" aria-pressed="false">Atender al detectar</button></div>
+          <div class="btns"><button type="button" class="btn ghost" id="ex-prev">Ciclo anterior</button><button type="button" class="btn" id="ex-next">Siguiente ciclo</button><button type="button" class="btn ghost" id="ex-rst">Reiniciar</button></div>
+        </div>
+        <div class="scroll"><table class="ptab" id="ex-table"></table></div>
+        <div class="status" id="ex-status" aria-live="polite"></div>
+        <p class="src">Excepciones posibles por etapa: IF fallo de página de instrucción; ID instrucción ilegal; EX aritmética; MEM fallo de página de datos. El vector tiene un bit por etapa (IF ID EX MEM) y se revisa al entrar a WB.</p>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 2.5 y 2.5.1.</p>
+    </section>
+
+    <!-- ============ 3.4.2 FUERA DE ORDEN Y ROB ============ -->
+    <section class="block pipe" id="s-rob">
+      <h2><span class="num">3.4.2</span> Ejecución fuera de orden: con y sin ROB</h2>
+      <p class="sub">Por qué escribir los registros apenas termina cada instrucción produce excepciones imprecisas, y cómo lo evita el buffer de reordenamiento.</p>
+      <p>Con ejecución fuera de orden, las instrucciones terminan en cualquier orden según su latencia. Si cada una escribe su registro apenas termina, cuando una genera una excepción puede haber instrucciones posteriores que ya escribieron y anteriores que todavía no. Con el <strong>ROB</strong>, las instrucciones terminan fuera de orden pero solo escriben el banco de registros al llegar a la cabecera (commit en orden); la excepción se marca en la entrada del ROB y se reconoce recién cuando esa entrada llega a la cabecera.</p>
+
+      <div class="sim">
+        <div class="sim-top">
+          <div class="seg" role="group" aria-label="Modo"><button type="button" id="rob-no" aria-pressed="true">Sin ROB</button><button type="button" id="rob-yes" aria-pressed="false">Con ROB</button></div>
+          <label class="rob-cyc" for="rob-c">Ciclo <b id="rob-cv">1</b><input type="range" id="rob-c" min="1" max="13" value="1"></label>
+        </div>
+        <div class="scroll"><svg id="rob-svg" class="wide" viewBox="0 0 760 250" role="img" aria-label="Línea de tiempo de ejecución"></svg></div>
+        <div class="regs" id="rob-regs"></div>
+        <div class="status" id="rob-status" aria-live="polite"></div>
+        <div class="legend"><span><i class="k-act"></i>ejecución</span><span><i class="k-ok"></i>escribe registro / commit</span><span><i class="k-err"></i>excepción</span></div>
+      </div>
+      <p class="src">Fuente: apuntes, sección 3.4.2 y el apartado del ROB sobre saltos e interrupciones.</p>
+    </section>
+
+    <!-- ============ 3.6 TOMASULO ============ -->
+    <section class="block pipe" id="s-tomasulo">
+      <h2><span class="num">3.6</span> Algoritmo de Tomasulo</h2>
+      <p class="sub">Cómo se implementa la planificación dinámica: estaciones de reserva, renombrado de registros y Common Data Bus.</p>
+      <p>Es la implementación clásica de la planificación dinámica (IBM, 1967). Cada unidad funcional tiene <strong>estaciones de reserva</strong> donde las instrucciones esperan sus operandos. Al emitir, cada operando se copia (campo V) o se reemplaza por la etiqueta de la estación que lo va a producir (campo Q). En el banco de registros, el campo Qi indica qué estación escribirá cada registro: eso es el <strong>renombrado de registros</strong>, y elimina los riesgos EDL y EDE.</p>
+      <p>Tres etapas: <strong>Issue</strong> (si hay estación libre; si no, riesgo estructural y se detiene la emisión), <strong>Ejecución</strong> (cuando Qj y Qk están en cero, lo que resuelve LDE) y <strong>Escritura</strong> (el resultado se difunde por el <strong>Common Data Bus</strong> a todas las estaciones y registros que esperan esa etiqueta). El CDB es el cuello de botella: un resultado por ciclo.</p>
+      <div class="note info"><strong>En una frase:</strong> Tomasulo ejecuta apenas hay operandos, renombra con las etiquetas de las estaciones de reserva para eliminar EDL y EDE, y difunde resultados por el CDB; sin ROB, termina fuera de orden y da excepciones imprecisas.</div>
+
+      <div class="sim">
+        <div class="sim-top">
+          <h4>Ejemplo 2 de los apuntes, ciclo a ciclo</h4>
+          <div class="btns"><button type="button" class="btn ghost" id="tm-prev">Ciclo anterior</button><button type="button" class="btn" id="tm-next">Siguiente ciclo</button><button type="button" class="btn ghost" id="tm-jump">Próximo evento</button><button type="button" class="btn ghost" id="tm-rst">Reiniciar</button></div>
+        </div>
+        <label class="rob-cyc tm-cyc" for="tm-c">Ciclo <b id="tm-cv">0</b><input type="range" id="tm-c" min="0" max="57" value="0"></label>
+        <div class="grid2">
+          <div><h4 class="tbl-h">Estado de las instrucciones</h4><div class="table-scroll"><table class="cmp tm" id="tm-ins"></table></div></div>
+          <div><h4 class="tbl-h">Estaciones de reserva</h4><div class="table-scroll"><table class="cmp tm" id="tm-rs"></table></div></div>
+        </div>
+        <h4 class="tbl-h">Estado de los registros (Qi)</h4>
+        <div class="table-scroll"><table class="cmp tm" id="tm-reg"></table></div>
+        <div class="status" id="tm-status" aria-live="polite"></div>
+        <p class="src">Latencias de los apuntes: load 2, suma y resta 2, multiplicación 10, división 40 ciclos. Estaciones: 3 de load, 3 de suma y 2 de multiplicación. Un resultado por ciclo en el CDB; una instrucción puede empezar a ejecutar el ciclo siguiente al que recibe su último operando.</p>
+      </div>
+      <div class="note"><strong>Para mirar:</strong> en el ciclo 6 la ADDD se emite para escribir F6, que la DIVD (emitida en el ciclo 5) todavía necesita. No hay riesgo EDL porque la DIVD ya copió el valor de F6 en su estación de reserva. Y la ADDD termina en el ciclo 11, mucho antes que la DIVD (57): terminación fuera de orden.</div>
+      <div class="note info">El <a href="tomasulo.html">simulador completo de Tomasulo</a> corre este mismo programa (ejemplo «ejemplo_pdf») con las mismas latencias y da el mismo orden de emisión, ejecución y escritura. Los números de ciclo no coinciden exactamente porque cuenta los ciclos con otra convención: arranca en 0 y los loads ocupan un ciclo más.</div>
+      <p class="src">Fuente: apuntes, secciones 3.6.1 a 3.6.7.</p>
+    </section>
+
+    <!-- ============ 4.1–4.3 SUPERESCALAR / VLIW ============ -->
+    <section class="block pipe" id="s-vliw">
+      <h2><span class="num">4.1–4.3</span> Lanzamiento múltiple: superescalar y VLIW</h2>
+      <p class="sub">Cómo bajar el CPI de 1: emitir varias instrucciones por ciclo, decidiendo en hardware o en el compilador.</p>
+      <p>Para bajar el CPI de 1 hay que emitir más de una instrucción por ciclo. Un <strong>superescalar</strong> duplica unidades funcionales, puertos del banco de registros, buses y control, y el hardware decide en cada ciclo cuántas instrucciones emitir (de 1 a 8); si no encuentra suficientes, emite menos. Puede ser estático (en orden) o dinámico con especulación.</p>
+      <p>Un <strong>VLIW</strong> deja todo en manos del compilador: cada instrucción larga tiene un campo por unidad funcional y todas sus operaciones se ejecutan juntas. Si no hay operaciones independientes para un campo, se rellena con NOP. El hardware es simple, pero el compilador es muy complejo, la densidad de código baja, es sensible a fallos de caché y los binarios no son compatibles entre implementaciones. EPIC (Itanium) es su evolución.</p>
+      <div class="note info"><strong>En una frase:</strong> el superescalar encuentra el paralelismo en hardware y emite lo que puede; el VLIW lo encuentra en compilación y paga con NOP lo que no pudo llenar.</div>
+
+      <div class="sim">
+        <div class="sim-top">
+          <h4>Empaquetado VLIW del bucle desenrollado</h4>
+          <label class="rob-cyc" for="vw-n">Factor de desenrollado <b id="vw-nv">7</b><input type="range" id="vw-n" min="1" max="10" value="7"></label>
+        </div>
+        <div class="scroll"><table class="ptab vw" id="vw-table"></table></div>
+        <div class="grid2">
+          <div class="cards2" id="vw-stats"></div>
+          <svg id="vw-chart" class="chart" viewBox="0 0 420 200" role="img" aria-label="Ciclos por elemento según desenrollado"></svg>
+        </div>
+        <p class="src">Instrucción VLIW de 5 campos: 2 accesos a memoria, 2 operaciones FP y 1 entera o salto. Latencias como en <a href="#s-loop">loop unrolling</a> (load → suma 1 ciclo de espera, suma → store 2). Con factor 7 sale el ejemplo clásico de Hennessy y Patterson: 9 ciclos para 7 elementos (1,29 por elemento) usando 23 de 45 campos.</p>
+      </div>
+
+      <div class="table-scroll">
+        <table class="cmp">
+          <thead><tr><th></th><th>Superescalar estático</th><th>Superescalar dinámico</th><th>VLIW</th></tr></thead>
+          <tbody>
+            <tr><td>Emisión</td><td>Dinámica (hardware)</td><td>Dinámica (hardware)</td><td>Estática (software)</td></tr>
+            <tr><td>Detección de riesgos</td><td>Hardware</td><td>Hardware</td><td>Básicamente software</td></tr>
+            <tr><td>Planificación</td><td>Estática, en orden</td><td>Dinámica, fuera de orden, con especulación</td><td>Estática</td></tr>
+            <tr><td>Ejemplos</td><td>MIPS y ARM embebidos</td><td>Pentium 4, Core 2, Power5</td><td>TI C6x, Itanium</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 4.1 a 4.3.4. La tabla resume la de los apuntes.</p>
+    </section>
+
+    <!-- ============ 4.5–4.14 MULTITHREADING ============ -->
+    <section class="block pipe" id="s-mt">
+      <h2><span class="num">4.5–4.14</span> Límites del ILP y multithreading</h2>
+      <p class="sub">Qué hacer cuando un solo hilo no alcanza para llenar todas las vías del procesador.</p>
+      <p>Aun con emisión múltiple, un solo hilo no tiene suficientes instrucciones independientes para llenar todas las vías: el ILP tiene un límite. El <strong>multithreading</strong> aprovecha el paralelismo entre hilos (TLP): varios hilos comparten las unidades funcionales de un procesador, que replica el estado de cada uno (banco de registros, PC).</p>
+      <div class="table-scroll">
+        <table class="cmp">
+          <thead><tr><th>Modelo</th><th>Cuándo cambia de hilo</th><th>Qué oculta</th></tr></thead>
+          <tbody>
+            <tr><td>Grano fino</td><td>En cada ciclo (round-robin, salteando los bloqueados)</td><td>Paradas cortas y largas, pero retrasa a cada hilo</td></tr>
+            <tr><td>Grano grueso</td><td>Solo ante paradas largas, como un fallo de L2</td><td>Paradas largas; no las cortas, y al cambiar vacía y llena el pipeline</td></tr>
+            <tr><td>SMT</td><td>Mezcla instrucciones de varios hilos en el mismo ciclo (superescalar fuera de orden, con renombrado y un ROB por hilo)</td><td>Ciclos vacíos y también vías vacías dentro de un ciclo</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note info"><strong>En una frase:</strong> grano fino y grueso eliminan ciclos vacíos completos (desperdicio vertical); solo SMT también llena las vías vacías dentro de un ciclo (desperdicio horizontal).</div>
+
+      <div class="sim">
+        <div class="sim-top"><h4>Ocupación de un procesador de 4 vías con tres hilos</h4><button type="button" class="btn ghost" id="mt-shuffle">Otro escenario</button></div>
+        <div class="scroll"><svg id="mt-svg" class="wide mtw" viewBox="0 0 900 420" role="img" aria-label="Ocupación de vías por modelo"></svg></div>
+        <div class="legend"><span><i class="k-ok"></i>hilo 1</span><span><i class="k-err"></i>hilo 2</span><span><i class="k-warn"></i>hilo 3</span><span><i class="k-empty"></i>vía desaprovechada</span><span><i class="k-flush"></i>vaciado por cambio de hilo</span></div>
+        <p class="src">Cada hilo tiene ráfagas de 1 a 3 instrucciones independientes y paradas cortas (1 ciclo) y largas (fallos de caché). Grano grueso cambia de hilo solo ante paradas largas y pierde un ciclo en el cambio. En multiprocesamiento, dos núcleos de 2 vías corren los hilos 1 y 2.</p>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 4.5 a 4.14.</p>
+    </section>
+
+    <!-- ============ QUIZ ============ -->
+    <section class="block" id="s-quiz">
+      <h2><span class="num">✓</span> Quiz de repaso</h2>
+      <p class="sub">Doce preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
+      <div id="quizWrap"></div>
+      <p class="quiz-score" id="quizScore"></p>
+    </section>
+
+    <footer class="pagefoot">Basado en los apuntes teóricos no oficiales de Arquitectura de Computadoras (FCEFyN, UNC), unidades 2 a 4. Las simulaciones son modelos didácticos simplificados. Hecho como material de repaso; no reemplaza la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
+  </main>
+</div>
+
+<script>
+/* ==== STD:SCRIPT v1 ==== (tema, scroll-spy del nav lateral y motor del quiz) */
+(function () {
+  var btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  function sync() {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    var icon = btn.querySelector('.icon');
+    if (icon) icon.textContent = dark ? '☀️' : '🌙';
+  }
+  btn.addEventListener('click', function () {
+    var el = document.documentElement;
+    var next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+    el.dataset.theme = next;
+    try { localStorage.setItem('tw-theme', next); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.side a[href^="#"]'));
+  var targets = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+  links.forEach(function (a, i) {
+    a.addEventListener('click', function (e) {
+      // scroll manual: navegar por hash puede recargar la página dentro de visores embebidos
+      e.preventDefault();
+      if (targets[i]) targets[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try { history.replaceState(null, '', a.getAttribute('href')); } catch (err) {}
+    });
+  });
+  function onScroll() {
+    var y = window.scrollY + 120, current = -1;
+    targets.forEach(function (t, i) {
+      if (t && t.getBoundingClientRect().top + window.scrollY <= y) current = i;
+    });
+    links.forEach(function (a, i) { a.classList.toggle('active', i === current); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+// stdQuiz([{q, opts:[...], correct:<índice>, exp}], 'quizWrap', 'quizScore')
+function stdQuiz(items, wrapId, scoreId) {
+  var wrap = document.getElementById(wrapId || 'quizWrap');
+  var scoreEl = document.getElementById(scoreId || 'quizScore');
+  if (!wrap) return;
+  function score() {
+    var c = 0, a = 0;
+    wrap.querySelectorAll('.quiz-item').forEach(function (div) {
+      if (div.dataset.answered) { a++; if (div.dataset.right === '1') c++; }
+    });
+    if (scoreEl) scoreEl.textContent = 'Puntaje: ' + c + ' / ' + a + ' respondidas (de ' + items.length + ' preguntas)';
+  }
+  items.forEach(function (item, qi) {
+    var div = document.createElement('div');
+    div.className = 'quiz-item';
+    div.innerHTML = '<p class="q">' + (qi + 1) + '. ' + item.q + '</p><div class="opts">'
+      + item.opts.map(function (o, oi) {
+        return '<label><input type="radio" name="' + wrap.id + '-q' + qi + '" value="' + oi + '"><span>' + o + '</span></label>';
+      }).join('') + '</div><div class="fb" aria-live="polite"></div>';
+    wrap.appendChild(div);
+    div.querySelectorAll('input').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        var right = parseInt(inp.value, 10) === item.correct;
+        div.dataset.answered = '1';
+        div.dataset.right = right ? '1' : '0';
+        var fb = div.querySelector('.fb');
+        fb.className = 'fb ' + (right ? 'ok' : 'bad');
+        fb.textContent = (right ? '✓ Correcto. ' : '✗ No es correcto. ') + item.exp;
+        score();
+      });
+    });
+  });
+  score();
+}
+/* ==== /STD:SCRIPT ==== */
+</script>
+<script>
+/* ==== PAGE:SCRIPT ==== un IIFE por widget, ids con el prefijo de su sección */
+/* ---------- 2.1 diagrama temporal ---------- */
+(function () {
+  var svg = document.getElementById("td-svg");
+  if (!svg) return;
+  var S = function (tag, attrs, parent) { var e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  var STG = { IF: 10, ID: 5, EX: 10, MEM: 10, WB: 10 }, ORDER = ["IF", "ID", "EX", "MEM", "WB"];
+  var INS = [{ n: "lw", st: ["IF", "ID", "EX", "MEM", "WB"] }, { n: "add", st: ["IF", "ID", "EX", "WB"] }, { n: "sw", st: ["IF", "ID", "EX", "MEM"] }, { n: "beq", st: ["IF", "ID", "EX"] }];
+  var NAMES = { mono: "Monociclo · ciclo de 45 ns", multi: "Multiciclo · ciclo de 10 ns", pipe: "Segmentado · ciclo de 10 ns" };
+  var mode = "all";
+  function draw() {
+    svg.innerHTML = "";
+    var modes = mode === "all" ? ["mono", "multi", "pipe"] : [mode];
+    var l = 60, W = 900, sc = (W - l - 20) / 180, rowH = 26, pad = 8; var panelH = 4 * (rowH + pad) + 56;
+    svg.setAttribute("viewBox", "0 0 " + W + " " + (modes.length * panelH + 10));
+    var d = S("defs", {}, svg);
+    var pat = S("pattern", { id: "td-hatch", width: "6", height: "6", patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, d);
+    S("rect", { width: 6, height: 6, fill: "var(--waste)" }, pat);
+    S("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: "var(--waste-line)", "stroke-width": 1.2, opacity: .5 }, pat);
+    modes.forEach(function (m, pi) {
+      var y0 = pi * panelH + 10; var g = S("g", {}, svg); var total = 0;
+      var title = S("text", { x: 0, y: y0 + 14, "font-weight": "700", "font-size": "15" }, g);
+      for (var k = 0; k <= 180; k += 10) {
+        var x = l + k * sc;
+        S("line", { x1: x, x2: x, y1: y0 + 26, y2: y0 + 26 + 4 * (rowH + pad), stroke: "var(--line)", "stroke-dasharray": k % (m === "mono" ? 45 : 10) === 0 ? "" : "2 4" }, g);
+        if (k % 30 === 0 || (m === "mono" && k % 45 === 0)) { var tt = S("text", { x: x, y: y0 + 26 + 4 * (rowH + pad) + 14, "text-anchor": "middle", "font-size": "11", fill: "var(--muted)" }, g); tt.textContent = k; }
+      }
+      INS.forEach(function (ins, i) {
+        var y = y0 + 28 + i * (rowH + pad);
+        var lab = S("text", { x: 0, y: y + rowH / 2 + 5, "class": "mono", "font-size": "13" }, g); lab.textContent = ins.n;
+        var blk = function (bx, w, name, waste) {
+          S("rect", { x: l + bx * sc, y: y, width: Math.max(0, w * sc - 1), height: rowH, rx: 4, fill: waste ? "url(#td-hatch)" : "var(--act)" }, g);
+          if (!waste && w * sc > 24) { var tx = S("text", { x: l + (bx + w / 2) * sc, y: y + rowH / 2 + 4, "text-anchor": "middle", "font-size": "11", "font-weight": "700", "class": "on-fill" }, g); tx.textContent = name; }
+        };
+        var bx;
+        if (m === "mono") { bx = i * 45; ins.st.forEach(function (s) { blk(bx, STG[s], s); bx += STG[s]; }); if (bx < (i + 1) * 45) blk(bx, (i + 1) * 45 - bx, "", true); total = (i + 1) * 45; }
+        if (m === "multi") { bx = INS.slice(0, i).reduce(function (a, b) { return a + b.st.length * 10; }, 0); ins.st.forEach(function (s) { blk(bx, STG[s], s); if (STG[s] < 10) blk(bx + STG[s], 10 - STG[s], "", true); bx += 10; }); total = Math.max(total, bx); }
+        if (m === "pipe") { bx = i * 10; ORDER.forEach(function (s) { var used = ins.st.indexOf(s) >= 0; if (used) { blk(bx, STG[s], s); if (STG[s] < 10) blk(bx + STG[s], 10 - STG[s], "", true); } else blk(bx, 10, "", true); bx += 10; }); total = Math.max(total, bx); }
+      });
+      title.textContent = NAMES[m] + "  ·  total " + total + " ns";
+    });
+  }
+  var btns = document.querySelectorAll(".td-btn");
+  btns.forEach(function (b) {
+    b.addEventListener("click", function () { mode = b.dataset.m; btns.forEach(function (x) { x.setAttribute("aria-pressed", x === b); }); draw(); });
+  });
+  draw();
+})();
+
+/* ---------- 2.1 calculadora de tiempo total ---------- */
+(function () {
+  var $ = function (id) { return document.getElementById("cc-" + id); };
+  if (!$("chart")) return;
+  var S = function (tag, attrs, parent) { var e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  function calc() {
+    var N = +$("n").value, tm = +$("tm").value, tk = +$("tk").value, cpi = +$("cpi").value, K = +$("k").value;
+    var rows = [["Monociclo", N * tm, tm + " ns × " + N, "var(--t-mono)"], ["Multiciclo", tk * cpi * N, tk + " ns × " + cpi + " × " + N, "var(--t-multi)"], ["Segmentado (ideal)", tk * (N + K - 1), tk + " ns × (" + N + " + " + (K - 1) + ")", "var(--t-pipe)"]];
+    var svg = $("chart"); svg.innerHTML = ""; var l = 150, W = 640;
+    var mx = Math.max.apply(null, rows.map(function (r) { return r[1]; })), best = Math.min.apply(null, rows.map(function (r) { return r[1]; }));
+    rows.forEach(function (r, i) {
+      var y = 14 + i * 50, w = (W - l - 150) * r[1] / mx;
+      var a = S("text", { x: 0, y: y + 18, "class": "lbl" }, svg); a.textContent = r[0];
+      S("rect", { x: l, y: y, width: Math.max(2, w), height: 28, rx: 5, fill: r[3] }, svg);
+      var b = S("text", { x: l + w + 8, y: y + 13, "class": "lbl" }, svg); b.textContent = r[1].toLocaleString("es-AR", { maximumFractionDigits: 1 }) + " ns" + (r[1] === best ? "" : " (" + (r[1] / best).toFixed(2) + "×)");
+      var c = S("text", { x: l + w + 8, y: y + 28 }, svg); c.textContent = r[2];
+    });
+  }
+  ["n", "tm", "tk", "cpi", "k"].forEach(function (s) { $(s).addEventListener("input", calc); });
+  calc();
+})();
+
+/* ---------- 2.5 excepciones precisas en el pipeline en orden ---------- */
+(function () {
+  var $ = function (id) { return document.getElementById("ex-" + id); };
+  if (!$("table")) return;
+  var PI = [{ n: "i0  add r6,r7,r8", exc: null }, { n: "i1  lw  r1,0(r2)", exc: { st: 3, why: "fallo de página de datos" } }, { n: "i2  (código ilegal)", exc: { st: 1, why: "instrucción ilegal" } }, { n: "i3  sub r3,r4,r5", exc: { st: 0, why: "fallo de página de instrucción" } }, { n: "i4  or  r9,r1,r3", exc: null }];
+  var SN = ["IF", "ID", "EX", "MEM", "WB"]; var mode = "vec", cyc = 0; var EMAX = 9;
+  function sim(c) {
+    var handled = null; var vec = PI.map(function () { return [0, 0, 0, 0]; });
+    for (var t = 1; t <= c; t++) {
+      if (mode === "vec") {
+        PI.forEach(function (ins, i) { var s = t - 1 - i; if (handled !== null) return; if (ins.exc && s === ins.exc.st) vec[i][ins.exc.st] = 1; });
+        for (var i = 0; i < PI.length; i++) { var s = t - 1 - i; if (s === 4 && handled === null && vec[i].some(function (v) { return v; })) { handled = { i: i, t: t }; break; } }
+      } else {
+        var det = []; PI.forEach(function (ins, j) { var s2 = t - 1 - j; if (ins.exc && s2 === ins.exc.st) det.push(j); });
+        if (det.length && handled === null) { handled = { i: Math.min.apply(null, det), t: t }; det.forEach(function (j) { vec[j][PI[j].exc.st] = 1; }); }
+      }
+      if (handled) break;
+    }
+    return { vec: vec, handled: handled };
+  }
+  function render() {
+    var r = sim(cyc); var h = "<tr><th></th>"; for (var t = 1; t <= EMAX; t++) h += "<th>c" + t + "</th>"; h += "<th>vector</th></tr>";
+    PI.forEach(function (ins, i) {
+      h += '<tr><td class="ins">' + ins.n + "</td>";
+      for (var t = 1; t <= EMAX; t++) {
+        var s = t - 1 - i; var cls = "", txt = "";
+        if (s >= 0 && s < 5 && t <= cyc) {
+          txt = SN[s]; cls = "st";
+          if (r.handled && t >= r.handled.t) {
+            if (i >= r.handled.i) { cls = t === r.handled.t && ins.exc && ins.exc.st === s ? "exc" : "fl"; if (cls === "fl") txt = "—"; }
+            else if (s === 4) cls = "done";
+          }
+          else if (ins.exc && s === ins.exc.st) { cls = "exc"; txt = SN[s] + "✕"; }
+          else if (s === 4) cls = "done";
+          if (r.handled && t > r.handled.t && i < r.handled.i && mode === "imm") { cls = "fl"; txt = "?"; }
+          if (t === cyc && cls !== "fl") cls += " now";
+        }
+        h += '<td class="' + cls + '">' + txt + "</td>";
+      }
+      h += '<td class="vec">' + r.vec[i].join("") + "</td></tr>";
+    });
+    $("table").innerHTML = h; var st = $("status"); st.className = "status";
+    if (cyc === 0) { st.innerHTML = "Avanzá ciclo a ciclo. i1 va a fallar en MEM (ciclo 5), pero i2 e i3, más nuevas, fallan antes: en el ciclo 4."; return; }
+    if (!r.handled) {
+      var m = "Ciclo " + cyc + ".";
+      if (mode === "vec") {
+        var marked = r.vec.map(function (v, i) { return v.some(function (x) { return x; }) ? "i" + i : null; }).filter(Boolean);
+        if (marked.length) m += " Excepciones marcadas en el vector de " + marked.join(", ") + ": se anulan sus escrituras pero no se atienden todavía. Se espera a que la más vieja llegue a WB.";
+        else m += " Sin excepciones detectadas.";
+      } else m += " Sin excepciones detectadas.";
+      st.innerHTML = m; return;
+    }
+    var hi = r.handled.i;
+    if (mode === "vec") { st.classList.add("good"); st.innerHTML = "<b>Ciclo " + r.handled.t + ": i" + hi + " entra a WB con vector " + r.vec[hi].join("") + "</b> (bit de " + SN[PI[hi].exc.st] + "): se atiende " + PI[hi].exc.why + ". EPC = PC de i" + hi + ". i0 ya terminó; i" + hi + " y las siguientes se vacían (como si no hubieran empezado). <b>Excepción precisa.</b> Las excepciones de i2 e i3 se van a volver a producir al reejecutarlas, si corresponde."; }
+    else { st.classList.add("bad"); st.innerHTML = "<b>Ciclo " + r.handled.t + ": se atiende la excepción de i" + hi + " (" + PI[hi].exc.why + ") apenas se detecta.</b> Pero i1, que es anterior, todavía no terminó y además tiene su propia excepción pendiente en MEM. El orden de atención no coincide con el orden del programa: <b>excepción imprecisa</b>."; }
+  }
+  function setMode(m) { mode = m; $("vec").setAttribute("aria-pressed", m === "vec"); $("imm").setAttribute("aria-pressed", m === "imm"); render(); }
+  $("vec").addEventListener("click", function () { setMode("vec"); });
+  $("imm").addEventListener("click", function () { setMode("imm"); });
+  $("next").addEventListener("click", function () { if (cyc < EMAX) cyc++; render(); });
+  $("prev").addEventListener("click", function () { if (cyc > 0) cyc--; render(); });
+  $("rst").addEventListener("click", function () { cyc = 0; render(); });
+  render();
+})();
+
+/* ---------- 3.4.2 ROB ---------- */
+(function () {
+  var $ = function (id) { return document.getElementById("rob-" + id); };
+  if (!$("svg")) return;
+  var S = function (tag, attrs, parent) { var e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  var RI = [{ n: "I1 DIV.D F0", reg: "F0", iss: 1, lat: 8 }, { n: "I2 ADD.D F6", reg: "F6", iss: 2, lat: 3, exc: true }, { n: "I3 SUB.D F12", reg: "F12", iss: 3, lat: 1 }, { n: "I4 MUL.D F18", reg: "F18", iss: 4, lat: 2 }];
+  RI.forEach(function (r) { r.done = r.iss + r.lat; });
+  var prev = 0; RI.forEach(function (r) { r.commit = Math.max(r.done + 1, prev + 1); prev = r.commit; });
+  var rob = false;
+  function render() {
+    var cyc = +$("c").value; $("cv").textContent = cyc; var svg = $("svg"); svg.innerHTML = "";
+    var l = 120, W = 760, sc = (W - l - 20) / 13, x = function (c) { return l + (c - 1) * sc; }; var excAt = rob ? RI[1].commit : RI[1].done;
+    for (var c = 1; c <= 13; c++) { S("line", { x1: x(c), x2: x(c), y1: 10, y2: 210, stroke: "var(--line)" }, svg); var t = S("text", { x: x(c) + sc / 2, y: 228, "text-anchor": "middle", "font-size": "11", fill: "var(--muted)" }, svg); t.textContent = c; }
+    S("rect", { x: x(cyc), y: 6, width: sc, height: 208, fill: "var(--act)", opacity: .1 }, svg);
+    S("line", { x1: x(excAt), x2: x(excAt), y1: 6, y2: 214, stroke: "var(--err)", "stroke-width": 2, "stroke-dasharray": "5 4" }, svg);
+    var et = S("text", { x: x(excAt) - 6, y: 12, "text-anchor": "end", "font-size": "11", fill: "var(--err)", "font-weight": "700" }, svg);
+    et.textContent = rob ? "se reconoce la excepción (I2 en la cabecera)" : "se reconoce la excepción (I2 termina)";
+    RI.forEach(function (r, i) {
+      var y = 30 + i * 46; var t = S("text", { x: 0, y: y + 17, "class": "mono", "font-size": "13" }, svg); t.textContent = r.n;
+      var after = rob && r.commit > excAt && i > 1; var endExec = Math.min(r.done, cyc);
+      if (cyc >= r.iss) S("rect", { x: x(r.iss), y: y, width: (endExec - r.iss + 1) * sc - 2, height: 24, rx: 4, fill: r.exc && cyc >= r.done ? "var(--err)" : "var(--act)", opacity: after && cyc >= excAt ? .35 : 1 }, svg);
+      var wc = rob ? r.commit : r.done;
+      if ((rob && cyc >= r.commit && r.commit < excAt) || (!rob && cyc >= r.done && !r.exc)) S("circle", { cx: x(wc) + sc / 2, cy: y + 12, r: 8, fill: "var(--ok)" }, svg);
+      if (rob && r.commit <= 13 && !(r.commit < excAt) && i !== 1) { var tt = S("text", { x: x(Math.min(r.commit, 13)) + sc / 2, y: y + 17, "text-anchor": "middle", "font-size": "11", fill: "var(--muted)" }, svg); if (cyc >= excAt) tt.textContent = "descartada"; }
+    });
+    var regs = $("regs"); regs.innerHTML = "";
+    RI.forEach(function (r) {
+      var w = rob ? (cyc >= r.commit && r.commit < excAt) : (cyc >= r.done && !r.exc);
+      var sp = document.createElement("span"); sp.className = w ? "reg w" : "reg"; sp.textContent = r.reg + " " + (w ? "escrito" : "sin escribir"); regs.appendChild(sp);
+    });
+    var st = $("status"); st.className = "status";
+    if (cyc < excAt) {
+      st.innerHTML = rob ? "Ciclo " + cyc + ". Las instrucciones terminan fuera de orden pero solo escriben el banco de registros al llegar a la cabecera del ROB (commit en orden). I2 termina en el ciclo " + RI[1].done + " con la marca de excepción en su entrada del ROB."
+        : "Ciclo " + cyc + ". Cada instrucción escribe su registro apenas termina. I3 (latencia 1) termina antes que I1 (latencia 8).";
+      return;
+    }
+    if (rob) { st.classList.add("good"); st.innerHTML = "<b>Ciclo " + excAt + ": I2 llega a la cabecera del ROB con la marca de excepción.</b> I1 ya hizo commit (F0 escrito). I3 e I4 terminaron de ejecutar, pero nunca hicieron commit: se vacía el ROB y F12, F18 quedan intactos. <b>Excepción precisa.</b>"; }
+    else { st.classList.add("bad"); st.innerHTML = "<b>Ciclo " + excAt + ": I2 termina y genera la excepción.</b> I1, que es anterior, todavía no terminó (F0 sin escribir), e I3, que es posterior, ya escribió F12. Se dan las dos situaciones que definen una <b>excepción imprecisa</b>."; }
+  }
+  function setRob(v) { rob = v; $("no").setAttribute("aria-pressed", !v); $("yes").setAttribute("aria-pressed", v); render(); }
+  $("c").addEventListener("input", render);
+  $("no").addEventListener("click", function () { setRob(false); });
+  $("yes").addEventListener("click", function () { setRob(true); });
+  render();
+})();
+
+/* ---------- 2.2 speedup del pipeline ---------- */
+(function () {
+  const $ = id => document.getElementById("ps-" + id);
+  if (!$("chart")) return;
+  const S = (tag, attrs, parent) => { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  const inputs = [...document.querySelectorAll("#ps-cfg .ps-st")];
+  function draw() {
+    const st = inputs.map(i => +i.value || 0), latch = +$("latch").value || 0;
+    const seq = st.reduce((a, b) => a + b, 0), cyc = Math.max(...st) + latch, k = st.length, max = seq / cyc;
+    $("out1").innerHTML = `Ciclo de ${cyc} ps<small>etapa más lenta (${Math.max(...st)} ps) + registro de segmentación (${latch} ps); sin pipeline cada instrucción tarda ${seq} ps</small>`;
+    $("out2").innerHTML = `Speedup máximo ${max.toFixed(2)}<small>ideal con ${k} etapas balanceadas: ${k}. Se pierde un ${(100 - 100 * max / k).toFixed(0)} %</small>`;
+    const svg = $("chart"); svg.innerHTML = ""; const W = 460, l = 34, top = 14, bt = 186, NM = 60;
+    const x = n => l + (W - l - 10) * (n - 1) / (NM - 1), y = v => bt - (bt - top) * v / k;
+    for (let v = 0; v <= k; v++) { S("line", { x1: l, x2: W - 10, y1: y(v), y2: y(v), stroke: "var(--line)" }, svg); S("text", { x: l - 6, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = v; }
+    S("line", { x1: l, x2: W - 10, y1: y(max), y2: y(max), stroke: "var(--err)", "stroke-dasharray": "5 4" }, svg);
+    S("text", { x: W - 12, y: y(max) - 6, "text-anchor": "end", "class": "lbl" }, svg).textContent = `máximo ${max.toFixed(2)}`;
+    const pts = []; for (let n = 1; n <= NM; n++) pts.push(`${x(n)},${y(n * seq / ((n + k - 1) * cyc))}`);
+    S("polyline", { points: pts.join(" "), fill: "none", stroke: "var(--act)", "stroke-width": 3 }, svg);
+    [1, 10, 20, 30, 40, 50, 60].forEach(n => { S("text", { x: x(n), y: bt + 16, "text-anchor": "middle" }, svg).textContent = n; });
+    S("text", { x: (W + l) / 2, y: bt + 32, "text-anchor": "middle" }, svg).textContent = "instrucciones ejecutadas";
+  }
+  inputs.forEach(i => i.addEventListener("input", draw)); $("latch").addEventListener("input", draw); draw();
+})();
+
+/* ---------- 2.3–2.4 riesgos y 3.5 bucles (comparten el parser de instrucciones) ---------- */
+(function () {
+  const $ = id => document.getElementById(id);
+  if (!$("hz-out")) return;
+  const S = (tag, attrs, parent) => { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  function parseIns(txt) {
+    const t = txt.trim(); if (!t) return null; const m = t.match(/^([A-Za-z.]+)\s*(.*)$/); if (!m) return { err: t };
+    const op = m[1].toUpperCase(), args = m[2].split(",").map(a => a.trim()).filter(Boolean); const R = a => (a || "").toLowerCase();
+    const mem = a => { const mm = (a || "").match(/\(\s*([A-Za-z]\w*)\s*\)/); return mm ? R(mm[1]) : null; };
+    const o = { txt: t, op, dst: null, srcs: [], load: false, store: false, branch: false };
+    if (["LW", "LD", "L.D", "LB"].includes(op)) { o.dst = R(args[0]); o.srcs = [mem(args[1])]; o.load = true; }
+    else if (["SW", "SD", "S.D", "SB"].includes(op)) { o.srcs = [R(args[0]), mem(args[1])]; o.store = true; o.data = R(args[0]); }
+    else if (["BEQ", "BNE"].includes(op)) { o.srcs = [R(args[0]), R(args[1])]; o.branch = true; }
+    else if (["BEQZ", "BNEZ"].includes(op)) { o.srcs = [R(args[0])]; o.branch = true; }
+    else if (/I$|IU$/.test(op) && args.length === 3) { o.dst = R(args[0]); o.srcs = [R(args[1])]; }
+    else if (args.length === 3) { o.dst = R(args[0]); o.srcs = [R(args[1]), R(args[2])]; }
+    else if (op === "NOP") { }
+    else return { err: t };
+    o.srcs = o.srcs.filter(s => s && s !== "r0" && !s.startsWith("#")); if (o.dst === "r0") o.dst = null; return o;
+  }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /* teorema de riesgos */
+  function hz() {
+    const a = parseIns($("hz-i").value), b = parseIns($("hz-j").value), out = $("hz-out");
+    if (!a || !b || a.err || b.err) { out.innerHTML = `<div class="status bad">No se pudo interpretar ${(!a || a.err) ? "i" : "j"}. Formatos: ADD r1,r2,r3 · ADDI r1,r2,#4 · LW r1,0(r2) · SW r1,0(r2) · BEQ r1,r2,etiqueta</div>`; return; }
+    const set = x => x.length ? "{" + [...new Set(x)].join(", ") + "}" : "∅", inter = (x, y) => [...new Set(x.filter(v => y.includes(v)))];
+    const Ri = a.dst ? [a.dst] : [], Rj = b.dst ? [b.dst] : []; const raw = inter(Ri, b.srcs), war = inter(a.srcs, Rj), waw = inter(Ri, Rj), dd = inter(a.srcs, b.srcs);
+    const row = (name, expr, res, desc, bad) => `<tr><td>${name}</td><td class="mono">${expr} = ${set(res)}</td><td>${res.length ? (bad ? `<b class="t-err">Sí.</b> ${desc}` : desc) : "No"}</td></tr>`;
+    out.innerHTML = `<div class="table-scroll"><table class="cmp"><thead><tr><th></th><th>Intersección</th><th>¿Hay riesgo?</th></tr></thead><tbody>
+     <tr><td>Conjuntos</td><td colspan="2" class="mono">D(i) = ${set(a.srcs)} · R(i) = ${set(Ri)} · D(j) = ${set(b.srcs)} · R(j) = ${set(Rj)}</td></tr>
+     ${row("LDE (RAW)", "R(i) ∩ D(j)", raw, "j lee lo que escribe i. Aparece en el pipeline en orden; se resuelve con cortocircuito" + (a.load ? ", pero como i es un load puede requerir una burbuja." : "."), true)}
+     ${row("EDL (WAR)", "D(i) ∩ R(j)", war, "Antidependencia: solo es problema con ejecución fuera de orden.", true)}
+     ${row("EDE (WAW)", "R(i) ∩ R(j)", waw, "Dependencia de salida: solo es problema con ejecución fuera de orden.", true)}
+     ${row("Leer y leer", "D(i) ∩ D(j)", dd, "Comparten operandos, pero no es riesgo.", false)}
+     </tbody></table></div>`;
+  }
+  $("hz-i").addEventListener("input", hz); $("hz-j").addEventListener("input", hz);
+  document.querySelectorAll(".hz-ex").forEach(b => b.addEventListener("click", () => { $("hz-i").value = b.dataset.i; $("hz-j").value = b.dataset.j; hz(); })); hz();
+
+  /* simulador de pipeline con riesgos */
+  const PZ = { raw: "SUB r2,r1,r3\nAND r12,r2,r5\nOR r13,r6,r2\nADD r14,r2,r2\nSW r15,100(r2)",
+    lu: "LW r1,0(r2)\nSUB r4,r1,r5\nAND r6,r1,r7\nOR r8,r1,r9",
+    br: "BEQ r1,r2,destino\nADD r3,r4,r5\nSUB r6,r7,r8\nOR r9,r10,r11",
+    st: "LW r1,0(r2)\nADD r3,r4,r5\nADD r6,r7,r8\nADD r9,r10,r11\nADD r12,r13,r14" };
+  function pz() {
+    const lines = $("pz-code").value.split("\n").map(parseIns).filter(Boolean); const bad = lines.find(l => l.err); const st = $("pz-status");
+    if (bad) { st.className = "status bad"; st.textContent = `No se pudo interpretar: ${bad.err}`; $("pz-table").innerHTML = ""; return; }
+    const fwd = $("pz-fwd").checked, oneMem = $("pz-mem").checked, pol = $("pz-br").value, taken = $("pz-taken").checked;
+    const rows = [], notes = []; let prev = null;
+    lines.forEach(ins => {
+      let f = prev ? prev.f + 1 : 1;
+      if (prev) {
+        f = Math.max(f, prev.idS);
+        if (prev.branch) {
+          if (pol === "mem") { f = Math.max(f, prev.ex + 2); notes.push(`El salto se resuelve en MEM: ${prev.ex + 2 - prev.f - 1} ciclos perdidos antes de buscar la siguiente.`); }
+          else if (pol === "id") { f = Math.max(f, prev.d + 1); notes.push(`Comparador y sumador en ID: se pierde ${prev.d + 1 - prev.f - 1} ciclo.`); }
+          else if (pol === "delay") { notes.push(`Salto retardado: «${ins.txt}» ocupa el delay slot y se ejecuta siempre; no tiene que depender del salto.`); }
+          else if (pol === "pnt") {
+            if (taken) { rows.push({ flush: true, txt: "(siguiente secuencial, buscada por error)", f: prev.f + 1 }); f = Math.max(f, prev.d + 1); notes.push("Se predijo no tomado y el salto se tomó: la instrucción buscada se descarta (flush) y se pierde un ciclo."); }
+            else notes.push("Se predijo no tomado y acertó: sin pérdida.");
+          }
+        }
+      }
+      if (oneMem) {
+        let moved = false; while (rows.some(r => !r.flush && (r.load || r.store) && r.ex + 1 === f)) { f++; moved = true; }
+        if (moved) notes.push(`Riesgo estructural: «${ins.txt}» no puede buscarse mientras un load/store usa la memoria única en MEM.`);
+      }
+      const idS = Math.max(f + 1, prev ? prev.d + 1 : 0); let d = idS;
+      const needAt = ins.branch && (pol === "id" || pol === "pnt") ? "id" : "ex";
+      ins.srcs.forEach(s => {
+        let p = null; for (let k = rows.length - 1; k >= 0; k--) { if (!rows[k].flush && rows[k].dst === s) { p = rows[k]; break; } } if (!p) return;
+        let need; if (!fwd) need = p.ex + 2;
+        else if (needAt === "id") need = p.load ? p.ex + 2 : p.ex + 1;
+        else if (ins.store && s === ins.data && p.load) need = p.ex;
+        else need = p.load ? p.ex + 1 : p.ex;
+        if (need > d) { notes.push(`«${ins.txt}» espera ${need - d} ciclo${need - d > 1 ? "s" : ""} por ${s} de «${p.txt}»${fwd ? (p.load ? " (load-use: el dato sale de MEM)" : " (el salto lo necesita en ID)") : " (sin cortocircuito: hay que esperar el WB)"}.`); d = need; }
+        else if (fwd && d < p.ex + 2 && p.ex + 2 > d) notes.push(`${s}: se anticipa de «${p.txt}» a «${ins.txt}» por cortocircuito.`);
+      });
+      const r = Object.assign({}, ins, { f, idS, d, ex: d + 1 }); rows.push(r); prev = r;
+    });
+    const last = rows.filter(r => !r.flush).slice(-1)[0]; const T = last ? last.ex + 2 : 0;
+    let h = "<tr><th></th>"; for (let c = 1; c <= T; c++) h += `<th>c${c}</th>`; h += "</tr>";
+    rows.forEach(r => {
+      h += `<tr><td class="ins">${esc(r.txt)}</td>`;
+      for (let c = 1; c <= T; c++) {
+        let cls = "", txt = "";
+        if (r.flush) { if (c === r.f) { cls = "st"; txt = "IF"; } else if (c === r.f + 1) { cls = "flush"; txt = "—"; } }
+        else if (c === r.f) { cls = "st"; txt = "IF"; }
+        else if (c > r.f && c < r.idS) { cls = "stall"; txt = "IF"; }
+        else if (c === r.idS) { cls = "st"; txt = "ID"; }
+        else if (c > r.idS && c <= r.d) { cls = "stall"; txt = "ID"; }
+        else if (c === r.ex) { cls = "st"; txt = "EX"; } else if (c === r.ex + 1) { cls = "st"; txt = "MEM"; } else if (c === r.ex + 2) { cls = "done"; txt = "WB"; }
+        h += `<td class="${cls}">${txt}</td>`;
+      }
+      h += "</tr>";
+    });
+    $("pz-table").innerHTML = h; const N = rows.filter(r => !r.flush).length, stalls = T - (N + 4);
+    st.className = "status " + (stalls > 0 ? "bad" : "good");
+    st.innerHTML = `<b>${T} ciclos para ${N} instrucciones</b> (ideal ${N + 4}): ${stalls} ciclo${stalls === 1 ? "" : "s"} perdido${stalls === 1 ? "" : "s"}. ${esc([...new Set(notes)].join(" ")) || "Sin riesgos que detengan el pipeline."}`;
+  }
+  document.querySelectorAll(".pz-p").forEach(b => b.addEventListener("click", () => { $("pz-code").value = PZ[b.dataset.k]; if (b.dataset.k === "st") $("pz-mem").checked = true; pz(); }));
+  ["pz-code", "pz-fwd", "pz-mem", "pz-br", "pz-taken"].forEach(s => $(s).addEventListener(s === "pz-code" ? "input" : "change", pz));
+  $("pz-code").value = PZ.raw; pz();
+
+  /* costo de los saltos */
+  function cp() {
+    const f = +$("cp-f").value / 100, k = +$("cp-k").value || 5; $("cp-fv").textContent = Math.round(f * 100) + " %";
+    const rows = [["Detener hasta MEM", 3, "var(--t-mono)"], ["Comparador en ID", 1, "var(--t-multi)"], ["Delay slot con relleno útil", 0, "var(--t-pipe)"]];
+    const svg = $("cp-chart"); svg.innerHTML = ""; const l = 200, W = 640;
+    rows.forEach(([n, p, col], i) => {
+      const cpi = 1 + f * p, sp = k / cpi, y = 10 + i * 54, w = (W - l - 170) * sp / k;
+      S("text", { x: 0, y: y + 15, "class": "lbl" }, svg).textContent = n;
+      S("text", { x: 0, y: y + 31 }, svg).textContent = `penalización ${p} ciclo${p === 1 ? "" : "s"}`;
+      S("rect", { x: l, y, width: W - l - 170, height: 30, rx: 5, fill: "var(--bg-panel-2)" }, svg);
+      S("rect", { x: l, y, width: w, height: 30, rx: 5, fill: col }, svg);
+      S("text", { x: W - 160, y: y + 13, "class": "lbl" }, svg).textContent = `speedup ${sp.toFixed(2)} de ${k}`;
+      S("text", { x: W - 160, y: y + 28 }, svg).textContent = `CPI ${cpi.toFixed(2)} · pierde ${(100 - 100 / cpi).toFixed(0)} %`;
+    });
+  }
+  $("cp-f").addEventListener("input", cp); $("cp-k").addEventListener("input", cp); cp();
+
+  /* 3.5 loop unrolling / software pipelining */
+  const U4 = [0, 1, 2, 3];
+  const LOOPS = {
+    orig: { n: "Original", el: 1, code: ["LD F0,0(R1)", "ADDD F4,F0,F2", "SD F4,0(R1)", "SUBI R1,R1,#8", "BNEZ R1,Loop"] },
+    sched: { n: "Planificado", el: 1, code: ["LD F0,0(R1)", "SUBI R1,R1,#8", "ADDD F4,F0,F2", "BNEZ R1,Loop", "SD F4,8(R1)"] },
+    unroll: { n: "Desenrollado ×4", el: 4, code: [...U4.flatMap(k => [`LD F${k * 6 ? k * 4 + 2 : 0},${-8 * k}(R1)`, `ADDD F${k * 4 + 4},F${k * 6 ? k * 4 + 2 : 0},F2`, `SD F${k * 4 + 4},${-8 * k}(R1)`]), "SUBI R1,R1,#32", "BNEZ R1,Loop"] },
+    unsched: { n: "Desenr. + planif.", el: 4, code: [...U4.map(k => `LD F${k ? k * 4 + 2 : 0},${-8 * k}(R1)`), ...U4.map(k => `ADDD F${k * 4 + 4},F${k ? k * 4 + 2 : 0},F2`), "SUBI R1,R1,#32", "SD F4,32(R1)", "SD F8,24(R1)", "SD F12,16(R1)", "BNEZ R1,Loop", "SD F16,8(R1)"] },
+    swp: { n: "Software pipelining", el: 1, code: ["SD F4,16(R1)", "SUBI R1,R1,#8", "ADDD F4,F0,F2", "BNEZ R1,Loop", "LD F0,8(R1)"] } };
+  const lpType = o => o.op === "LD" ? "LD" : o.op === "SD" ? "SD" : o.op === "ADDD" ? "FP" : o.op === "BNEZ" ? "BR" : "INT";
+  function lpLat(p, c, isData) { if (p === "FP" && c === "FP") return 3; if (p === "FP" && c === "SD" && isData) return 2; if (p === "LD" && c === "FP") return 1; if (p === "INT" && c === "BR") return 1; return 0; }
+  function lpRun(code) {
+    const ins = code.map(t => { const o = parseIns(t); o.dst = o.dst && o.dst.toLowerCase(); return o; }); const out = []; let c = 0; const issued = []; let brAt = -1;
+    ins.forEach((o, k) => {
+      let at = c + 1, why = null; const ty = lpType(o);
+      o.srcs.forEach(s => { for (let q = issued.length - 1; q >= 0; q--) { const p = issued[q]; if (p.o.dst === s) { const lat = lpLat(lpType(p.o), ty, o.store && s === o.data); const need = p.c + lat + 1; if (need > at) { at = need; why = `${lpType(p.o) === "LD" ? "LD" : lpType(p.o) === "FP" ? "ADDD" : "SUBI"} → ${o.op}`; } break; } } });
+      for (let s = c + 1; s < at; s++) out.push({ c: s, stall: true, why });
+      out.push({ c: at, txt: o.txt, slot: brAt >= 0 && k === brAt + 1 }); issued.push({ o, c: at }); c = at; if (o.branch) brAt = k;
+    });
+    if (brAt === ins.length - 1) { c++; out.push({ c, stall: true, why: "delay slot vacío" }); }
+    return { out, cycles: c };
+  }
+  let lpCur = "orig"; const LPRES = {}; Object.keys(LOOPS).forEach(k => LPRES[k] = lpRun(LOOPS[k].code));
+  const card = (t, v) => `<div class="statc"><div class="l">${t}</div><div class="n">${v}</div></div>`;
+  function lp() {
+    const L = LOOPS[lpCur], R = LPRES[lpCur];
+    $("lp-list").innerHTML = R.out.map(r => r.stall ? `<div class="t-err">${String(r.c).padStart(2, " ")}  · espera (${r.why})</div>` : `<div>${String(r.c).padStart(2, " ")}  ${r.txt}${r.slot ? '  <span class="tx">← delay slot</span>' : ""}</div>`).join("") + (lpCur === "swp" ? `<div class="src">Falta el prólogo (2 LD y 1 ADDD) y el epílogo (1 ADDD y 2 SD), que se ejecutan una sola vez.</div>` : "");
+    const fr = new Set(L.code.join(" ").match(/F\d+/g)); const stalls = R.out.filter(r => r.stall).length;
+    $("lp-stats").innerHTML = card("Ciclos por vuelta", R.cycles) + card("Ciclos por elemento", (R.cycles / L.el).toLocaleString("es-AR")) + card("Ciclos perdidos por vuelta", stalls) + card("Saltos por elemento", (1 / L.el).toLocaleString("es-AR")) + card("Instrucciones en el cuerpo", L.code.length) + card("Registros FP usados", fr.size);
+    const svg = $("lp-chart"); svg.innerHTML = ""; const ks = Object.keys(LOOPS), W = 520, top = 34, bt = 180, l = 10, gw = (W - l) / ks.length; const vals = ks.map(k => LPRES[k].cycles / LOOPS[k].el), mx = Math.max(...vals);
+    vals.forEach((v, i) => {
+      const h = (bt - top) * v / mx, x = l + i * gw + 18; S("rect", { x, y: bt - h, width: gw - 36, height: h, rx: 4, fill: ks[i] === lpCur ? "var(--act)" : "var(--gray)" }, svg);
+      S("text", { x: x + (gw - 36) / 2, y: bt - h - 6, "text-anchor": "middle", "class": "lbl" }, svg).textContent = v.toLocaleString("es-AR");
+      LOOPS[ks[i]].n.split(" ").reduce((acc, w) => { const lst = acc[acc.length - 1]; if (lst && (lst + " " + w).length < 13) acc[acc.length - 1] = lst + " " + w; else acc.push(w); return acc; }, []).forEach((ln, j) => { S("text", { x: x + (gw - 36) / 2, y: bt + 16 + j * 14, "text-anchor": "middle" }, svg).textContent = ln; });
+    });
+    S("text", { x: l, y: 12 }, svg).textContent = "Ciclos por elemento del vector";
+  }
+  const lpBtns = document.querySelectorAll("#lp-ver button");
+  lpBtns.forEach(b => b.addEventListener("click", () => { lpCur = b.dataset.v; lpBtns.forEach(x => x.setAttribute("aria-pressed", x === b)); lp(); })); lp();
+
+  (function () {
+    const svg = $("swp-svg"), l = 60, cw = 44, rh = 34, top = 26, NI = 6, NT = 8;
+    for (let t = 0; t < NT; t++) {
+      const pro = t < 2 || t >= NT - 2; S("rect", { x: l + t * cw, y: top - 6, width: cw - 2, height: NI * rh + 6, rx: 4, fill: pro ? "var(--bg-panel-2)" : "transparent", stroke: "var(--line)" }, svg);
+      S("text", { x: l + t * cw + cw / 2 - 1, y: top - 10, "text-anchor": "middle", "font-size": "11", fill: "var(--muted)" }, svg).textContent = t < 2 ? "pról." : t >= NT - 2 ? "epíl." : "núcleo";
+    }
+    for (let i = 0; i < NI; i++) {
+      const y = top + i * rh; S("text", { x: 0, y: y + 18, "font-size": "12", fill: "var(--muted)" }, svg).textContent = "iter " + i;
+      [["LD", "var(--t-multi)"], ["ADD", "var(--act)"], ["SD", "var(--t-pipe)"]].forEach(([n, col], s) => {
+        const t = i + s; if (t >= NT) return; S("rect", { x: l + t * cw + 3, y: y + 2, width: cw - 8, height: rh - 8, rx: 4, fill: col }, svg);
+        S("text", { x: l + t * cw + cw / 2 - 1, y: y + rh / 2 + 2, "text-anchor": "middle", "font-size": "11", "font-weight": "700", "class": "on-fill" }, svg).textContent = n;
+      });
+    }
+    svg.setAttribute("viewBox", `0 0 ${l + NT * cw + 4} ${top + NI * rh + 6}`);
+  })();
+})();
+
+/* ---------- 3.2–3.3 planificación estática vs. dinámica ---------- */
+(function () {
+  const $ = id => document.getElementById("sd-" + id);
+  if (!$("svg")) return;
+  const S = (tag, attrs, parent) => { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  const SD = [{ n: "i1 MULTD F0,F2,F6", lat: 5, dst: "F0", src: ["F2", "F6"] }, { n: "i2 ADDD F4,F0,F2", lat: 2, dst: "F4", src: ["F0", "F2"] }, { n: "i3 ADDD F8,F2,F6", lat: 2, dst: "F8", src: ["F2", "F6"] }, { n: "i4 SUBD F10,F6,F2", lat: 2, dst: "F10", src: ["F6", "F2"] }];
+  let mode = "none";
+  function run(m) {
+    const order = m === "static" ? [0, 2, 3, 1] : [0, 1, 2, 3]; const res = []; let prev = null;
+    order.forEach((ix, k) => {
+      const ins = SD[ix]; const f = k + 1; let idS = Math.max(f + 1, prev ? prev.idS + 1 : 0); if (m !== "dyn" && prev) idS = Math.max(idS, prev.rd + 1);
+      let rd = idS; ins.src.forEach(s => { const p = res.find(r => r.ins.dst === s); if (p) rd = Math.max(rd, p.wb); });
+      const r = { ins, f, idS, rd, ex: rd + 1, exE: rd + ins.lat, wb: rd + ins.lat + 1 }; res.push(r); prev = r;
+    });
+    return res;
+  }
+  function draw() {
+    const res = run(mode), svg = $("svg"); svg.innerHTML = ""; const l = 150, W = 760, NC = 14, sc = (W - l - 10) / NC, x = c => l + (c - 1) * sc;
+    const d = S("defs", {}, svg); const pat = S("pattern", { id: "sd-hatch", width: "6", height: "6", patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, d);
+    S("rect", { width: 6, height: 6, fill: "var(--bg-panel-2)" }, pat); S("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: "var(--err)", "stroke-width": 2 }, pat);
+    for (let c = 1; c <= NC; c++) { S("line", { x1: x(c), x2: x(c), y1: 8, y2: 200, stroke: "var(--line)" }, svg); S("text", { x: x(c) + sc / 2, y: 216, "text-anchor": "middle", "font-size": "11", fill: "var(--muted)" }, svg).textContent = c; }
+    const total = Math.max(...res.map(r => r.wb));
+    res.forEach((r, i) => {
+      const y = 14 + i * 46; S("text", { x: 0, y: y + 19, "class": "mono", "font-size": "13" }, svg).textContent = r.ins.n;
+      const cell = (c, fill, txt, onFill) => { S("rect", { x: x(c) + 1, y, width: sc - 2, height: 28, rx: 4, fill }, svg); if (txt) { const tt = S("text", { x: x(c) + sc / 2, y: y + 18, "text-anchor": "middle", "font-size": "10", "font-weight": "700" }, svg); if (onFill) tt.setAttribute("class", "on-fill"); tt.textContent = txt; } };
+      cell(r.f, "var(--bg-panel-2)", "IF"); cell(r.idS, "var(--bg-panel-2)", mode === "dyn" ? "Issue" : "ID"); for (let c = r.idS + 1; c <= r.rd; c++) cell(c, "url(#sd-hatch)", "");
+      for (let c = r.ex; c <= r.exE; c++) cell(c, "var(--act)", c === r.ex ? "EX" : "", true); cell(r.wb, "var(--ok)", "WB", true);
+    });
+    S("line", { x1: x(total + 1), x2: x(total + 1), y1: 4, y2: 204, stroke: "var(--text)", "stroke-width": 2 }, svg);
+    const st = $("status"); const ord = res.slice().sort((a, b) => a.wb - b.wb).map(r => r.ins.n.split(" ")[0]).join(", ");
+    st.className = "status " + (total > 11 ? "bad" : "good");
+    st.innerHTML = mode === "none" ? `<b>${total} ciclos.</b> i2 necesita F0 y se queda en ID hasta que i1 hace WB. Como el pipeline es en orden, i3 e i4 quedan bloqueadas detrás aunque no dependen de nadie.`
+      : mode === "static" ? `<b>${total} ciclos.</b> El compilador mueve i3 e i4 antes de i2 para llenar la espera. Funciona porque sabe la latencia de la multiplicación; si la latencia real cambiara en ejecución (por ejemplo, un operando que viene de un load con fallo de caché), el orden fijado ya no sería el mejor.`
+      : `<b>${total} ciclos con el código original.</b> El hardware emite en orden, pero i2 espera sus operandos sin bloquear: i3 e i4 ejecutan antes. Orden de terminación: ${ord}, fuera de orden. Por eso la planificación dinámica necesita algo como el ROB para tener excepciones precisas.`;
+  }
+  const btns = document.querySelectorAll("#sd-mode button");
+  btns.forEach(b => b.addEventListener("click", () => { mode = b.dataset.m; btns.forEach(x => x.setAttribute("aria-pressed", x === b)); draw(); })); draw();
+})();
+
+/* ---------- 3.6 Tomasulo ---------- */
+(function () {
+  const $ = id => document.getElementById("tm-" + id);
+  if (!$("ins")) return;
+  const TMI = [{ op: "LD", d: "F6", a: "34(R2)", t: "L" }, { op: "LD", d: "F2", a: "45(R3)", t: "L" }, { op: "MULTD", d: "F0", s: ["F2", "F4"], t: "M", lat: 10 }, { op: "SUBD", d: "F8", s: ["F6", "F2"], t: "A", lat: 2 }, { op: "DIVD", d: "F10", s: ["F0", "F6"], t: "M", lat: 40 }, { op: "ADDD", d: "F6", s: ["F8", "F2"], t: "A", lat: 2 }];
+  const TMRS = { L: ["Load1", "Load2", "Load3"], A: ["Add1", "Add2", "Add3"], M: ["Mult1", "Mult2"] };
+  const TMREG = ["F0", "F2", "F4", "F6", "F8", "F10"];
+  const SNAP = (function () {
+    const rs = {}; Object.values(TMRS).flat().forEach(n => rs[n] = { busy: false }); const reg = {}, rv = {}; TMREG.forEach(r => { reg[r] = null; rv[r] = `R[${r}]`; });
+    const st = TMI.map(() => ({})); const val = {}; let next = 0; const snaps = [{ rs: JSON.parse(JSON.stringify(rs)), reg: { ...reg }, st: JSON.parse(JSON.stringify(st)), ev: [] }];
+    for (let c = 1; c <= 60; c++) {
+      const ev = [];
+      const cand = Object.entries(rs).filter(([, r]) => r.busy && r.comp != null && r.comp < c).sort((a, b) => a[1].i - b[1].i);
+      if (cand.length) {
+        const [n, r] = cand[0]; st[r.i].w = c; const v = val[n];
+        Object.values(rs).forEach(o => { if (o.busy) { if (o.Qj === n) { o.Qj = null; o.Vj = v; o.rdy = c; } if (o.Qk === n) { o.Qk = null; o.Vk = v; o.rdy = c; } } });
+        TMREG.forEach(x => { if (reg[x] === n) { reg[x] = null; rv[x] = v; } }); rs[n] = { busy: false }; ev.push(`${TMI[r.i].op} ${TMI[r.i].d} escribe por el CDB (etiqueta ${n}).`);
+      }
+      Object.entries(rs).forEach(([n, r]) => { if (r.busy && r.start == null && !r.Qj && !r.Qk && r.rdy < c) { r.start = c; r.comp = c + r.lat - 1; st[r.i].s = c; st[r.i].c = r.comp; ev.push(`${TMI[r.i].op} ${TMI[r.i].d} empieza a ejecutar (${r.lat} ciclos).`); } });
+      if (next < TMI.length) {
+        const I = TMI[next]; const free = TMRS[I.t].find(n => !rs[n].busy);
+        if (free) {
+          const r = { busy: true, op: I.op, i: next, rdy: c, lat: I.t === "L" ? 2 : I.lat };
+          if (I.t === "L") { r.A = I.a; } else { [["j", I.s[0]], ["k", I.s[1]]].forEach(([k, s]) => { if (reg[s]) r["Q" + k] = reg[s]; else r["V" + k] = rv[s]; }); }
+          rs[free] = r; reg[I.d] = free; val[free] = I.t === "L" ? `M[${I.a}]` : `#${next + 1}`; st[next].i = c; st[next].rs = free; ev.push(`Se emite ${I.op} ${I.d} en ${free}${r.Qj || r.Qk ? `; espera ${[r.Qj, r.Qk].filter(Boolean).join(" y ")}` : ""}.`); next++;
+        } else ev.push(`${I.op} no se puede emitir: no hay estación libre (riesgo estructural).`);
+      }
+      snaps.push({ rs: JSON.parse(JSON.stringify(rs)), reg: { ...reg }, st: JSON.parse(JSON.stringify(st)), ev });
+    }
+    return snaps;
+  })();
+  const MAX = 57; let cur = 0;
+  function draw() {
+    const s = SNAP[cur]; $("c").value = cur; $("cv").textContent = cur;
+    const f = v => v != null && v <= cur ? v : "";
+    $("ins").innerHTML = "<tr><th>Instrucción</th><th>Issue</th><th>Ejecución</th><th>Escritura</th></tr>" + TMI.map((I, k) => {
+      const x = s.st[k]; const ex = x.s ? (x.c <= cur ? `${x.s}–${x.c}` : `${x.s}–…`) : "";
+      return `<tr><td class="mono">${I.op} ${I.d},${I.a || I.s.join(",")}</td><td>${f(x.i)}</td><td>${ex}</td><td>${f(x.w)}</td></tr>`;
+    }).join("");
+    $("rs").innerHTML = "<tr><th>Estación</th><th>Busy</th><th>Op</th><th>Vj</th><th>Vk</th><th>Qj</th><th>Qk</th></tr>" + Object.values(TMRS).flat().map(n => {
+      const r = s.rs[n];
+      return `<tr${r.busy ? ' class="busy"' : ""}><td>${n}</td><td>${r.busy ? "sí" : "no"}</td><td>${r.op || ""}</td><td>${r.busy ? (r.A ? r.A : (r.Vj || "")) : ""}</td><td>${r.busy ? (r.Vk || "") : ""}</td><td class="q">${r.busy && r.Qj || ""}</td><td class="q">${r.busy && r.Qk || ""}</td></tr>`;
+    }).join("");
+    $("reg").innerHTML = "<tr>" + TMREG.map(r => `<th>${r}</th>`).join("") + "</tr><tr>" + TMREG.map(r => `<td class="qi">${s.reg[r] || "—"}</td>`).join("") + "</tr>";
+    const st = $("status"); st.className = "status";
+    st.innerHTML = cur === 0 ? "Todas las estaciones libres. Avanzá para emitir la primera instrucción." : (s.ev.length ? `<b>Ciclo ${cur}:</b> ${s.ev.join(" ")}` : `<b>Ciclo ${cur}:</b> sin eventos; las instrucciones en curso siguen ejecutando.`);
+    if (cur >= MAX) { st.classList.add("good"); st.innerHTML += " Terminaron todas: orden de escritura LD, LD, SUBD, ADDD, MULTD, DIVD, distinto del orden del programa."; }
+  }
+  $("c").addEventListener("input", () => { cur = +$("c").value; draw(); });
+  $("next").addEventListener("click", () => { if (cur < MAX) cur++; draw(); });
+  $("prev").addEventListener("click", () => { if (cur > 0) cur--; draw(); });
+  $("rst").addEventListener("click", () => { cur = 0; draw(); });
+  $("jump").addEventListener("click", () => { let c = cur + 1; while (c < MAX && !SNAP[c].ev.length) c++; cur = Math.min(c, MAX); draw(); });
+  draw();
+})();
+
+/* ---------- 4.1–4.3 VLIW ---------- */
+(function () {
+  const $ = id => document.getElementById("vw-" + id);
+  if (!$("table")) return;
+  const S = (tag, attrs, parent) => { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  function sched(n) {
+    const cyc = []; const get = c => (cyc[c] = cyc[c] || { m: [], f: [], i: [] }); const ld = [], ad = [];
+    for (let k = 0; k < n; k++) { let c = 1; while (get(c).m.length >= 2) c++; get(c).m.push(`LD F${2 * k + 4},${-8 * k}(R1)`); ld[k] = c; }
+    for (let k = 0; k < n; k++) { let c = ld[k] + 2; while (get(c).f.length >= 2) c++; get(c).f.push(`ADDD F${2 * k + 4},F${2 * k + 4},F2`); ad[k] = c; }
+    let last = 0; for (let k = 0; k < n; k++) { let c = ad[k] + 3; while (get(c).m.length >= 2) c++; get(c).m.push(`SD F${2 * k + 4},${-8 * k}(R1)`); last = Math.max(last, c); }
+    last = Math.max(last, 3); get(last).i.push("BNEZ R1,Loop"); let sc = Math.max(1, last - 2); while (get(sc).i.length) sc++; get(sc).i.push(`SUBI R1,R1,#${8 * n}`);
+    for (let c = 1; c <= last; c++) get(c); return { cyc: cyc.slice(1, last + 1), last, ops: 3 * n + 2 };
+  }
+  const card = (t, v) => `<div class="statc"><div class="l">${t}</div><div class="n">${v}</div></div>`;
+  function draw() {
+    const n = +$("n").value; $("nv").textContent = n; const r = sched(n);
+    let h = "<tr><th>Ciclo</th><th>Mem 1</th><th>Mem 2</th><th>FP 1</th><th>FP 2</th><th>Entera / salto</th></tr>";
+    r.cyc.forEach((c, i) => { const td = v => v ? `<td class="st op">${v}</td>` : `<td class="nop">nop</td>`; h += `<tr><td class="ins">${i + 1}</td>${td(c.m[0])}${td(c.m[1])}${td(c.f[0])}${td(c.f[1])}${td(c.i[0])}</tr>`; });
+    $("table").innerHTML = h; const slots = 5 * r.last;
+    $("stats").innerHTML = card("Ciclos por vuelta", r.last) + card("Ciclos por elemento", (r.last / n).toFixed(2).replace(".", ",")) + card("Campos útiles", `${r.ops} de ${slots}`) + card("Densidad de código", Math.round(100 * r.ops / slots) + " %") + card("Registros FP", n + 1) + card("NOP en el código", slots - r.ops);
+    const svg = $("chart"); svg.innerHTML = ""; const W = 420, l = 36, top = 14, bt = 160, N = 10; const vals = Array.from({ length: N }, (_, k) => sched(k + 1).last / (k + 1)); const mx = Math.ceil(Math.max(...vals));
+    const x = k => l + (W - l - 14) * k / (N - 1), y = v => bt - (bt - top) * v / mx;
+    for (let v = 0; v <= mx; v++) { S("line", { x1: l, x2: W - 10, y1: y(v), y2: y(v), stroke: "var(--line)" }, svg); S("text", { x: l - 6, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = v; }
+    S("polyline", { points: vals.map((v, k) => `${x(k)},${y(v)}`).join(" "), fill: "none", stroke: "var(--act)", "stroke-width": 3 }, svg);
+    vals.forEach((v, k) => { S("circle", { cx: x(k), cy: y(v), r: k === n - 1 ? 6 : 3.5, fill: k === n - 1 ? "var(--err)" : "var(--act)" }, svg); S("text", { x: x(k), y: bt + 16, "text-anchor": "middle" }, svg).textContent = k + 1; });
+    S("text", { x: (W + l) / 2, y: bt + 34, "text-anchor": "middle" }, svg).textContent = "factor de desenrollado (ciclos por elemento)";
+  }
+  $("n").addEventListener("input", draw); draw();
+})();
+
+/* ---------- 4.5–4.14 multithreading ---------- */
+(function () {
+  const $ = id => document.getElementById("mt-" + id);
+  if (!$("svg")) return;
+  const S = (tag, attrs, parent) => { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  let seed = 7;
+  function rng(sd) { let s = sd; return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }; }
+  function threads(sd) { const R = rng(sd); return [0, 1, 2].map(() => { const L = []; for (let i = 0; i < 30; i++) { const x = R(); if (x < 0.1) L.push({ s: 3 + Math.floor(R() * 3) }); else if (x < 0.25) L.push({ s: 1 }); else L.push({ g: 1 + Math.floor(R() * 2.6) }); } return L.map(e => e.g ? { g: Math.min(4, e.g) } : e); }); }
+  function sim(model, TH, C) {
+    const grid = []; const st = TH.map(() => ({ p: 0, ready: 0, left: 0 }));
+    const ready = (t, c) => { const s = st[t]; while (s.p < TH[t].length && TH[t][s.p].s && s.left === 0) { s.ready = Math.max(s.ready, c) + TH[t][s.p].s; s.p++; } return s.ready <= c && s.p < TH[t].length; };
+    const take = (t, c, max) => { const s = st[t]; if (!ready(t, c)) return 0; if (s.left === 0) s.left = TH[t][s.p].g; const n = Math.min(max, s.left); s.left -= n; if (s.left === 0) s.p++; return n; };
+    let cur = 0, rr = 0, switchPen = 0;
+    for (let c = 0; c < C; c++) {
+      const row = [];
+      if (model === "ss") { const n = take(0, c, 4); for (let k = 0; k < n; k++) row.push(0); }
+      else if (model === "fine") { for (let q = 0; q < 3; q++) { const t = (rr + q) % 3; if (ready(t, c)) { const n = take(t, c, 4); for (let k = 0; k < n; k++) row.push(t); rr = t + 1; break; } } }
+      else if (model === "coarse") {
+        if (switchPen > 0) { switchPen--; row.flush = true; }
+        else {
+          const s = st[cur]; ready(cur, c); const blockedLong = s.ready - c >= 2;
+          if (blockedLong) { const nx = [1, 2].map(d => (cur + d) % 3).find(t => { ready(t, c); return st[t].ready - c < 2; }); if (nx != null) { cur = nx; row.flush = true; } }
+          else { const n = take(cur, c, 4); for (let k = 0; k < n; k++) row.push(cur); }
+        }
+      }
+      else if (model === "smt") { let left = 4; for (let q = 0; q < 3 && left > 0; q++) { const t = (rr + q) % 3; const n = take(t, c, left); for (let k = 0; k < n; k++) row.push(t); left -= n; } rr = (rr + 1) % 3; }
+      else if (model === "mp") { const a = take(0, c, 2), b = take(1, c, 2); for (let k = 0; k < a; k++) row.push(0); while (row.length < 2) row.push(null); for (let k = 0; k < b; k++) row.push(1); }
+      grid.push(row);
+    }
+    return grid;
+  }
+  function draw() {
+    const TH = threads(seed), C = 14; const models = [["ss", "Superescalar (1 hilo)"], ["fine", "Grano fino"], ["coarse", "Grano grueso"], ["smt", "SMT"], ["mp", "Multiprocesador 2×2"]];
+    const svg = $("svg"); svg.innerHTML = ""; const cw = 34, ch = 22, gap = 40, l = 30, top = 44; const cols = ["var(--ok)", "var(--err)", "var(--warn)"];
+    const d = S("defs", {}, svg); const pat = S("pattern", { id: "mt-hatch", width: "6", height: "6", patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, d);
+    S("rect", { width: 6, height: 6, fill: "var(--bg-panel-2)" }, pat); S("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: "var(--gray)", "stroke-width": 2 }, pat);
+    models.forEach(([m, name], mi) => {
+      const g = sim(m, TH, C); const x0 = l + mi * (4 * cw + gap); let used = 0;
+      for (let c = 0; c < C; c++) {
+        const row = g[c];
+        for (let k = 0; k < 4; k++) {
+          const v = row[k]; const fill = row.flush ? "url(#mt-hatch)" : (v == null ? "var(--bg-panel-2)" : cols[v]); if (v != null && !row.flush) used++;
+          S("rect", { x: x0 + k * cw + (m === "mp" && k >= 2 ? 6 : 0), y: top + c * ch, width: cw - 4, height: ch - 4, rx: 3, fill, stroke: v == null ? "var(--line)" : "none" }, svg);
+        }
+      }
+      S("text", { x: x0, y: 16, "font-weight": "700", "font-size": "13" }, svg).textContent = name;
+      S("text", { x: x0, y: 34, "font-size": "12", fill: "var(--muted)" }, svg).textContent = `ocupación ${Math.round(100 * used / (4 * C))} %`;
+    });
+    for (let c = 0; c < C; c++) S("text", { x: 0, y: top + c * ch + 13, "font-size": "10", fill: "var(--muted)" }, svg).textContent = "c" + (c + 1);
+    svg.setAttribute("viewBox", `0 0 ${l + 5 * (4 * cw + gap)} ${top + C * ch + 6}`);
+  }
+  $("shuffle").addEventListener("click", () => { seed = (seed * 7 + 3) % 997; draw(); }); draw();
+})();
+
+stdQuiz([
+  { q: "En una implementación monociclo, ¿cuánto dura el ciclo de reloj?",
+    opts: ["Lo que dura la etapa más lenta", "Lo que dura la instrucción más lenta", "Lo que dura la instrucción promedio", "Un valor fijo independiente de las instrucciones"], correct: 1,
+    exp: "Toda la instrucción entra en un ciclo, así que el ciclo tiene que alcanzar para la más lenta (45 ns en el ejemplo). Las instrucciones cortas desperdician el resto." },
+  { q: "En el ejemplo de los apuntes, un lw tarda 45 ns en monociclo y 50 ns en multiciclo. ¿Por qué tarda más?",
+    opts: ["Porque el multiciclo no puede usar la memoria de datos", "Porque cada etapa ocupa un ciclo de 10 ns y las etapas rápidas (ID, 5 ns) desperdician parte de su ciclo", "Porque el multiciclo agrega una etapa extra", "Porque el CPI del multiciclo es 1"], correct: 1,
+    exp: "El ciclo del multiciclo lo fija la etapa más lenta (10 ns). ID dura 5 ns pero ocupa un ciclo entero, así que 5 etapas × 10 ns = 50 ns." },
+  { q: "100 instrucciones, ciclo de 10 ns, pipeline de 5 etapas ideal. ¿Tiempo total?",
+    opts: ["1000 ns", "1040 ns", "4600 ns", "5000 ns"], correct: 1,
+    exp: "Segmentado = T × (N + k − 1) = 10 × (100 + 4) = 1040 ns: k − 1 ciclos para llenar el pipeline y después termina una instrucción por ciclo." },
+  { q: "¿Cuándo es precisa una excepción?",
+    opts: ["Cuando se atiende en el mismo ciclo en que se detecta", "Cuando las instrucciones anteriores terminaron y la que la causó y las siguientes se comportan como si no hubieran empezado", "Cuando solo una instrucción del pipeline genera excepción", "Cuando la detecta la etapa MEM"], correct: 1,
+    exp: "Es la definición: el estado arquitectónico refleja exactamente todo lo anterior y nada de lo posterior, así el SO la resuelve y se reanuda desde el EPC." },
+  { q: "En el pipeline en orden con vector de estado, ¿cuándo se atiende una excepción marcada?",
+    opts: ["Apenas se detecta", "Cuando la instrucción entra a WB", "Cuando el pipeline se vacía", "Cuando la instrucción llega a EX"], correct: 1,
+    exp: "Se marca el bit de la etapa y se anulan sus escrituras, pero se atiende al entrar a WB. Así se atienden en orden de programa aunque se hayan detectado fuera de orden." },
+  { q: "Con ROB, una instrucción posterior a la que causó la excepción ya terminó de ejecutar. ¿Qué pasa con su resultado?",
+    opts: ["Ya escribió el registro y hay que deshacerlo", "Nunca hizo commit: se descarta al vaciar el ROB", "Se escribe igual porque ya terminó", "Se reejecuta antes de atender la excepción"], correct: 1,
+    exp: "Con el ROB solo se escribe el banco de registros en commit, en orden. La excepción se reconoce cuando su entrada llega a la cabecera; lo que está detrás se descarta." },
+  { q: "LW r1,0(r2) seguida de SUB r4,r1,r5, con cortocircuito. ¿Qué pasa?",
+    opts: ["Nada: el cortocircuito resuelve todos los LDE", "Hace falta una burbuja: el dato sale de MEM y la SUB lo necesita en EX", "Es un riesgo EDL", "Es un riesgo estructural"], correct: 1,
+    exp: "Es el caso load-use: el dato del load recién está disponible al final de MEM, un ciclo tarde para el EX de la siguiente. La unidad de detección de riesgos, en ID, inserta una burbuja." },
+  { q: "¿Qué hace software pipelining que loop unrolling no?",
+    opts: ["Reduce la cantidad de saltos", "Elimina las paradas por datos sin agrandar el cuerpo del bucle, mezclando instrucciones de iteraciones distintas", "Usa muchos más registros", "Elimina el prólogo y el epílogo"], correct: 1,
+    exp: "Cada vuelta del bucle nuevo ejecuta el SD de una iteración, el ADDD de la siguiente y el LD de la otra. Mantiene los saltos y necesita prólogo y epílogo, pero no multiplica el código ni los registros." },
+  { q: "¿Cuál es una desventaja de la planificación estática frente a la dinámica?",
+    opts: ["Necesita más hardware y consume más", "No conoce lo que pasa en ejecución, como un fallo de caché, y el código optimizado para un procesador puede rendir mal en otro", "Termina las instrucciones fuera de orden", "No puede usar loop unrolling"], correct: 1,
+    exp: "El compilador decide con lo que ve en el código. La dinámica se adapta a la ejecución real, pero paga en área, consumo y complejidad." },
+  { q: "En Tomasulo, ¿qué elimina los riesgos EDL y EDE?",
+    opts: ["El Common Data Bus", "El renombrado de registros con las etiquetas de las estaciones de reserva", "El ROB", "Emitir en orden"], correct: 1,
+    exp: "Al emitir, cada operando se copia o se reemplaza por la etiqueta de la estación que lo va a producir, y el registro destino apunta a la estación nueva. Así una escritura posterior no pisa un valor que alguien todavía necesita." },
+  { q: "En un VLIW, ¿qué pasa si el compilador no encuentra operaciones independientes para un campo?",
+    opts: ["El hardware lo llena en ejecución", "Se rellena con NOP, lo que baja la densidad de código", "La instrucción se divide en dos", "Se detiene el pipeline"], correct: 1,
+    exp: "Todo el paralelismo lo encuentra el compilador. Los campos que no puede llenar quedan con NOP: el código ocupa más y el hardware sigue siendo simple." },
+  { q: "¿Qué modelo de multithreading llena también las vías vacías dentro de un mismo ciclo?",
+    opts: ["Grano fino", "Grano grueso", "SMT", "Ninguno"], correct: 2,
+    exp: "Grano fino y grueso eliminan ciclos vacíos completos (desperdicio vertical). SMT mezcla instrucciones de varios hilos en el mismo ciclo y ataca también el desperdicio horizontal." }
+]);
+</script>
+</body>
+</html>
