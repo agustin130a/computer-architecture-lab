@@ -8,7 +8,7 @@ estudiar tocando: todo corre en el navegador y se despliega en **GitHub Pages**.
 | Página | Qué es |
 | --- | --- |
 | [Inicio](web/index.html) | Índice del sitio: una tarjeta por página con enlaces directos a cada sección. |
-| [Coloquio](web/coloquio.html) | Modalidad del coloquio y todos los temas que entran (marcando los que más salen), cada uno con resumen y enlace a la sección donde se desarrolla. |
+| [Coloquio](web/coloquio.html) | Modalidad del coloquio y una lista de posibles temas recopilada, no oficial (marcando los que más salen), cada uno con resumen y enlace a la sección donde se desarrolla. |
 | [Procesador y paralelismo](web/pipeline.html) | Unidades 2 a 4: monociclo y multiciclo, pipeline y speedup, riesgos (simulador de pipeline), loop unrolling y software pipelining, planificación estática y dinámica, excepciones precisas con vector de estado y ROB, Tomasulo ciclo a ciclo, superescalar/VLIW y multithreading, con quiz. |
 | [Simulador de Tomasulo](web/tomasulo.html) | Planificación dinámica fuera de orden, ciclo a ciclo (Issue → Execute → Write Back). |
 | [Predicción de saltos](web/predictores.html) | Contador saturado de 2 bits, 1 bit vs. 2 bits con BTAC/BTB, predictor local, global, comparación lado a lado, híbrido (juez) y quiz. |

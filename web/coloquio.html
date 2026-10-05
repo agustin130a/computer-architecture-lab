@@ -277,7 +277,7 @@
   @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
   /* ==== /STD:COMPONENTS ==== */
 
-  /* ==== PAGE:TOKENS ==== sin tokens propios: "sale seguido" usa --ok y "en el temario" los neutros */
+  /* ==== PAGE:TOKENS ==== sin tokens propios: "sale seguido" usa --ok y "puede salir" los neutros */
 
   /* ==== PAGE ==== modalidad y fichas de temas (todo bajo .col) */
   .col .steps{ list-style:none; margin:16px 0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); gap:12px; counter-reset:paso; }
@@ -367,15 +367,15 @@
     <!-- ============ 2 TEMAS ============ -->
     <section class="block col" id="s-temas">
       <h2><span class="num">2</span> Temas del coloquio</h2>
-      <p class="sub">La lista completa, con dónde se desarrolla cada tema en el sitio.</p>
-      <p>Los marcados como <span class="st ok">sale seguido</span> son los que más se repiten. El resto también está en el temario y puede tocar.</p>
+      <p class="sub">Lista con posibles temas que te pueden tomar, con dónde se desarrolla cada uno en el sitio.</p>
+      <p>Es lo que pude recopilar, no el temario oficial de la cátedra: pueden tomar temas que no estén acá. Los marcados como <span class="st ok">sale seguido</span> son los que más se repiten; el resto también puede salir.</p>
       <div class="table-scroll">
         <table class="cmp">
           <thead><tr><th>Tema</th><th>Dónde se ve</th><th>Simulador</th><th>Frecuencia</th></tr></thead>
           <tbody>
             <tr><td><a href="#t-snoopy">Coherencia de caché: snoopy</a></td><td>Coherencia de caché</td><td>Dos estados, MSI / MESI, saturación del bus</td><td><span class="st ok">sale seguido</span></td></tr>
             <tr><td><a href="#t-directorios">Coherencia de caché: directorios</a></td><td>Coherencia de caché</td><td>Red de cuatro nodos, sobrecarga</td><td><span class="st ok">sale seguido</span></td></tr>
-            <tr><td><a href="#t-ciclos">Monociclo y multiciclo</a></td><td>Procesador y paralelismo</td><td>Diagrama temporal</td><td><span class="st">en el temario</span></td></tr>
+            <tr><td><a href="#t-ciclos">Monociclo y multiciclo</a></td><td>Procesador y paralelismo</td><td>Diagrama temporal</td><td><span class="st">puede salir</span></td></tr>
             <tr><td><a href="#t-pipeline">Pipeline segmentado</a></td><td>Procesador y paralelismo</td><td>Calculadora de speedup</td><td><span class="st ok">sale seguido</span></td></tr>
             <tr><td><a href="#t-riesgos">Riesgos estructurales y de control</a></td><td>Procesador y paralelismo</td><td>Pipeline con riesgos, dominio y rango</td><td><span class="st ok">sale seguido</span></td></tr>
             <tr><td><a href="#t-unrolling">Loop unrolling</a></td><td>Procesador y paralelismo</td><td>Ciclos del bucle por versión</td><td><span class="st ok">sale seguido</span></td></tr>
@@ -385,10 +385,10 @@
             <tr><td><a href="#t-excepciones">Excepciones precisas</a></td><td>Procesador y paralelismo</td><td>Vector de estado y ROB</td><td><span class="st ok">sale seguido</span></td></tr>
             <tr><td><a href="#t-tomasulo">Tomasulo</a></td><td>Procesador y paralelismo · Simulador de Tomasulo</td><td>Ejemplo de los apuntes y simulador completo</td><td><span class="st ok">sale seguido</span></td></tr>
             <tr><td><a href="#t-predictores">Predictores de salto</a></td><td>Predicción de saltos</td><td>1 bit vs. 2 bits, local, global, híbrido</td><td><span class="st ok">sale seguido</span></td></tr>
-            <tr><td><a href="#t-vliw">Superescalar y VLIW</a></td><td>Procesador y paralelismo</td><td>Empaquetado VLIW</td><td><span class="st">en el temario</span></td></tr>
-            <tr><td><a href="#t-mt">Multithreading</a></td><td>Procesador y paralelismo</td><td>Ocupación de vías por modelo</td><td><span class="st">en el temario</span></td></tr>
-            <tr><td><a href="#t-cache">Memoria caché</a></td><td>Jerarquía de memoria y caché</td><td>Simulador de caché, tipos de fallo</td><td><span class="st">en el temario</span></td></tr>
-            <tr><td><a href="#t-consistencia">Consistencia de memoria</a></td><td>Coherencia de caché</td><td>Órdenes posibles con y sin SC</td><td><span class="st">en el temario</span></td></tr>
+            <tr><td><a href="#t-vliw">Superescalar y VLIW</a></td><td>Procesador y paralelismo</td><td>Empaquetado VLIW</td><td><span class="st">puede salir</span></td></tr>
+            <tr><td><a href="#t-mt">Multithreading</a></td><td>Procesador y paralelismo</td><td>Ocupación de vías por modelo</td><td><span class="st">puede salir</span></td></tr>
+            <tr><td><a href="#t-cache">Memoria caché</a></td><td>Jerarquía de memoria y caché</td><td>Simulador de caché, tipos de fallo</td><td><span class="st">puede salir</span></td></tr>
+            <tr><td><a href="#t-consistencia">Consistencia de memoria</a></td><td>Coherencia de caché</td><td>Órdenes posibles con y sin SC</td><td><span class="st">puede salir</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -418,7 +418,7 @@
       <p class="sub">Unidad 2: cómo se implementa el procesador y qué frena al pipeline.</p>
       <div class="topics">
         <article class="topic" id="t-ciclos">
-          <h3><a href="pipeline.html#s-ciclos">Monociclo y multiciclo</a><span class="st">en el temario</span></h3>
+          <h3><a href="pipeline.html#s-ciclos">Monociclo y multiciclo</a><span class="st">puede salir</span></h3>
           <p>Monociclo: un ciclo largo, que dura lo que la instrucción más lenta, y CPI = 1. Multiciclo: ciclos cortos (lo que dura la etapa más lenta), cada instrucción usa solo las etapas que necesita y el control es una máquina de estados. Ninguno solapa instrucciones.</p>
           <div class="links"><a href="pipeline.html#s-ciclos">Diagrama temporal →</a><a href="pipeline.html#s-ciclos-calc">Calculadora →</a></div>
         </article>
@@ -484,12 +484,12 @@
       <p class="sub">Unidad 4: bajar el CPI de 1 emitiendo varias instrucciones o varios hilos por ciclo.</p>
       <div class="topics">
         <article class="topic" id="t-vliw">
-          <h3><a href="pipeline.html#s-vliw">Superescalar y VLIW</a><span class="st">en el temario</span></h3>
+          <h3><a href="pipeline.html#s-vliw">Superescalar y VLIW</a><span class="st">puede salir</span></h3>
           <p>El superescalar encuentra el paralelismo en hardware y emite lo que puede por ciclo; el VLIW lo encuentra en compilación, con un campo por unidad funcional, y rellena con NOP lo que no pudo llenar: hardware simple, compilador complejo y menos densidad de código.</p>
           <div class="links"><a href="pipeline.html#s-vliw">Empaquetado VLIW →</a></div>
         </article>
         <article class="topic" id="t-mt">
-          <h3><a href="pipeline.html#s-mt">Multithreading</a><span class="st">en el temario</span></h3>
+          <h3><a href="pipeline.html#s-mt">Multithreading</a><span class="st">puede salir</span></h3>
           <p>El ILP de un hilo tiene un límite; varios hilos comparten las unidades funcionales. Grano fino cambia de hilo cada ciclo, grano grueso solo ante paradas largas, y SMT mezcla hilos en el mismo ciclo y llena también las vías vacías.</p>
           <div class="links"><a href="pipeline.html#s-mt">Ocupación por modelo →</a></div>
         </article>
@@ -502,12 +502,12 @@
       <p class="sub">Unidades 5 y 6: la jerarquía de memoria y qué orden ven los procesadores.</p>
       <div class="topics">
         <article class="topic" id="t-cache">
-          <h3><a href="cache.html#s-fundamentos">Memoria caché</a><span class="st">en el temario</span></h3>
+          <h3><a href="cache.html#s-fundamentos">Memoria caché</a><span class="st">puede salir</span></h3>
           <p>Emplazamiento directo, asociativo por conjuntos o totalmente asociativo; reemplazo aleatorio, FIFO, LRU o LFU; write-through o write-back. Fallos iniciales, de capacidad y de conflicto. Tiempo de CPU = IC × (CPI + accesos por instrucción × tasa de fallos × penalización) × Tc.</p>
           <div class="links"><a href="cache.html#s-simulador">Simulador de caché →</a><a href="cache.html#s-tiposfallo">Tipos de fallo →</a><a href="cache.html#s-rendimiento">Calculadora →</a></div>
         </article>
         <article class="topic" id="t-consistencia">
-          <h3><a href="coherencia.html#s-consistencia">Consistencia de memoria</a><span class="st">en el temario</span></h3>
+          <h3><a href="coherencia.html#s-consistencia">Consistencia de memoria</a><span class="st">puede salir</span></h3>
           <p>La coherencia ordena las escrituras a una misma posición; la consistencia, las escrituras a posiciones distintas. Bajo consistencia secuencial el resultado es el de algún orden secuencial que respeta el orden de programa de cada procesador, con escrituras atómicas.</p>
           <div class="links"><a href="coherencia.html#s-consistencia">Órdenes posibles →</a></div>
         </article>
