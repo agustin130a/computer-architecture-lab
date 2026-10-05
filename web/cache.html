@@ -468,6 +468,20 @@
   .vm label.vm-check{ display:flex; align-items:center; gap:6px; font-size:13.5px; margin-left:8px; }
   @media (max-width:640px){ .vm .vm-grid2, .vm .vm-phs{ grid-template-columns:1fr; } .vm .vm-bar{ font-size:11px; } }
   @media (prefers-reduced-motion:reduce){ .vm .vm-bar > div, .vm .vm-blk{ transition:none !important; } }
+
+  /* Simulador de tipos de fallo (todo bajo .tf) */
+  .tf .tf-seq{ grid-template-columns:minmax(0,1fr); }
+  .tf table.tf-tab{ margin:0; }
+  .tf table.tf-tab th, .tf table.tf-tab td{ padding:5px 8px; font-size:12.5px; white-space:nowrap; }
+  .tf .k-hit{ color:var(--ok); font-weight:700; } .tf .k-ini{ color:var(--muted); font-weight:700; }
+  .tf .k-cap{ color:var(--amber); font-weight:700; } .tf .k-conf{ color:var(--rust); font-weight:700; }
+  .tf .tf-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:18px; align-items:start; margin-top:12px; }
+  .tf .out{ font-size:22px; font-weight:700; }
+  .tf .out small{ display:block; font-size:13px; font-weight:400; color:var(--muted); }
+  .tf svg.tf-chart{ width:100%; height:auto; display:block; }
+  .tf .tf-chart text{ font-size:12px; fill:var(--muted); }
+  .tf .tf-chart .lbl{ fill:var(--text); font-weight:700; }
+  .tf .tf-src{ font-size:13px; color:var(--muted); }
 </style>
 </head>
 <body>
@@ -521,6 +535,7 @@
         <p class="grp-title">Rendimiento</p>
         <a href="#s-rendimiento">5.15 Rendimiento y calculadora</a>
         <a href="#s-mejoras">5.16 Reducir la tasa de fallos</a>
+        <a href="#s-tiposfallo">↳ Simulador: las 3 C</a>
         <a href="#s-penalizacion">5.17–5.19.3 Reducir penalización</a>
       </li>
       <li class="grp">
@@ -1049,6 +1064,30 @@
           <p><strong>Prebúsqueda (prefetching)</strong>: anticipa el acceso a memoria antes de que el procesador lo pida, solapándolo con instrucciones independientes previas. Puede ser por <em>software</em> (el compilador inserta instrucciones de prebúsqueda, útil en bucles y arrays) o por <em>hardware</em> (secuencial, marcada, adaptativa o con "stride" arbitrario para patrones de salto).</p>
         </div>
       </details>
+    </section>
+
+    <!-- ============ ↳ TIPOS DE FALLO ============ -->
+    <section class="block tf" id="s-tiposfallo">
+      <h2><span class="num">↳</span> Simulador: iniciales, de capacidad y de conflicto</h2>
+      <p class="sub">Qué tipo de fallo produce cada acceso de una secuencia, según la organización y la política de reemplazo.</p>
+      <p>En la caché <strong>directa</strong> cada bloque va a un único marco (B mod M): es simple, pero sufre aliasing. La <strong>asociativa por conjuntos</strong> de N vías elige un conjunto con el índice y compara N tags en paralelo. La <strong>totalmente asociativa</strong> permite cualquier marco: menos fallos, pero muchos comparadores y tags largos.</p>
+      <div class="formula">Tiempo CPU = IC × (CPI + accesos por instrucción × tasa de fallos × penalización) × Tc</div>
+      <div class="note info">La fórmula ya tiene su calculadora en <a href="#s-rendimiento">5.15</a>. Acá se ve de dónde sale la <strong>tasa de fallos</strong> y qué parte se puede bajar cambiando la organización.</div>
+      <div class="sim">
+        <div class="cfg">
+          <div><label for="tf-l">Marcos en total</label><select id="tf-l"><option>4</option><option selected>8</option></select></div>
+          <div><label for="tf-a">Organización</label><select id="tf-a"><option value="1">Directa</option><option value="2">2 vías</option><option value="4">4 vías</option><option value="0">Totalmente asociativa</option></select></div>
+          <div><label for="tf-p">Reemplazo</label><select id="tf-p"><option>LRU</option><option>FIFO</option><option value="RND">Aleatorio</option></select></div>
+        </div>
+        <div class="cfg tf-seq"><div><label for="tf-seq">Secuencia de bloques referenciados</label><input type="text" id="tf-seq" value="0 8 0 8 1 9 1 9 2 3 0 8"></div></div>
+        <div class="table-scroll"><table class="cmp tf-tab" id="tf-table"></table></div>
+        <div class="tf-grid">
+          <div id="tf-out"></div>
+          <svg id="tf-chart" class="tf-chart" viewBox="0 0 420 200" role="img" aria-label="Tasa de fallos según organización"></svg>
+        </div>
+        <p class="tf-src">Clasificación de fallos: inicial si es el primer acceso al bloque; capacidad si también falla una caché totalmente asociativa LRU del mismo tamaño; conflicto si no (falla solo por el emplazamiento). Con la secuencia por defecto y caché directa, 0 y 8 (y también 1 y 9) compiten por el mismo marco: todo falla. Con 2 vías caben juntos y solo quedan los fallos iniciales. Agregá más bloques distintos para ver fallos de capacidad.</p>
+      </div>
+      <p class="tf-src">Fuente: apuntes, secciones 5.2 a 5.16.1.</p>
     </section>
 
     <!-- ============ 5.17-5.19.3 PENALIZACION ============ -->
@@ -1815,6 +1854,45 @@ const QUIZ = [
   {q:"Una caché víctima es...", opts:["Una caché totalmente asociativa grande que reemplaza a la L1","Una pequeña caché totalmente asociativa que revisa bloques recién desalojados antes de ir a memoria principal","Un algoritmo de reemplazo aleatorio","Un tipo de memoria DRAM"], correct:1, exp:"Es especialmente útil en cachés directas chicas, donde puede evitar entre 20% y 95% de los fallos con solo 4 entradas."},
   {q:"¿Qué mide el 'ancho de banda' de la memoria principal, a diferencia de la latencia?", opts:["El tiempo entre pedido y llegada del primer dato","La cantidad máxima de datos transferibles por unidad de tiempo","El tamaño del tag","La cantidad de bits de índice"], correct:1, exp:"La latencia es tiempo de acceso + tiempo de ciclo; el ancho de banda es volumen de datos por segundo, clave para dimensionar el tamaño de bloque."},
 ];
+
+/* ---------- ↳ tipos de fallo ---------- */
+(function () {
+  const $ = id => document.getElementById("tf-" + id);
+  if (!$("table")) return;
+  const S = (tag, attrs, parent) => { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  function rng(seed) { let s = seed; return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }; }
+  function sim(seq, L, A, P) {
+    const assoc = A === 0 ? L : A, sets = L / assoc; const cache = Array.from({ length: sets }, () => []); const fa = []; const seen = new Set(); const R = rng(42);
+    return seq.map((b, i) => {
+      const s = b % sets, set = cache[s]; const hit = set.find(e => e.b === b); let kind, victim = null;
+      const faHit = fa.indexOf(b); if (faHit >= 0) fa.splice(faHit, 1); else if (fa.length >= L) fa.shift(); fa.push(b);
+      if (hit) { kind = "hit"; hit.last = i; }
+      else {
+        kind = !seen.has(b) ? "ini" : (faHit < 0 ? "cap" : "conf");
+        if (set.length >= assoc) { let idx = 0; if (P === "LRU") idx = set.reduce((m, e, k) => e.last < set[m].last ? k : m, 0); else if (P === "FIFO") idx = set.reduce((m, e, k) => e.in < set[m].in ? k : m, 0); else idx = Math.floor(R() * set.length); victim = set[idx].b; set.splice(idx, 1); }
+        set.push({ b, last: i, in: i });
+      }
+      seen.add(b); return { b, s, kind, victim, snap: cache.map(st => st.map(e => e.b)) };
+    });
+  }
+  const K = { hit: ["Acierto", "k-hit"], ini: ["Fallo inicial", "k-ini"], cap: ["Fallo de capacidad", "k-cap"], conf: ["Fallo de conflicto", "k-conf"] };
+  function draw() {
+    const seq = $("seq").value.split(/[\s,]+/).filter(Boolean).map(Number).filter(v => Number.isInteger(v) && v >= 0); const L = +$("l").value, A = +$("a").value, P = $("p").value;
+    const r = sim(seq, L, A, P); const assoc = A === 0 ? L : A, sets = L / assoc;
+    $("table").innerHTML = `<tr><th>#</th><th>Bloque</th><th>${sets > 1 ? "Conjunto (B mod " + sets + ")" : "Conjunto"}</th><th>Resultado</th><th>Reemplaza</th><th>Contenido después</th></tr>` + r.map((x, i) => `<tr><td>${i + 1}</td><td class="mono"><b>${x.b}</b></td><td>${x.s}</td><td class="${K[x.kind][1]}">${K[x.kind][0]}</td><td>${x.victim != null ? x.victim : ""}</td><td class="mono">${x.snap.map((st, k) => (sets > 1 ? k + ":" : "") + "[" + st.join(" ") + "]").join(" ")}</td></tr>`).join("");
+    const cnt = k => r.filter(x => x.kind === k).length, miss = r.length - cnt("hit");
+    $("out").innerHTML = `<div class="out">${r.length ? Math.round(100 * miss / r.length) : 0} % de fallos<small>${miss} de ${r.length}: ${cnt("ini")} iniciales, ${cnt("cap")} de capacidad, ${cnt("conf")} de conflicto</small></div>`;
+    const svg = $("chart"); svg.innerHTML = ""; const opts = [[1, "Directa"], [2, "2 vías"], [4, "4 vías"], [0, "Tot. asoc."]].filter(o => o[0] <= L); const W = 420, l = 10, top = 36, bt = 160, gw = (W - l) / opts.length;
+    opts.forEach(([a, n], i) => {
+      const q = sim(seq, L, a, P); const m = q.length ? q.filter(x => x.kind !== "hit").length / q.length : 0; const h = (bt - top) * m;
+      S("rect", { x: l + i * gw + 16, y: bt - h, width: gw - 32, height: h, rx: 4, fill: a === A ? "var(--teal)" : "var(--line)" }, svg);
+      S("text", { x: l + (i + .5) * gw, y: bt - h - 6, "text-anchor": "middle", "class": "lbl" }, svg).textContent = Math.round(100 * m) + " %";
+      S("text", { x: l + (i + .5) * gw, y: bt + 16, "text-anchor": "middle" }, svg).textContent = n;
+    });
+    S("text", { x: l, y: 12 }, svg).textContent = `Tasa de fallos con ${L} marcos y reemplazo ${P === "RND" ? "aleatorio" : P}`;
+  }
+  ["l", "a", "p"].forEach(s => $(s).addEventListener("change", draw)); $("seq").addEventListener("input", draw); draw();
+})();
 
 stdQuiz(QUIZ);
 
