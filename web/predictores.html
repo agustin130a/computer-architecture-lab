@@ -277,7 +277,7 @@
   @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
   /* ==== /STD:COMPONENTS ==== */
 
-  /* ==== PAGE:TOKENS ==== tomado / no tomado y acierto / fallo de predicción */
+  /* ==== PAGE:TOKENS ==== tomado / no tomado, acierto / fallo de predicción y simulador 1 bit vs. 2 bits */
   :root{
     --taken: #b45309;
     --taken-dim: #fdf2e3;
@@ -287,6 +287,9 @@
     --miss: #c0392b;
     --active-ring: rgba(31,111,235,0.18);
     --trace-last: rgba(31,111,235,0.06);
+    --bp-act: #2457B3;
+    --bp-gray: #8C95A4;
+    --bp-ink: #ffffff;
   }
   html[data-theme='dark']{
     --taken: #e2a640;
@@ -297,6 +300,9 @@
     --miss: #e0776d;
     --active-ring: rgba(77,159,255,0.25);
     --trace-last: rgba(77,159,255,0.08);
+    --bp-act: #7BA6F2;
+    --bp-gray: #7D8797;
+    --bp-ink: #0d1524;
   }
 
   /* ==== PAGE ==== widgets de predicción (todo bajo .pred salvo el pipeline del header) */
@@ -377,6 +383,32 @@
 
   @media (max-width:700px){ .pred .compare-grid{ grid-template-columns:1fr; } }
   @media (max-width:640px){ .pred .reg-label{ min-width:0; } }
+
+  /* 1 bit vs. 2 bits (todo bajo .bp) */
+  .bp .actions .btn.ghost[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); background:var(--bg-panel-2); }
+  .bp .scroll{ overflow-x:auto; }
+  .bp .bp-line{ display:flex; align-items:center; white-space:nowrap; }
+  .bp .bp-line .lab{ width:110px; flex:0 0 110px; font-size:13px; color:var(--muted); }
+  .bp .bp-c{ display:inline-flex; width:24px; height:24px; margin:1px; border-radius:5px; align-items:center; justify-content:center; font:700 11px ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--bp-ink); background:var(--bp-gray); }
+  .bp .bp-c.ok{ background:var(--hit); } .bp .bp-c.bad{ background:var(--miss); }
+  .bp .bp-c.tag{ background:transparent; color:var(--muted); font-size:10px; font-weight:400; }
+  .bp .bp-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:18px; align-items:start; margin-top:12px; }
+  .bp .out{ font-size:22px; font-weight:700; margin-bottom:8px; }
+  .bp .out small{ display:block; font-size:13px; font-weight:400; color:var(--muted); }
+  .bp .src{ font-size:13px; color:var(--muted); }
+  .bp .legend{ display:flex; gap:6px 16px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin-top:8px; }
+  .bp .legend i{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+  .bp .k-ok{ background:var(--hit); } .bp .k-bad{ background:var(--miss); }
+  .bp svg.fsm{ width:100%; height:auto; display:block; }
+  .bp .fsm text{ fill:var(--text); }
+  .bp .fsm .node circle{ stroke-width:3; fill:var(--bg-panel); }
+  .bp .fsm .node text{ font-weight:800; font-size:22px; }
+  .bp .fsm .edge path{ fill:none; stroke:var(--bp-gray); stroke-width:1.8; transition:stroke .2s, stroke-width .2s; }
+  .bp .fsm .edge text{ font-size:12.5px; paint-order:stroke; stroke:var(--bg-panel); stroke-width:4px; fill:var(--muted); }
+  .bp .fsm .edge.hot path{ stroke:var(--bp-act); stroke-width:3.6; }
+  .bp .fsm .edge.hot text{ fill:var(--bp-act); font-weight:700; }
+  .bp .fsm .cap{ fill:var(--muted); font-size:13px; }
+  @media (prefers-reduced-motion:reduce){ .bp .fsm .edge path{ transition:none; } }
 </style>
 </head>
 <body>
@@ -423,6 +455,7 @@
         <p class="grp-title">Fundamentos</p>
         <a href="#s-problema">0 Por qué hace falta predecir</a>
         <a href="#s-contador">1 Contador saturado de 2 bits</a>
+        <a href="#s-bits">↳ 1 bit vs. 2 bits, BTAC y BTB</a>
       </li>
       <li class="grp">
         <p class="grp-title">Predictores</p>
@@ -495,6 +528,32 @@
       </div>
 
       <div class="note">Este contador de 2 bits es la pieza que se repite muchas veces dentro de una tabla, tanto en predictores locales como globales. La diferencia entre ambos está en <b>qué historia se usa para elegir qué contador consultar</b> — eso es lo que viene ahora.</div>
+    </section>
+
+    <!-- ============ ↳ 1 BIT VS 2 BITS ============ -->
+    <section class="block pred bp" id="s-bits">
+      <h2><span class="num">↳</span> 1 bit vs. 2 bits, BTAC y BTB</h2>
+      <p class="sub">Las dos piezas de la predicción dinámica y cuántas veces falla cada predictor en bucles simples y anidados.</p>
+      <p>La predicción se divide en dos piezas: el <strong>predictor de dirección</strong> (BHT: ¿se toma o no?) y el <strong>predictor de destino</strong> (BTAC: ¿a dónde?). La BTAC es una caché indexada con la dirección del salto que guarda el destino de los últimos saltos tomados; si además guarda bits de predicción se llama <strong>BTB</strong>. Los retornos se predicen con una pila de direcciones de retorno (RAS).</p>
+      <p>El <strong>predictor de 1 bit</strong> repite lo que hizo el salto la última vez. El <strong>de 2 bits</strong> es un contador saturado: necesita fallar dos veces seguidas para cambiar de opinión, así que una salida ocasional del bucle no le hace cambiar la predicción.</p>
+      <div class="note info"><strong>En una frase:</strong> en un bucle simple, 1 bit falla 2 veces y 2 bits falla 3 (arrancando en 00); en bucles anidados, 2 bits falla la mitad porque no se confunde al reentrar al bucle interno.</div>
+
+      <div class="sim">
+        <div class="actions" role="group" aria-label="Patrón">
+          <button type="button" class="btn ghost bp-p" data-k="loop" aria-pressed="true">Bucle simple</button>
+          <button type="button" class="btn ghost bp-p" data-k="nest" aria-pressed="false">Bucles anidados</button>
+          <button type="button" class="btn ghost bp-p" data-k="alt" aria-pressed="false">Alternado</button>
+          <button type="button" class="btn ghost bp-p" data-k="custom" aria-pressed="false">Patrón propio</button>
+        </div>
+        <div class="cfg" id="bp-fields"></div>
+        <div class="scroll"><div id="bp-strip"></div></div>
+        <div class="bp-grid">
+          <div id="bp-out"></div>
+          <svg id="bp-fsm" class="fsm" viewBox="-30 0 600 230" role="img" aria-label="Contador saturado de 2 bits"></svg>
+        </div>
+        <div class="legend"><span><i class="k-ok"></i>acierto</span><span><i class="k-bad"></i>fallo</span><span>T = tomado, N = no tomado</span></div>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 2.4.4, 3.7, 3.8 y 3.8.4.</p>
     </section>
 
     <!-- ============ 2 ============ -->
@@ -1067,6 +1126,83 @@ function judgeStep(result){
 }
 function judgeReset(){ judgeState=0; judgeRender(); }
 judgeRender();
+
+/* ---------- ↳ 1 bit vs. 2 bits ---------- */
+(function () {
+  const $ = id => document.getElementById("bp-" + id);
+  if (!$("strip")) return;
+  const S = (tag, attrs, parent) => { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  function drawFSM(svg, id, nodes, edges) {
+    svg.innerHTML = ""; const d = S("defs", {}, svg);
+    [["n", "var(--bp-gray)"], ["h", "var(--bp-act)"]].forEach(([k, c]) => { const m = S("marker", { id: id + k, viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "10", markerHeight: "10", markerUnits: "userSpaceOnUse", orient: "auto-start-reverse" }, d); S("path", { d: "M0,0 L10,5 L0,10 z", fill: c }, m); });
+    const R = 34, map = {}, gE = S("g", {}, svg), gN = S("g", {}, svg);
+    edges.forEach(e => {
+      const g = S("g", { "class": "edge" }, gE); let p, lx, ly;
+      if (e.loop) {
+        const n = nodes[e.from], a = e.ang * Math.PI / 180, sp = .5;
+        const x1 = n.x + R * Math.cos(a - sp), y1 = n.y + R * Math.sin(a - sp), x2 = n.x + R * Math.cos(a + sp), y2 = n.y + R * Math.sin(a + sp);
+        const cx1 = n.x + (R + 60) * Math.cos(a - sp * 1.3), cy1 = n.y + (R + 60) * Math.sin(a - sp * 1.3), cx2 = n.x + (R + 60) * Math.cos(a + sp * 1.3), cy2 = n.y + (R + 60) * Math.sin(a + sp * 1.3);
+        p = `M${x1},${y1} C${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}`; lx = n.x + (R + 58) * Math.cos(a) + (e.dx || 0); ly = n.y + (R + 58) * Math.sin(a) + (e.dy || 0);
+      } else {
+        const A = nodes[e.from], B = nodes[e.to], dx = B.x - A.x, dy = B.y - A.y, L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L, c = e.c || 0;
+        const mx = (A.x + B.x) / 2 + nx * c, my = (A.y + B.y) / 2 + ny * c, t1 = Math.atan2(my - A.y, mx - A.x), t2 = Math.atan2(my - B.y, mx - B.x);
+        const x1 = A.x + R * Math.cos(t1), y1 = A.y + R * Math.sin(t1), x2 = B.x + (R + 3) * Math.cos(t2), y2 = B.y + (R + 3) * Math.sin(t2);
+        p = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`; lx = .25 * x1 + .5 * mx + .25 * x2 + (e.dx || 0); ly = .25 * y1 + .5 * my + .25 * y2 + (e.dy || 0);
+      }
+      S("path", { d: p, "marker-end": `url(#${id}n)` }, g);
+      S("text", { x: lx, y: ly, "text-anchor": "middle", "dominant-baseline": "middle" }, g).textContent = e.label;
+      map[e.id] = g;
+    });
+    for (const k in nodes) { const n = nodes[k], g = S("g", { "class": "node" }, gN); S("circle", { cx: n.x, cy: n.y, r: R, stroke: n.col }, g); S("text", { x: n.x, y: n.y + 1, "text-anchor": "middle", "dominant-baseline": "middle", fill: n.col }, g).textContent = k; }
+    return { hot(list) {
+      Object.values(map).forEach(g => { g.classList.remove("hot"); g.querySelector("path").setAttribute("marker-end", `url(#${id}n)`); });
+      list.forEach(eid => { const g = map[eid]; if (!g) return; g.classList.add("hot"); g.querySelector("path").setAttribute("marker-end", `url(#${id}h)`); gE.appendChild(g); });
+    } };
+  }
+  let kind = "loop";
+  function seqOf(k, p) {
+    if (k === "loop") return Array.from({ length: p.n }, (_, i) => ({ b: "bucle", t: i < p.n - 1 }));
+    if (k === "nest") { const o = []; for (let j = 0; j < p.out; j++) { for (let i = 0; i < p.inn; i++) o.push({ b: "interno", t: i < p.inn - 1 }); o.push({ b: "externo", t: j < p.out - 1 }); } return o; }
+    if (k === "alt") return Array.from({ length: p.n }, (_, i) => ({ b: "salto", t: i % 2 === 0 }));
+    return (p.pat || "").toUpperCase().replace(/[^TN]/g, "").split("").map(c => ({ b: "salto", t: c === "T" }));
+  }
+  function run(seq) {
+    const s1 = {}, s2 = {}; let m1 = 0, m2 = 0;
+    const rows = seq.map(e => { const a = s1[e.b] || 0, b = s2[e.b] || 0; const p1 = a === 1, p2 = b >= 2; if (p1 !== e.t) m1++; if (p2 !== e.t) m2++; s1[e.b] = e.t ? 1 : 0; s2[e.b] = e.t ? Math.min(3, b + 1) : Math.max(0, b - 1); return { e, p1, p2, b, b2: s2[e.b] }; });
+    return { rows, m1, m2 };
+  }
+  function params() { const g = id => { const el = $(id); return el ? el.value : null; }; return { n: +(g("n") || 10), inn: +(g("in") || 10), out: +(g("out2") || 5), pat: g("pat") || "TTNTTNTTN" }; }
+  function fields() {
+    const f = $("fields"); const num = (id, l, v, max) => `<div><label for="bp-${id}">${l}</label><input type="number" id="bp-${id}" value="${v}" min="1" max="${max}"></div>`;
+    f.innerHTML = kind === "loop" ? num("n", "Iteraciones", 10, 60) : kind === "nest" ? num("in", "Iteraciones del interno", 10, 20) + num("out2", "Iteraciones del externo", 5, 10) : kind === "alt" ? num("n", "Ejecuciones del salto", 12, 60) : `<div><label for="bp-pat">Secuencia (T y N)</label><input type="text" id="bp-pat" value="TTNTTNTTN"></div>`;
+    f.querySelectorAll("input").forEach(i => i.addEventListener("input", draw));
+  }
+  const fsm = drawFSM($("fsm"), "bp-m", { "00": { x: 100, y: 115, col: "var(--nottaken)" }, "01": { x: 215, y: 115, col: "var(--nottaken)" }, "10": { x: 330, y: 115, col: "var(--taken)" }, "11": { x: 445, y: 115, col: "var(--taken)" } }, [
+    { id: "a", from: "00", to: "01", c: -36, label: "T" }, { id: "b", from: "01", to: "10", c: -36, label: "T" }, { id: "c", from: "10", to: "11", c: -36, label: "T" },
+    { id: "d", from: "11", to: "10", c: -36, label: "N" }, { id: "e", from: "10", to: "01", c: -36, label: "N" }, { id: "f", from: "01", to: "00", c: -36, label: "N" },
+    { id: "g", from: "11", loop: 1, ang: 0, label: "T", dx: 6 }, { id: "h", from: "00", loop: 1, ang: 180, label: "N", dx: -6 }]);
+  (function () { const s = $("fsm"); [["predice N", 157], ["predice T", 387]].forEach(([t, x]) => { S("text", { x, y: 215, "text-anchor": "middle", "class": "cap" }, s).textContent = t; }); S("line", { x1: 272, x2: 272, y1: 40, y2: 200, stroke: "var(--line)", "stroke-dasharray": "4 4" }, s); })();
+  function draw() {
+    const r = run(seqOf(kind, params()));
+    const cell = (txt, ok, title) => `<span class="bp-c${ok == null ? "" : ok ? " ok" : " bad"}" title="${title || ""}">${txt}</span>`;
+    const lim = r.rows.slice(0, 80);
+    const line = (lab, fn) => `<div class="bp-line"><span class="lab">${lab}</span>${lim.map(fn).join("")}</div>`;
+    $("strip").innerHTML = line("Real", x => cell(x.e.t ? "T" : "N", null, x.e.b)) + line("1 bit", x => cell(x.p1 ? "T" : "N", x.p1 === x.e.t)) + line("2 bits", x => cell(x.p2 ? "T" : "N", x.p2 === x.e.t, "estado " + x.b.toString(2).padStart(2, "0"))) +
+      (kind === "nest" ? line("Salto", x => `<span class="bp-c tag">${x.e.b === "externo" ? "ext" : ""}</span>`) : "") + (r.rows.length > 80 ? `<div class="src">Se muestran las primeras 80 de ${r.rows.length} ejecuciones.</div>` : "");
+    let extra = "";
+    if (kind === "loop" || kind === "nest") {
+      const big = kind === "loop" ? run(seqOf("loop", { n: 1000 })) : run(seqOf("nest", { inn: 1000, out: 1000 }));
+      extra = `<p class="src">Con ${kind === "loop" ? "for(1000)" : "for(1000){for(1000)}"}: 1 bit falla ${big.m1.toLocaleString("es-AR")} veces y 2 bits ${big.m2.toLocaleString("es-AR")}.${kind === "nest" ? " Los apuntes dan 2002 y ~1003: la diferencia de 2 viene del salto externo, que también arranca en 00." : ""}</p>`;
+    }
+    const n = r.rows.length;
+    $("out").innerHTML = `<div class="out">${r.m1} fallos con 1 bit<small>${n ? (100 - 100 * r.m1 / n).toFixed(0) : 0} % de aciertos</small></div><div class="out">${r.m2} fallos con 2 bits<small>${n ? (100 - 100 * r.m2 / n).toFixed(0) : 0} % de aciertos</small></div>${extra}`;
+    const last = r.rows.length ? r.rows[r.rows.length - 1] : null;
+    if (last) { const map = { "0-1": "a", "1-2": "b", "2-3": "c", "3-2": "d", "2-1": "e", "1-0": "f", "3-3": "g", "0-0": "h" }; fsm.hot([map[last.b + "-" + last.b2]]); } else fsm.hot([]);
+  }
+  const btns = document.querySelectorAll(".bp-p");
+  btns.forEach(b => b.addEventListener("click", () => { kind = b.dataset.k; btns.forEach(x => x.setAttribute("aria-pressed", x === b)); fields(); draw(); }));
+  fields(); draw();
+})();
 
 stdQuiz([
   { q: '¿Por qué un pipeline necesita predecir los saltos condicionales?', opts: ['Porque la dirección destino nunca se puede calcular', 'Porque el resultado del salto recién se conoce en EX y esperar costaría ciclos en cada salto', 'Porque los saltos se ejecutan fuera de orden', 'Porque la caché de instrucciones no guarda saltos'], correct: 1, exp: 'En IF todavía no se sabe si el salto se toma; se resuelve varias etapas después. Como hay un salto cada 5–6 instrucciones, esperar sería carísimo.' },
