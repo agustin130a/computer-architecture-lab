@@ -503,6 +503,7 @@
             <tr><td>Hardware</td><td>Solo se amplía el controlador de caché. Memoria y cachés no cambian.</td><td>Memoria extra para el directorio (bits de presencia y estado) y controladores más complejos.</td></tr>
             <tr><td>Escalabilidad</td><td>Limitada por el ancho de banda del bus.</td><td>Escala a muchos procesadores; el directorio se distribuye para no ser cuello de botella.</td></tr>
             <tr><td>Invalidar una escritura</td><td>Una sola transacción en el bus llega a todos.</td><td>Un mensaje por cada nodo que comparte el bloque (se pueden mandar en paralelo).</td></tr>
+            <tr><td>Cuándo conviene</td><td>Pocos procesadores sobre un bus compartido: el broadcast y el orden global salen gratis, pero el bus se satura y no escala.</td><td>Muchos procesadores con memoria distribuida (NUMA) y red sin broadcast: los mensajes van solo a los nodos con copia, a cambio de memoria extra y más latencia por los saltos en la red.</td></tr>
           </tbody>
         </table>
       </div>
@@ -595,6 +596,7 @@
       </div>
 
       <div class="note"><strong>Detalle de los apuntes:</strong> la transición T10 (E + BusRd → S) indica un Flush. Como en E la memoria está actualizada, la caché no está obligada a proveer el dato (los mismos apuntes lo dicen en «sin pertenencia»). El simulador lo muestra como Flush opcional y no lo cuenta como transacción.</div>
+      <div class="note"><strong>Qué es Replace:</strong> el desalojo de un bloque de la caché para hacerle lugar a otro que viene de memoria. Aunque los apuntes lo listan junto a las transacciones del bus (<code>BusRdX, Replace</code>), es un evento <em>local</em>: lo provoca un fallo del propio procesador, no algo que se observa de los demás. Desde <b>M</b> pasa a <b>I</b> con <code>Flush</code>, porque el bloque está sucio y la memoria desactualizada; desde <b>S</b> (o <b>E</b> en MESI) pasa a <b>I</b> sin mensaje, porque la memoria ya está al día y alcanza con descartar la copia. Probalo con el botón «Reemplazar» del simulador.</div>
       <p class="src">Fuente: apuntes, secciones 6.10 a 6.10.7.</p>
     </section>
 
@@ -620,6 +622,7 @@
       <p class="sub">Qué pasa cuando no hay un bus que espiar: un nodo home lleva la cuenta de quién tiene cada bloque.</p>
       <p>En una máquina NUMA no hay bus que espiar. Cada bloque tiene un <strong>nodo home</strong> (fijado por la dirección del bloque) que guarda su entrada de directorio: un bit de presencia por procesador y un bit limpio/sucio. Los estados en cada caché siguen siendo <b class="c-M">M</b>, <b class="c-S">S</b> e <b class="c-I">I</b>, pero las transiciones se disparan con mensajes por la red.</p>
       <p>En cada transacción participan el nodo <b>peticionario</b> (local), el <b>home</b> y los <b>remotos</b> que tienen copia (si está en M, uno solo: el owner).</p>
+      <p><strong>Cómo se reparten los homes:</strong> cada bloque tiene un único home fijo, pero los homes están distribuidos entre todos los nodos, para que el directorio no sea un cuello de botella. El home se calcula a partir de la dirección física: por los bits altos (cada nodo es dueño de un rango contiguo de memoria) o por entrelazado (bloques consecutivos van a nodos distintos). El directorio centralizado de los primeros mainframes de IBM quedó en desuso justamente porque no escala.</p>
 
       <div class="sim">
         <div class="sim-top"><h4>Simulador: cuatro nodos, bloque X con home en P0</h4><button type="button" class="btn ghost" id="dir-reset">Reiniciar</button></div>
@@ -650,10 +653,24 @@
             <label>Nodos: <b class="mono" id="dir-ov-nv">64</b><input type="range" id="dir-ov-n" min="1" max="10" value="6"></label>
             <label>Línea (bytes)<select id="dir-ov-l"><option>4</option><option>16</option><option>32</option><option selected>64</option><option>128</option></select></label>
           </div>
+          <p class="small">Dos tamaños que no hay que confundir. Los <b>bits de presencia</b> son un bit por nodo en cada entrada del directorio, que indica si ese nodo tiene copia del bloque; con el bit limpio/sucio, cada entrada ocupa unos N + 1 bits. Los <b>bits de línea</b> son el tamaño del bloque en bits (bytes × 8). La sobrecarga es el cociente entre los dos:</p>
+          <div class="formula">Sobrecarga = N<sub>nodos</sub> / (línea en bytes × 8) × 100</div>
+          <p class="small">Se paga sobre <b>toda la memoria principal</b> (hay una entrada por bloque de memoria, esté cacheado o no) y crece linealmente con los nodos, así que puede pasar del 100 %.</p>
           <div class="out" id="dir-ov-out">—</div>
           <svg id="dir-ov-chart" class="chart" viewBox="0 0 420 180" role="img" aria-label="Sobrecarga por cantidad de nodos"></svg>
-          <p class="src">Cálculo: N bits de presencia / bits de la línea (el bit sucio suma uno más, despreciable). Con línea de 64 B salen 64 nodos 12,5 %, 256 nodos 50 % y 1024 nodos 200 %, que son los valores de los apuntes. Ojo: los apuntes dicen «4 nodos», «25 nodos» y «línea de 4 bytes»; parecen erratas de 64, 256 y 64 bytes, porque con esos datos los números no cierran. Soluciones: un bit por nodo multiprocesador, punteros en lugar de bits (menos ancho) u organizar el directorio como caché (menos alto).</p>
+          <p class="src">Cálculo: N bits de presencia / bits de la línea (el bit sucio suma uno más, despreciable). Con línea de 64 B salen 64 nodos 12,5 %, 256 nodos 50 % y 1024 nodos 200 %, que son los valores de los apuntes. Ojo: los apuntes dicen «4 nodos», «25 nodos» y «línea de 4 bytes»; parecen erratas de 64, 256 y 64 bytes, porque con esos datos los números no cierran. Soluciones: un bit por nodo multiprocesador, punteros en lugar de bits (menos ancho) u organizar el directorio como caché (menos alto). Conviene verificar los datos de la sección 6.24 con las diapositivas de la cátedra.</p>
         </div>
+      </div>
+
+      <div class="panel">
+        <h4>¿Y MESI con directorios?</h4>
+        <p class="small">Se puede: los estados de la caché son independientes del mecanismo que mantiene la coherencia. Lo que cambia respecto de snoopy:</p>
+        <ul class="small">
+          <li><b>E o S lo decide el home</b>, mirando los bits de presencia, en lugar de la señal S del bus.</li>
+          <li><b>El directorio no distingue E de M</b>, porque el paso E → M es silencioso. Registra los dos como «dueño exclusivo» y, ante otro pedido, se lo reenvía al dueño.</li>
+          <li><b>Un Replace en E</b> se puede avisar al home o hacer en silencio. En el segundo caso, cuando el home le reenvía un pedido, el ex dueño responde que ya no tiene el bloque.</li>
+        </ul>
+        <p class="small">En el examen, si piden el protocolo de directorio tal como lo dio la cátedra, respondé con <b>MSI</b>.</p>
       </div>
       <p class="src">Fuente: apuntes, secciones 6.18 a 6.26.</p>
     </section>
