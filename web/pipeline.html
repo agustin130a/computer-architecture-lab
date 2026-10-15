@@ -31,17 +31,17 @@
     --line-soft: #e4e9f0;
     --text: #1d2433;
     --muted: #4a5568;
-    --accent: #1f6feb;
+    --accent: #1a62d6;
     --accent-ink: #ffffff;
     --focus: #0a4bce;
     --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
     --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
-    --highlight: #b45309;
+    --highlight: #a84d08;
     --ok: #0f766e;
     --ok-soft: #e6f4f2;
     --err: #c0392b;
     --err-soft: #fbeae7;
-    --warn: #b45309;
+    --warn: #a84d08;
     --warn-soft: #fdf2e3;
   }
   html[data-theme='dark']{
@@ -212,17 +212,19 @@
 
   /* Fórmula / regla destacada */
   .formula{
-    background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--accent);
-    padding:12px 16px; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
+    background:var(--bg-panel-2); border:1px solid var(--line);
+    padding:12px 16px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
   }
 
   /* Nota al margen (.info para una aclaración, sin variante para un "ojo con esto") */
   .note{
-    border-left:3px solid var(--warn); border-radius:0 8px 8px 0;
-    padding:12px 16px; background:var(--warn-soft);
+    --note-c: var(--warn); --note-bg: var(--warn-soft);
+    border:1px solid color-mix(in srgb, var(--note-c) 32%, transparent); border-radius:10px;
+    padding:12px 16px; background:var(--note-bg);
     font-size:13.5px; margin:14px 0; color:var(--text); max-width:80ch;
   }
-  .note.info{ border-left-color:var(--ok); background:var(--ok-soft); }
+  .note > strong:first-child, .note > b:first-child{ color:var(--note-c); }
+  .note.info{ --note-c: var(--ok); --note-bg: var(--ok-soft); }
 
   /* Etiquetas */
   .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px; }
@@ -232,7 +234,7 @@
   /* Panel de simulador / widget interactivo */
   .sim{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:24px; margin:10px 0 16px; }
   .sim .cfg{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px; }
-  .sim .cfg label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  .sim .cfg label{ display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:6px; }
   .sim select, .sim input[type=text], .sim input[type=number]{
     width:100%; background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
     padding:9px 10px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px;
@@ -304,7 +306,7 @@
   /* ==== PAGE ==== diagramas temporales y simuladores de excepciones (todo bajo .pipe) */
   .pipe .src{ font-size:13px; color:var(--muted); }
   .pipe .sim-top{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .pipe .sim-top h4{ margin:0; font-size:16px; }
+  .pipe .sim-top h3, .pipe .sim-top h4{ margin:0; font-size:16px; }
   .pipe .seg{ display:inline-flex; flex-wrap:wrap; background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px; gap:2px; }
   .pipe .seg button{ font:inherit; font-size:13.5px; font-weight:600; border:0; background:transparent; color:var(--muted); padding:6px 14px; border-radius:999px; cursor:pointer; }
   .pipe .seg button[aria-pressed="true"]{ background:var(--accent); color:var(--accent-ink); }
@@ -350,9 +352,9 @@
   .pipe .grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:18px; align-items:start; margin:12px 0; }
   .pipe .simgrid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.35fr); gap:20px; align-items:start; }
   @media (max-width:1000px){ .pipe .simgrid{ grid-template-columns:minmax(0,1fr); } }
-  .pipe .panel h4{ margin:0 0 10px; font-size:15px; }
+  .pipe .panel h3, .pipe .panel h4{ margin:0 0 10px; font-size:15px; }
   .pipe .tbl-h{ margin:14px 0 6px; font-size:14.5px; }
-  .pipe .lbl-sm{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  .pipe .lbl-sm{ display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:6px; }
   .pipe textarea{ width:100%; font:600 13.5px ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--text); background:var(--bg-panel); border:1px solid var(--line); border-radius:8px; padding:8px; resize:vertical; }
   .pipe .opts{ display:flex; flex-direction:column; gap:10px; font-size:14px; }
   .pipe .ex-row{ margin:12px 0 0; }
@@ -469,7 +471,7 @@
       <div class="note info"><strong>En una frase:</strong> monociclo tiene ciclo largo y CPI 1; multiciclo tiene ciclo corto y CPI mayor que 1. Cuál gana depende de la mezcla de instrucciones. Ninguno solapa instrucciones; eso lo hace la segmentación.</div>
 
       <div class="sim">
-        <div class="sim-top"><h4>Diagrama temporal: lw, add, sw, beq</h4>
+        <div class="sim-top"><h3>Diagrama temporal: lw, add, sw, beq</h3>
           <div class="seg" role="group" aria-label="Mostrar">
             <button type="button" class="td-btn" data-m="all" aria-pressed="true">Los tres</button>
             <button type="button" class="td-btn" data-m="mono" aria-pressed="false">Monociclo</button>
@@ -503,14 +505,14 @@
     <section class="block pipe" id="s-pipeline">
       <h2><span class="num">2.2–2.3</span> Pipeline segmentado</h2>
       <p class="sub">Cómo la segmentación mejora el throughput y por qué el speedup real queda por debajo de la cantidad de etapas.</p>
-      <p>La segmentación aprovecha que, mientras una instrucción está en una etapa, el hardware de las otras cuatro queda ocioso. Se separan las etapas con <strong>registros de segmentación</strong> (IF/ID, ID/EX, EX/MEM, MEM/WB) que guardan al final de cada ciclo lo que produjo cada etapa, y así cada etapa trabaja en una instrucción distinta. Es invisible para el programador.</p>
-      <p>No acorta el tiempo de una instrucción: mejora el <strong>throughput</strong>. En el caso ideal, con etapas balanceadas, el tiempo por instrucción se divide por la cantidad de etapas (100 ns con 5 etapas pasa a 20 ns) y el CPI tiende a 1 una vez lleno el pipeline.</p>
+      <p>La segmentación aprovecha que, mientras una instrucción está en una etapa, el hardware de las otras cuatro queda ocioso. Se separan las etapas con <strong>registros de segmentación</strong> (IF/ID, ID/EX, EX/MEM, MEM/WB) que guardan al final de cada ciclo lo que produjo cada etapa, y así cada etapa trabaja en una instrucción distinta, sin que el programador tenga que hacer nada.</p>
+      <p>Cada instrucción sigue tardando lo mismo (o un poco más); lo que mejora es el <strong>throughput</strong>. En el caso ideal, con etapas balanceadas, el tiempo por instrucción se divide por la cantidad de etapas (100 ns con 5 etapas pasa a 20 ns) y el CPI tiende a 1 una vez lleno el pipeline.</p>
       <p>Limitaciones prácticas: el ciclo dura lo que la etapa más lenta; en ID y WB se desaprovecha medio ciclo, porque la lectura de registros y la escritura ocurren en flancos distintos del reloj; los registros de segmentación (latches) agregan retardo, que pesa más cuanto más corta es cada etapa; las instrucciones tipo R pasan por una etapa MEM vacía para que todas tengan la misma cantidad de etapas; y aparecen los <strong>riesgos</strong>, que impiden iniciar una instrucción por ciclo. Por eso agregar etapas sin fin no sirve: a partir de cierta profundidad pesan los latches y cada vaciado (por un salto o una excepción) tira más instrucciones.</p>
       <div class="note info"><strong>En una frase:</strong> el speedup ideal es igual a la cantidad de etapas, pero en la práctica baja por el desbalance entre etapas, el retardo de los registros de segmentación, el llenado del pipeline y los riesgos.</div>
 
       <div class="formula">speedup(N) = N × tiempo sin pipeline / ((N + etapas − 1) × ciclo)</div>
       <div class="sim">
-        <div class="sim-top"><h4>Calculadora de speedup</h4></div>
+        <div class="sim-top"><h3>Calculadora de speedup</h3></div>
         <div class="cfg" id="ps-cfg">
           <div><label for="ps-if">IF (ps)</label><input type="number" class="ps-st" id="ps-if" value="200" min="1"></div>
           <div><label for="ps-id">ID (ps)</label><input type="number" class="ps-st" id="ps-id" value="100" min="1"></div>
@@ -574,7 +576,7 @@
         <div class="body">
           <p>Para saltar hacen falta dos datos: si se cumple la condición y la dirección destino. En la ruta de datos básica los dos se calculan en EX y el PC se carga en MEM, así que detener el pipeline cuesta 3 ciclos por salto. Las alternativas de los apuntes:</p>
           <h3>Salto retardado</h3>
-          <p>La instrucción que sigue al salto (el <em>delay slot</em>) se ejecuta siempre, se tome o no el salto. No tiene que depender del salto, y es el compilador quien la elige:</p>
+          <p>La instrucción que sigue al salto (el <em>delay slot</em>) se ejecuta siempre, se tome o no el salto; por eso tiene que ser independiente del salto, y la elige el compilador:</p>
           <ol>
             <li>una instrucción independiente de <strong>antes</strong> del salto (la mejor opción: siempre es útil);</li>
             <li>una del <strong>destino</strong> del salto, suponiendo que se toma (sirve en bucles);</li>
@@ -673,7 +675,7 @@
             <table class="cmp">
               <thead><tr><th>Tipo</th><th>Qué pasa</th><th>Ejemplo</th></tr></thead>
               <tbody>
-                <tr><td>De datos (verdadera, LDE)</td><td>j necesita el resultado de i. No se puede eliminar, solo esperar o anticipar.</td><td class="mono">i: LD F0,0(R1) · j: ADDD F4,F0,F2</td></tr>
+                <tr><td>De datos (verdadera, LDE)</td><td>j necesita el resultado de i: se puede esperar o anticipar, pero nunca eliminar.</td><td class="mono">i: LD F0,0(R1) · j: ADDD F4,F0,F2</td></tr>
                 <tr><td>De nombre: antidependencia (EDL)</td><td>j escribe algo que i todavía tiene que leer.</td><td class="mono">i: ADDD F4,F0,F2 · j: LD F0,−8(R1)</td></tr>
                 <tr><td>De nombre: de salida (EDE)</td><td>i y j escriben el mismo registro o posición.</td><td class="mono">i: ADDD F4,F0,F2 · j: SUBD F4,F3,F2</td></tr>
               </tbody>
@@ -695,7 +697,7 @@
       </details>
       <details class="card" open>
         <summary>Software pipelining</summary>
-        <div class="body"><p>Cada vuelta del bucle nuevo toma una instrucción de iteraciones distintas (el SD de la i, el ADDD de la i+1, el LD de la i+2). No reduce los saltos, pero elimina las esperas sin agrandar el cuerpo. Necesita un <strong>prólogo</strong> (llenado) y un <strong>epílogo</strong> (vaciado).</p></div>
+        <div class="body"><p>Cada vuelta del bucle nuevo toma una instrucción de iteraciones distintas (el SD de la i, el ADDD de la i+1, el LD de la i+2), así que elimina las esperas sin agrandar el cuerpo, aunque la cantidad de saltos queda igual. Necesita un <strong>prólogo</strong> (llenado) y un <strong>epílogo</strong> (vaciado).</p></div>
       </details>
       <div class="note info"><strong>En una frase:</strong> unrolling ataca los saltos y expone paralelismo a costa de registros y tamaño de código; software pipelining ataca las paradas por datos manteniendo los saltos y el tamaño del cuerpo.</div>
 
@@ -749,7 +751,7 @@
       <p class="sub">Quién reordena las instrucciones —el compilador o el hardware— y qué gana y pierde cada uno.</p>
       <details class="card" open>
         <summary>Estática (compilador)</summary>
-        <div class="body"><p>El compilador reordena las instrucciones antes de ejecutar. No agrega hardware ni consumo, pero no conoce lo que pasa en ejecución (un fallo de caché, una dependencia de memoria que depende de un dato) y el código optimizado para un procesador puede rendir mal en otro. Las instrucciones se emiten en el orden en que quedaron en el programa.</p></div>
+        <div class="body"><p>El compilador reordena las instrucciones antes de ejecutar, sin agregar hardware ni consumo, aunque no conoce lo que pasa en ejecución (un fallo de caché, una dependencia de memoria que depende de un dato) y el código optimizado para un procesador puede rendir mal en otro. Las instrucciones se emiten en el orden en que quedaron en el programa.</p></div>
       </details>
       <details class="card" open>
         <summary>Dinámica (hardware)</summary>
@@ -759,7 +761,7 @@
 
       <div class="sim">
         <div class="sim-top">
-          <h4>El ejemplo de los apuntes: MULTD con latencia 5</h4>
+          <h3>El ejemplo de los apuntes: MULTD con latencia 5</h3>
           <div class="seg" role="group" aria-label="Modo" id="sd-mode">
             <button type="button" data-m="none" aria-pressed="true">Sin planificación</button><button type="button" data-m="static" aria-pressed="false">Estática (compilador)</button><button type="button" data-m="dyn" aria-pressed="false">Dinámica (hardware)</button>
           </div>
@@ -881,7 +883,7 @@
 
       <div class="sim">
         <div class="sim-top">
-          <h4>Ejemplo 2 de los apuntes, ciclo a ciclo</h4>
+          <h3>Ejemplo 2 de los apuntes, ciclo a ciclo</h3>
           <div class="btns"><button type="button" class="btn ghost" id="tm-prev">Ciclo anterior</button><button type="button" class="btn" id="tm-next">Siguiente ciclo</button><button type="button" class="btn ghost" id="tm-jump">Próximo evento</button><button type="button" class="btn ghost" id="tm-rst">Reiniciar</button></div>
         </div>
         <label class="rob-cyc tm-cyc" for="tm-c">Ciclo <b id="tm-cv">0</b><input type="range" id="tm-c" min="0" max="57" value="0"></label>
@@ -894,7 +896,7 @@
         <div class="status" id="tm-status" aria-live="polite"></div>
         <p class="src">Latencias de los apuntes: load 2, suma y resta 2, multiplicación 10, división 40 ciclos. Estaciones: 3 de load, 3 de suma y 2 de multiplicación, la configuración de Hennessy y Patterson (no la de los apuntes: en p. 105 hablan de 6 de load, 3 de suma, 2 de multiplicación y 3 de store, y la figura de p. 111 muestra 3 de multiplicación). Con este programa no cambia nada: solo hay 2 loads y 2 instrucciones de multiplicación o división. Un resultado por ciclo en el CDB; una instrucción puede empezar a ejecutar el ciclo siguiente al que recibe su último operando.</p>
       </div>
-      <div class="note"><strong>Para mirar:</strong> en el ciclo 6 la ADDD se emite para escribir F6, que la DIVD (emitida en el ciclo 5) todavía necesita. No hay riesgo EDL porque la DIVD ya copió el valor de F6 en su estación de reserva. Y la ADDD termina en el ciclo 11, mucho antes que la DIVD (57): terminación fuera de orden.</div>
+      <div class="note"><strong>Para mirar:</strong> en el ciclo 6 la ADDD se emite para escribir F6, que la DIVD (emitida en el ciclo 5) todavía necesita, y aun así no hay riesgo EDL porque la DIVD ya copió el valor de F6 en su estación de reserva. Y la ADDD termina en el ciclo 11, mucho antes que la DIVD (57): terminación fuera de orden.</div>
       <div class="note info">El <a href="tomasulo.html">simulador completo de Tomasulo</a> corre este mismo programa (ejemplo «ejemplo_pdf») con las mismas latencias y da el mismo orden de emisión, ejecución y escritura. Los números de ciclo no coinciden exactamente porque cuenta los ciclos con otra convención: arranca en 0 y los loads ocupan un ciclo más.</div>
       <details class="card">
         <summary>Estructura y campos de cada componente</summary>
@@ -1084,7 +1086,7 @@
 
       <div class="sim">
         <div class="sim-top">
-          <h4>Empaquetado VLIW del bucle desenrollado</h4>
+          <h3>Empaquetado VLIW del bucle desenrollado</h3>
           <label class="rob-cyc" for="vw-n">Factor de desenrollado <b id="vw-nv">7</b><input type="range" id="vw-n" min="1" max="10" value="7"></label>
         </div>
         <div class="scroll"><table class="ptab vw" id="vw-table"></table></div>
@@ -1167,7 +1169,7 @@
       <div class="note info"><strong>En una frase:</strong> grano fino y grueso eliminan ciclos vacíos completos (desperdicio vertical); solo SMT también llena las vías vacías dentro de un ciclo (desperdicio horizontal).</div>
 
       <div class="sim">
-        <div class="sim-top"><h4>Ocupación de un procesador de 4 vías con tres hilos</h4><button type="button" class="btn ghost" id="mt-shuffle">Otro escenario</button></div>
+        <div class="sim-top"><h3>Ocupación de un procesador de 4 vías con tres hilos</h3><button type="button" class="btn ghost" id="mt-shuffle">Otro escenario</button></div>
         <div class="scroll"><svg id="mt-svg" class="wide mtw" viewBox="0 0 900 420" role="img" aria-label="Ocupación de vías por modelo"></svg></div>
         <div class="legend"><span><i class="k-ok"></i>hilo 1</span><span><i class="k-err"></i>hilo 2</span><span><i class="k-warn"></i>hilo 3</span><span><i class="k-empty"></i>vía desaprovechada</span><span><i class="k-flush"></i>vaciado por cambio de hilo</span></div>
         <p class="src">Cada hilo tiene ráfagas de 1 a 3 instrucciones independientes y paradas cortas (1 ciclo) y largas (fallos de caché). Grano grueso cambia de hilo solo ante paradas largas y pierde un ciclo en el cambio. En multiprocesamiento, dos núcleos de 2 vías corren los hilos 1 y 2.</p>

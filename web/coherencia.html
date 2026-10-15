@@ -31,17 +31,17 @@
     --line-soft: #e4e9f0;
     --text: #1d2433;
     --muted: #4a5568;
-    --accent: #1f6feb;
+    --accent: #1a62d6;
     --accent-ink: #ffffff;
     --focus: #0a4bce;
     --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
     --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
-    --highlight: #b45309;
+    --highlight: #a84d08;
     --ok: #0f766e;
     --ok-soft: #e6f4f2;
     --err: #c0392b;
     --err-soft: #fbeae7;
-    --warn: #b45309;
+    --warn: #a84d08;
     --warn-soft: #fdf2e3;
   }
   html[data-theme='dark']{
@@ -212,17 +212,19 @@
 
   /* Fórmula / regla destacada */
   .formula{
-    background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--accent);
-    padding:12px 16px; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
+    background:var(--bg-panel-2); border:1px solid var(--line);
+    padding:12px 16px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
   }
 
   /* Nota al margen (.info para una aclaración, sin variante para un "ojo con esto") */
   .note{
-    border-left:3px solid var(--warn); border-radius:0 8px 8px 0;
-    padding:12px 16px; background:var(--warn-soft);
+    --note-c: var(--warn); --note-bg: var(--warn-soft);
+    border:1px solid color-mix(in srgb, var(--note-c) 32%, transparent); border-radius:10px;
+    padding:12px 16px; background:var(--note-bg);
     font-size:13.5px; margin:14px 0; color:var(--text); max-width:80ch;
   }
-  .note.info{ border-left-color:var(--ok); background:var(--ok-soft); }
+  .note > strong:first-child, .note > b:first-child{ color:var(--note-c); }
+  .note.info{ --note-c: var(--ok); --note-bg: var(--ok-soft); }
 
   /* Etiquetas */
   .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px; }
@@ -232,7 +234,7 @@
   /* Panel de simulador / widget interactivo */
   .sim{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:24px; margin:10px 0 16px; }
   .sim .cfg{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px; }
-  .sim .cfg label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  .sim .cfg label{ display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:6px; }
   .sim select, .sim input[type=text], .sim input[type=number]{
     width:100%; background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
     padding:9px 10px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px;
@@ -329,12 +331,12 @@
   /* Piezas comunes de los simuladores */
   .coh .src{ font-size:13px; color:var(--muted); }
   .coh .small{ margin:0; font-size:14px; }
-  .coh .panel h4{ margin:0 0 10px; font-size:15px; }
+  .coh .panel h3, .coh .panel h4{ margin:0 0 10px; font-size:15px; }
   .coh .grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:18px; align-items:start; }
   .coh .simgrid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.35fr); gap:20px; align-items:start; }
   @media (max-width:1100px){ .coh .simgrid{ grid-template-columns:minmax(0,1fr); } }
   .coh .sim-top{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .coh .sim-top h4{ margin:0; font-size:16px; }
+  .coh .sim-top h3, .coh .sim-top h4{ margin:0; font-size:16px; }
   .coh .sim-ctl{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
   .coh .seg{ display:inline-flex; background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px; gap:2px; }
   .coh .seg button{ font:inherit; font-size:13.5px; font-weight:600; border:0; background:transparent; color:var(--muted); padding:6px 14px; border-radius:999px; cursor:pointer; }
@@ -612,7 +614,7 @@
       <div class="note info"><strong>En una frase:</strong> toda escritura sale al bus (<code>BusWr</code>) y actualiza la memoria; las demás cachés que la ven invalidan su copia. Funciona, pero cada store ocupa el bus.</div>
 
       <div class="sim">
-        <div class="sim-top"><h4>Simulador: tres procesadores y un bloque X</h4><button type="button" class="btn ghost" id="vi-reset">Reiniciar</button></div>
+        <div class="sim-top"><h3>Simulador: tres procesadores y un bloque X</h3><button type="button" class="btn ghost" id="vi-reset">Reiniciar</button></div>
         <div class="grid2">
           <div>
             <div class="cpus" id="vi-cpus"></div>
@@ -662,7 +664,7 @@
 
       <div class="sim">
         <div class="sim-top">
-          <h4>Simulador MSI / MESI</h4>
+          <h3>Simulador MSI / MESI</h3>
           <div class="sim-ctl">
             <div class="seg" role="group" aria-label="Protocolo"><button type="button" id="msi-p-msi" aria-pressed="true">MSI</button><button type="button" id="msi-p-mesi" aria-pressed="false">MESI</button></div>
             <button type="button" class="btn ghost" id="msi-reset">Reiniciar</button>
@@ -786,7 +788,7 @@
       <p><strong>Quién habla con quién:</strong> en las figuras de los apuntes el home solo <em>informa</em>. Si el bloque está limpio, responde con el dato y, en una escritura, con la lista de nodos que tienen copia. Si está sucio, responde con la identidad del owner. Después es el <b>peticionario</b> el que invalida a los que comparten o le pide el bloque al owner, y el owner le manda una revisión (Revision/WB) al home para que actualice el directorio.</p>
 
       <div class="sim">
-        <div class="sim-top"><h4>Simulador: cuatro nodos, bloque X con home en P0</h4><button type="button" class="btn ghost" id="dir-reset">Reiniciar</button></div>
+        <div class="sim-top"><h3>Simulador: cuatro nodos, bloque X con home en P0</h3><button type="button" class="btn ghost" id="dir-reset">Reiniciar</button></div>
         <div class="grid2">
           <svg id="dir-net" class="net" viewBox="0 0 440 340" role="img" aria-label="Red de cuatro nodos"></svg>
           <div>
@@ -905,7 +907,7 @@
 
       <div class="sim">
         <div class="sim-top">
-          <h4>P1: A = 1; B = 2 &nbsp;·&nbsp; P2: print B; print A</h4>
+          <h3>P1: A = 1; B = 2 &nbsp;·&nbsp; P2: print B; print A</h3>
           <div class="seg" role="group" aria-label="Modelo"><button type="button" id="cs-sc" aria-pressed="true">Consistencia secuencial</button><button type="button" id="cs-no" aria-pressed="false">Escrituras reordenadas</button></div>
         </div>
         <div id="cs-list" class="cpus cs-list"></div>
