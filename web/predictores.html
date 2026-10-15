@@ -370,7 +370,8 @@
     background:var(--bg-panel-2); border:1px solid var(--line); border-radius:6px; font-size:.85rem;
   }
   .pred .entry-row.active{ border-color:var(--taken); background:var(--taken-dim); }
-  .pred .entry-idx{ font-family:ui-monospace, monospace; color:var(--muted); width:54px; }
+  .pred .entry-idx{ font-family:ui-monospace, monospace; color:var(--muted); min-width:54px; white-space:nowrap; }
+  .pred .src{ font-size:13px; color:var(--muted); }
   .pred .entry-state{ font-family:ui-monospace, monospace; font-weight:700; width:70px; }
   .pred .entry-pred{ font-size:.78rem; color:var(--muted); flex:1; }
   .pred .entry-pred b{ color:var(--text); }
@@ -454,6 +455,7 @@
       <li class="grp">
         <p class="grp-title">Fundamentos</p>
         <a href="#s-problema">0 Por qué hace falta predecir</a>
+        <a href="#s-estatica">0.1 Predicción estática</a>
         <a href="#s-contador">1 Contador saturado de 2 bits</a>
         <a href="#s-bits">↳ 1 bit vs. 2 bits, BTAC y BTB</a>
       </li>
@@ -483,7 +485,7 @@
 
       <div class="panel">
         <h3>El costo de esperar</h3>
-        <p>Cuando el pipeline busca (<b>IF</b>) una instrucción de salto condicional, todavía no sabe si el salto se va a <b class="mono" style="color:var(--taken)">tomar (T)</b> o <b class="mono" style="color:var(--nottaken)">no tomar (NT)</b> — eso recién se resuelve varias etapas después, en <b>EX</b>. Si el procesador simplemente esperara, perdería un ciclo entero (o varios, en pipelines más profundos) por cada salto. Como los saltos aparecen cada 5–6 instrucciones en promedio, eso es carísimo.</p>
+        <p>Cuando el pipeline busca (<b>IF</b>) una instrucción de salto condicional, todavía no sabe si el salto se va a <b class="mono" style="color:var(--taken)">tomar (T)</b> o <b class="mono" style="color:var(--nottaken)">no tomar (NT)</b>, ni a qué dirección salta. En el DLX base las dos cosas se calculan en <b>EX</b> y el PC recién se carga en <b>MEM</b>, así que esperar cuesta <b>3 ciclos</b> por salto; con un comparador y un sumador en <b>ID</b> baja a <b>1 ciclo</b> (lo podés ver en el <a href="pipeline.html#s-riesgos">simulador de riesgos del pipeline</a>). En pipelines más profundos la espera es mayor. Y los saltos son frecuentes: según el apunte, aparece uno cada 7–8 instrucciones en promedio, así que esperar es carísimo.</p>
         <p>La solución: <b>predecir</b> el resultado del salto antes de conocerlo, seguir buscando instrucciones especulativamente por esa rama, y si la predicción falla, descartar lo que se ejecutó de más. Todo el juego consiste en acertar la mayor cantidad de veces posible — y en aprender rápido cuando el patrón cambia.</p>
       </div>
 
@@ -496,7 +498,86 @@
         </ol>
       </div>
 
-      <div class="note info">En la sección siguiente está la pieza fundamental de la que se arman todos los predictores: el <b>contador saturado</b>.</div>
+      <div class="note">Ojo con la frecuencia de saltos: el apunte no es consistente. En la unidad 3 (p. 126) dice "un salto cada 7–8 instrucciones", y en la unidad 2 (p. 73) calcula el CPI suponiendo que el 30 % de las instrucciones son saltos (uno cada ~3). Las dos cifras sirven como orden de magnitud: la frecuencia depende del tipo de programa (p. 127).</div>
+
+      <details class="card">
+        <summary>Tipos de saltos, frecuencias y penalización</summary>
+        <div class="body">
+          <p>No todos los saltos piden predecir lo mismo:</p>
+          <ul>
+            <li><strong>Condicionales</strong>: hay que predecir si se toma <em>y</em> el destino. Los condicionales directos son el 70 % de todos los saltos, y un fallo vacía el cauce entero (las señales de control de IF, ID y EX se ponen en cero).</li>
+            <li><strong>Incondicionales</strong>: siempre se toman, así que solo hay que predecir el destino. Si son directos, el destino se conoce en la decodificación y un error cuesta poco (vaciado parcial). Si son indirectos (el destino sale de un registro, como los <code>return</code>), el destino recién se conoce en EX y un error vacía todo el cauce.</li>
+            <li><strong>Directos e indirectos</strong>: en los directos el destino viene en la instrucción y se conoce tras la decodificación (vaciado parcial); en los indirectos hay que calcularlo y se conoce tras la ejecución (vaciado total).</li>
+          </ul>
+          <p>¿Cuántos se toman? El apunte los reparte así: incondicionales ≈ 33 % (siempre tomados), condicionales de bucle ≈ 33 % (tomados salvo en la última iteración) y otros condicionales ≈ 33 %, que se toman la mitad de las veces. Resultado: <strong>5/6 de los saltos se toman</strong> y solo 1/6 no.</p>
+          <div class="table-scroll"><table class="cmp">
+            <thead><tr><th>Caso</th><th>Penalización</th></tr></thead>
+            <tbody>
+              <tr><td>Se predijo no tomado y acertó</td><td>0 ciclos</td></tr>
+              <tr><td>Se predijo tomado y acertó (sin salto retardado)</td><td>1 ciclo</td></tr>
+              <tr><td>Falló la predicción (en cualquier sentido)</td><td>al menos 2 ciclos para vaciar y retomar</td></tr>
+            </tbody>
+          </table></div>
+          <p class="src">Fuente: apuntes, secciones 2.4.3 (p. 68–69), 3.7 (p. 125–126) y 3.7.1 (p. 128). La detención de 3 ciclos, el salto retardado y el CPI de 1,3 están en la <a href="pipeline.html#s-riesgos">guía del pipeline</a>.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Cuando la predicción falla: detección y recuperación</summary>
+        <div class="body">
+          <p><strong>Detectar el salto a tiempo.</strong> Para predecir hay que saber que la instrucción es un salto, y eso normalmente se sabe al terminar la decodificación, lo que ya cuesta ciclos. El apunte da tres formas de adelantarlo: un decodificador de saltos dedicado en paralelo con la decodificación, reconocerlo en el buffer de instrucciones apenas termina el fetch, o detectarlo durante el fetch, mientras se lee la caché de instrucciones.</p>
+          <p><strong>Recuperarse de un fallo</strong> se hace en dos pasos:</p>
+          <ul>
+            <li><strong>Descartar resultados</strong>: las instrucciones especulativas escriben en registros temporales (de renombramiento) y no tocan registros ni memoria. Si se acertó, se copian a su destino definitivo; si no, se tiran.</li>
+            <li><strong>Retomar por el camino correcto</strong>: el procesador guarda la dirección del otro camino. Si predijo tomado, guarda la dirección siguiente al salto; si predijo no tomado, calcula y guarda el destino por las dudas.</li>
+          </ul>
+          <p>Para recuperarse más rápido también puede prebuscar las primeras instrucciones del camino alternativo, aunque esa prebúsqueda puede generar fallos de caché que agregan otro retardo.</p>
+          <p class="src">Fuente: apuntes, secciones 3.10.1 a 3.10.3 (p. 145–147). La especulación con ROB está en la <a href="pipeline.html#s-rob">guía del pipeline</a>.</p>
+        </div>
+      </details>
+
+      <div class="note info">Primero vas a ver la alternativa más simple, la <b>predicción estática</b>. Después viene la pieza de la que se arman todos los predictores dinámicos: el <b>contador saturado</b>.</div>
+    </section>
+
+    <!-- ============ 0.1 ESTÁTICA ============ -->
+    <section class="block pred" id="s-estatica">
+      <h2><span class="num">0.1</span> Predicción estática</h2>
+      <p class="sub">¿Se puede apostar sin mirar la historia del salto, con una regla fija o con ayuda del compilador?</p>
+
+      <details class="card" open>
+        <summary>Estática vs. dinámica</summary>
+        <div class="body">
+          <p>La predicción <strong>estática</strong> se decide antes de ejecutar (en el diseño del hardware o en la compilación) y no cambia durante la ejecución. No necesita hardware extra, pero acierta menos que la dinámica, y en algunas implementaciones agranda el ejecutable hasta un 30 %. La <strong>dinámica</strong> mira cómo se comportó el salto mientras el programa corre: acierta más, a cambio de más hardware.</p>
+        </div>
+      </details>
+
+      <div class="table-scroll"><table class="cmp">
+        <thead><tr><th>Técnica</th><th>Regla</th><th>Fuerte / débil</th></tr></thead>
+        <tbody>
+          <tr><td><b>Fija: siempre tomado</b></td><td>Todos los saltos se predicen tomados.</td><td>Acierta más (≈ 75 % de los condicionales se toman), pero hay que tener el destino listo, así que necesita guardar direcciones (BTAC/BTB).</td></tr>
+          <tr><td><b>Fija: nunca tomado</b></td><td>Se sigue buscando en PC+4; si el salto se toma, la instrucción buscada se descarta (flush).</td><td>Acierta menos (≈ 25 % de los condicionales no se toman), pero es la más barata: no hay que calcular el destino.</td></tr>
+          <tr><td><b>Por dirección</b></td><td>Salto hacia atrás → tomado (suele cerrar un bucle); hacia adelante → no tomado (suele ser un if-then-else).</td><td>Anda bien con muchos bucles y mal con mucho if-then-else.</td></tr>
+          <tr><td><b>Por código de operación</b></td><td>Cada opcode de salto tiene su predicción fija, elegida por estadística.</td><td>Lee y Smith midieron en el IBM 370 que para algunos opcodes la probabilidad de que se tome es del 80–90 %.</td></tr>
+          <tr><td><b>Dirigida por el compilador</b></td><td>El compilador decide según la construcción (<code>if</code>, <code>for</code>, <code>while</code>), según <em>profiling</em> (ejecuciones previas medidas) o según lo que indique el programador, y lo marca con un bit de predicción en el opcode.</td><td>Usa información del programa, pero sigue sin adaptarse si el comportamiento cambia en ejecución.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note info"><b>Caso real:</b> varios ARM Cortex-R/M y otros procesadores embebidos usan, por simplicidad, "siempre no tomado" (o "hacia atrás tomado, hacia adelante no"). Si acierta no hay que calcular el destino; estadísticamente convendría "tomado", pero para no pagar el cálculo del destino haría falta una BTAC/BTB.</div>
+
+      <details class="card">
+        <summary>Otra salida: eliminar el salto (ejecución condicional y predicada)</summary>
+        <div class="body">
+          <p>En vez de predecir el salto, el compilador puede sacarlo. Una instrucción de <strong>ejecución condicional</strong> lleva una condición y una operación: si la condición es cierta se ejecuta y, si no, se comporta como un NOP. Por ejemplo, <code>BNEZ R1, L</code> + <code>MOV R2, R3</code> se reemplaza por <code>CMOVZ R2, R3, R1</code>.</p>
+          <ul>
+            <li><strong>Ventaja:</strong> desaparecen saltos simples y con ellos el cálculo de su destino.</li>
+            <li><strong>Desventaja:</strong> la instrucción se evalúa siempre, aunque la condición sea falsa, y es más compleja (lleva la operación y la condición). En promedio es más lenta que una incondicional.</li>
+            <li>La <strong>ejecución predicada</strong> lleva la idea al extremo: todas las instrucciones tienen un predicado (guarda) guardado en registros de predicado. Según el apunte no se usó mucho, aunque instrucciones sueltas como <code>CMOV</code> de x86 sí se usan (Alpha, HP-PA, MIPS y SPARC tienen alguna).</li>
+          </ul>
+          <p class="src">Fuente: apuntes, sección 3.10.4 (p. 147–148).</p>
+        </div>
+      </details>
+
+      <p class="src">Fuente: apuntes, secciones 2.4.4 (p. 71), 3.8 (p. 130) y 3.8.2 (p. 131–132).</p>
     </section>
 
     <!-- ============ 1 ============ -->
@@ -507,7 +588,7 @@
       <div class="panel">
         <h3>¿Por qué no alcanza con 1 bit?</h3>
         <p>Un predictor de 1 bit guarda literalmente el último resultado y lo repite. Funciona bien en bucles largos, pero falla <b>dos veces por cada bucle</b>: una al entrar (asumía lo contrario) y otra al salir (predice que sigue el bucle cuando en realidad termina). En bucles anidados esto se paga muy caro, porque se repite en cada re-entrada al bucle interno.</p>
-        <p>La solución es agregar <b>histéresis</b>: un contador saturado de 2 bits que necesita <em>dos</em> resultados seguidos distintos para cambiar de predicción. Así, una única excepción dentro de un patrón mayormente estable no arruina la predicción.</p>
+        <p>La solución es agregar <b>histéresis</b>: un contador saturado de 2 bits que sube con cada Tomado, baja con cada No Tomado y predice según su bit más significativo. Desde un estado <em>fuerte</em> (<code>00</code> o <code>11</code>) hacen falta <em>dos</em> resultados seguidos distintos para cambiar de predicción; desde un estado débil (<code>01</code> o <code>10</code>) alcanza uno. Así, una única excepción dentro de un patrón estable no arruina la predicción.</p>
       </div>
 
       <div class="panel">
@@ -524,7 +605,8 @@
           <div class="stat"><div class="n" id="fsmHits">0</div><div class="l">Aciertos</div></div>
           <div class="stat"><div class="n" id="fsmMiss">0</div><div class="l">Fallos</div></div>
         </div>
-        <p style="font-size:0.85rem; color:var(--muted);">Notá que hace falta <b>fallar dos veces seguidas</b> para que la predicción cambie de bando (por ejemplo, de "Fuertemente Tomado" a "Débilmente No Tomado" hacen falta dos No-Tomado consecutivos).</p>
+        <p style="font-size:0.85rem; color:var(--muted);">Notá que desde un estado fuerte hace falta <b>fallar dos veces seguidas</b> para que la predicción cambie de bando (de "Fuertemente Tomado" a "Débilmente No Tomado" hacen falta dos No Tomado consecutivos). Desde un estado débil, en cambio, un solo fallo la da vuelta: probá arrancar en <code>00</code> y apretar Tomado dos veces.</p>
+        <div class="note">Ojo: el apunte describe el bimodal como si guardara "las últimas dos ejecuciones" del salto (p. 133). No es exacto: el contador resume la tendencia, no recuerda los dos últimos resultados. Por ejemplo, T, N, T, N desde <code>00</code> lo deja en <code>00</code>, no en "N, T".</div>
       </div>
 
       <div class="note">Este contador de 2 bits es la pieza que se repite muchas veces dentro de una tabla, tanto en predictores locales como globales. La diferencia entre ambos está en <b>qué historia se usa para elegir qué contador consultar</b> — eso es lo que viene ahora.</div>
@@ -535,8 +617,37 @@
       <h2><span class="num">↳</span> 1 bit vs. 2 bits, BTAC y BTB</h2>
       <p class="sub">Las dos piezas de la predicción dinámica y cuántas veces falla cada predictor en bucles simples y anidados.</p>
       <p>La predicción se divide en dos piezas: el <strong>predictor de dirección</strong> (BHT: ¿se toma o no?) y el <strong>predictor de destino</strong> (BTAC: ¿a dónde?). La BTAC es una caché indexada con la dirección del salto que guarda el destino de los últimos saltos tomados; si además guarda bits de predicción se llama <strong>BTB</strong>. Los retornos se predicen con una pila de direcciones de retorno (RAS).</p>
-      <p>El <strong>predictor de 1 bit</strong> repite lo que hizo el salto la última vez. El <strong>de 2 bits</strong> es un contador saturado: necesita fallar dos veces seguidas para cambiar de opinión, así que una salida ocasional del bucle no le hace cambiar la predicción.</p>
+      <p>El <strong>predictor de 1 bit</strong> repite lo que hizo el salto la última vez. El <strong>de 2 bits</strong> es un contador saturado: estando en un estado fuerte necesita fallar dos veces seguidas para cambiar de opinión, así que una salida ocasional del bucle no le hace cambiar la predicción.</p>
       <div class="note info"><strong>En una frase:</strong> en un bucle simple, 1 bit falla 2 veces y 2 bits falla 3 (arrancando en 00); en bucles anidados, 2 bits falla la mitad porque no se confunde al reentrar al bucle interno.</div>
+
+      <details class="card">
+        <summary>BTAC, BTB y BHT en detalle</summary>
+        <div class="body">
+          <p><strong>BTAC</strong> (Branch Target Address Cache): en el fetch se consulta en paralelo con el PC. No decide si el salto se toma; solo da el destino si hay hit. Un MUX elige la próxima dirección:</p>
+          <div class="formula">next_PC = BTAC[PC].target   si pred_taken = 1 y hay hit<br>next_PC = PC + 4            si pred_taken = 0 o no hay hit</div>
+          <ul>
+            <li><strong>Actualización</strong>: cuando el salto se resuelve como tomado, se actualiza su destino o se inserta la entrada; si no se tomó y estaba, se elimina. Recorrer las entradas una por una sería lentísimo y buscar en todas en paralelo, carísimo, así que se organiza como una caché asociativa.</li>
+            <li><strong>BTB</strong> = BTAC + bits de predicción: cada entrada tiene el tag del salto, el destino del último salto tomado y sus bits de predicción. Con un solo bit puede usarse <em>predicción implícita</em>: si el salto está en la BTB se predice tomado y, si no está, no tomado. La contra es que solo predice los saltos que están en la BTB. Ejemplos: Pentium 256 × 2 bits, Pentium 4 4K × 2 bits.</li>
+            <li><strong>BHT</strong> (Branch History Table): una tabla aparte con los bits de predicción de los saltos condicionales, indexada con los bits menos significativos de la dirección del salto y <em>sin tag</em>. Es más barata y predice saltos que no están en la BTAC, pero dos saltos con los mismos bits bajos comparten entrada y se pisan. Ejemplos: R10000 512 × 2 bits, AMD64 16K × 2 bits.</li>
+          </ul>
+          <p>Un dato que motiva el resto de la guía: según el apunte, agrandar la tabla prácticamente no mejora la precisión. En programas enteros sigue habiendo demasiados fallos, porque la predicción solo usa <em>dónde</em> está el salto. Para mejorar hay que usar historia (local o global).</p>
+          <div class="note">Ojo con los nombres: en la literatura BTAC y BTB se usan casi como sinónimos. El apunte distingue BTAC = destino, BHT = tomado o no, y BTB = BTAC con bits de predicción.</div>
+          <p class="src">Fuente: apuntes, secciones 3.8 (p. 129–130) y 3.8.5 (p. 135–138).</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Predicción de retornos (RAS)</summary>
+        <div class="body">
+          <p>Un <code>return</code> es un salto indirecto cuyo destino cambia según quién llamó a la función, así que la BTAC (que recuerda el último destino) lo predice muy mal. La solución es una pila de direcciones de retorno (<strong>RAS</strong>, Return Address Stack) de 8 a 16 entradas:</p>
+          <ul>
+            <li>Cada <code>call</code> apila PC+4.</li>
+            <li>Cada <code>return</code> toma como predicción la dirección del tope y la desapila.</li>
+            <li>Según el apunte, cuantas más entradas tenga la pila, mejor predice.</li>
+          </ul>
+          <p class="src">Fuente: apuntes, secciones 3.8 (p. 130) y 3.10 (p. 144–145).</p>
+        </div>
+      </details>
 
       <div class="sim">
         <div class="actions" role="group" aria-label="Patrón">
@@ -618,7 +729,8 @@
         </table></div>
       </div>
 
-      <div class="note">Preset "alternado": con <code>m=1</code>, el predictor nunca converge — cada resultado contradice al anterior, así que un solo contador indexado por 1 bit de historia falla siempre. Subí <code>m</code> a 2 o 3 y vas a ver cómo, apenas el patrón se repite, el predictor lo aprende y deja de fallar.</div>
+      <div class="note">Preset "alternado": con historia de <code>m=1</code> bit ya hay dos contadores, uno para "la última vez se tomó" y otro para "la última vez no se tomó". Cada uno ve siempre el mismo resultado, así que el patrón se aprende enseguida: 11/12 aciertos con <code>n=1</code> y 10/12 con <code>n=2</code>. Con <code>m=2</code> o <code>m=3</code> también lo aprende (9/12 con <code>n=2</code>), pero tarda un poco más porque hay más contadores que arrancan en frío. El que falla siempre ante este patrón es el predictor de 1 bit <em>sin</em> historia (un solo contador, ver la sección anterior).</div>
+      <div class="note info">Mirá también el preset "bucle simple": con <code>m=2</code>, <code>n=2</code> acierta 20/30, menos que con <code>m=1</code> (23/30). En una traza corta, más historia significa más contadores que arrancan en <code>00</code> y hay que entrenar.</div>
     </section>
 
     <!-- ============ 3 ============ -->
@@ -628,13 +740,36 @@
 
       <div class="panel">
         <h3>La idea</h3>
-        <p>No todos los saltos son independientes entre sí. Es común que el resultado de un salto <code>b2</code> esté correlacionado con lo que hizo un salto <code>b1</code> ejecutado justo antes — por ejemplo, cuando ambos derivan de la misma variable de control. El predictor global captura esto con un único <b>Registro de Historia Global (GHR)</b>, compartido por <b>todos</b> los saltos del programa, que se actualiza con cada salto que se resuelve (sin importar de qué instrucción se trate). Ese registro de <code>m</code> bits indexa una tabla compartida de <code>2^m</code> contadores.</p>
-        <p>La clave: la tabla se indexa por <b>lo que pasó últimamente</b>, no por <b>quién lo hizo</b>. Eso es exactamente lo que le permite capturar correlaciones entre saltos distintos.</p>
+        <p>No todos los saltos son independientes entre sí. Es común que el resultado de un salto <code>b2</code> esté correlacionado con lo que hizo un salto <code>b1</code> ejecutado justo antes, por ejemplo cuando ambos dependen de la misma variable. El predictor global (o <b>correlacionado</b>) captura esto con un único <b>Registro de Historia Global (GHR)</b>, compartido por <b>todos</b> los saltos del programa, que se actualiza con cada salto que se resuelve, sin importar de qué instrucción se trate.</p>
+        <p>Igual que en el local, cada salto tiene sus propios <code>2^m</code> contadores de <code>n</code> bits. La diferencia es <b>quién elige el contador</b>: acá lo elige el GHR, es decir, lo que hicieron los últimos <code>m</code> saltos del programa, sean cuales sean. La tabla se indexa con bits de la dirección del salto (qué salto es) <b>y</b> con el GHR (qué pasó últimamente). Así <code>b2</code> puede aprender "cuando el salto anterior se tomó, yo también me tomo".</p>
       </div>
 
+      <details class="card">
+        <summary>Predictor de dos niveles (m,n): la notación del apunte</summary>
+        <div class="body">
+          <p>Un predictor <strong>(m,n)</strong> usa la historia de los últimos <code>m</code> saltos para elegir, para cada salto, uno de sus <code>2^m</code> predictores de <code>n</code> bits.</p>
+          <p><strong>Caso (1,1)</strong>: cada salto tiene dos predictores de 1 bit (no uno de 2 bits). El primero se usa si el último salto no se tomó y el segundo si se tomó. El apunte los escribe como un par "predictor si el último fue NT / predictor si el último fue T":</p>
+          <div class="table-scroll"><table class="cmp">
+            <thead><tr><th>Bits de predicción</th><th>Si el último salto fue NT</th><th>Si el último salto fue T</th></tr></thead>
+            <tbody>
+              <tr><td>NT/NT</td><td>NT</td><td>NT</td></tr>
+              <tr><td>NT/T</td><td>NT</td><td>T</td></tr>
+              <tr><td>T/NT</td><td>T</td><td>NT</td></tr>
+              <tr><td>T/T</td><td>T</td><td>T</td></tr>
+            </tbody>
+          </table></div>
+          <p><strong>Ejemplo del apunte</strong> (caso 2, <code>d = 2, 0, 2, 0, …</code>): <code>b1</code> se toma si <code>d ≠ 0</code>; si <code>d</code> era 0 pasa a valer 1, y <code>b2</code> se toma si <code>d ≠ 1</code>. Con <code>d</code> alternando entre 2 y 0, los dos saltos dan T, T, NT, NT, … Un predictor de 1 bit sin historia falla el 100 % de las veces. El (1,1), arrancando con todo en NT, falla solo en las dos primeras predicciones (la primera iteración) y después acierta siempre. Es el preset "Apunte, caso 2" del simulador de abajo: 14/16 con <code>m=1</code>, <code>n=1</code>.</p>
+          <p><strong>Caso (2,2)</strong> con 16 entradas (Fig. 121 del apunte): 4 bits de la dirección del salto eligen la fila y los 2 bits del GHR eligen una de 4 columnas, cada una con un contador de 2 bits. Por ejemplo, la historia <code>01</code> significa "el penúltimo no se tomó y el último sí".</p>
+          <div class="formula">Tamaño = 2^m × n × entradas → (2,2) con 4K entradas: 4 × 2 × 4K = 32 Kbits</div>
+          <div class="note">Ojo: al describir el (2,2), el apunte (p. 141–142) dice que cada predictor tiene "2 bits de historia global" y anota los estados con el par NT/T, que es la notación del (1,1). Lo correcto es que los 2 bits de historia son el GHR (<code>m=2</code>) y que cada uno de los 4 predictores es un contador saturado de 2 bits (<code>n=2</code>).</div>
+          <p>Un detalle: en el caso 2 cada salto, mirado solo, también alterna. Por eso un predictor <em>local</em> de dos niveles con <code>m=1</code> también lo resuelve (el simulador de la sección 2 lo aprende). Lo que este ejemplo muestra es la falla del predictor de 1 bit <em>sin</em> historia.</p>
+          <p class="src">Fuente: apuntes, secciones 3.8.5 (p. 138–140), 3.9 (p. 140–141) y 3.10 (p. 141–142).</p>
+        </div>
+      </details>
+
       <div class="panel">
-        <h3>Simulador — dos saltos correlacionados (b1, b2)</h3>
-        <p style="font-size:0.85rem; color:var(--muted); margin-bottom:10px;">Este es el ejemplo clásico del apunte: <code>b1</code> y <code>b2</code> se ejecutan intercalados y sus resultados están correlacionados (cuando uno se toma, el otro también). Elegí <code>m</code> y avanzá salto por salto — vas a ver que el GHR compartido aprende la correlación aunque los saltos sean instrucciones distintas.</p>
+        <h3>Simulador — dos saltos (b1, b2) con historia global</h3>
+        <p style="font-size:0.85rem; color:var(--muted); margin-bottom:10px;"><code>b1</code> y <code>b2</code> se ejecutan intercalados. Cada uno tiene su tabla de <code>2^m</code> contadores, y el GHR compartido elige cuál de esos contadores usa. Con <code>m=1</code> y <code>n=1</code> es el predictor (1,1) del apunte.</p>
 
         <div class="controls">
           <label class="field">m — bits de historia global
@@ -643,11 +778,18 @@
               <option value="2">2</option>
             </select>
           </label>
+          <label class="field">n — bits del contador
+            <select id="globalN" onchange="globalReset()">
+              <option value="1" selected>1 (simple)</option>
+              <option value="2">2 (saturado)</option>
+            </select>
+          </label>
         </div>
 
         <div class="preset-list">
-          <button class="btn ghost" onclick="globalLoadPreset('corr')">Cargar: correlación perfecta (b1=b2 siempre)</button>
-          <button class="btn ghost" onclick="globalLoadPreset('anti')">Cargar: anti-correlación (b1 ≠ b2 siempre)</button>
+          <button class="btn ghost" onclick="globalLoadPreset('d2020')">Cargar: apunte, caso 2 (d = 2, 0, 2, 0, …)</button>
+          <button class="btn ghost" onclick="globalLoadPreset('copy')">Cargar: b2 repite a b1 (b1 irregular)</button>
+          <button class="btn ghost" onclick="globalLoadPreset('anti')">Cargar: b2 hace lo contrario de b1 (b1 irregular)</button>
           <button class="btn ghost reset" onclick="globalReset()">Reiniciar</button>
         </div>
 
@@ -667,9 +809,11 @@
           <div class="stat"><div class="n" id="globalHits">0</div><div class="l">Aciertos</div></div>
           <div class="stat"><div class="n" id="globalMiss">0</div><div class="l">Fallos</div></div>
           <div class="stat"><div class="n" id="globalAcc">–</div><div class="l">Precisión</div></div>
+          <div class="stat"><div class="n" id="globalB1">–</div><div class="l">Aciertos de b1</div></div>
+          <div class="stat"><div class="n" id="globalB2">–</div><div class="l">Aciertos de b2</div></div>
         </div>
 
-        <h4 style="margin:18px 0 6px; color:var(--muted);">Tabla global de contadores (compartida)</h4>
+        <h4 style="margin:18px 0 6px; color:var(--muted);">Contadores de b1 y b2 (se resalta el que va a usar el próximo salto)</h4>
         <div class="table-grid" id="globalTable"></div>
 
         <h4 style="margin:18px 0 6px; color:var(--muted);">Traza paso a paso</h4>
@@ -679,7 +823,13 @@
         </table></div>
       </div>
 
-      <div class="note info">Fijate que la tabla no sabe si el contador que acaba de actualizar pertenece a <code>b1</code> o a <code>b2</code>: solo le importa el patrón reciente. Por eso el predictor global generaliza correlaciones entre saltos distintos — algo que un predictor puramente local, al mantener registros separados por dirección, no puede ver.</div>
+      <div class="note info">Qué mirar en los presets, con <code>m=1</code> y <code>n=1</code>:
+        <ul>
+          <li><b>Apunte, caso 2</b>: 14/16, como en el apunte (falla solo la primera iteración).</li>
+          <li><b>b2 repite a b1</b>: 22/32. <code>b1</code> sigue un patrón irregular y acierta apenas 7/16, pero <code>b2</code> acierta 15/16: el GHR le dice qué acaba de hacer <code>b1</code>.</li>
+          <li><b>b2 hace lo contrario de b1</b>: también 22/32, con <code>b2</code> en 15/16. Una correlación inversa sirve igual: lo que se aprende es la relación, no que "los dos se toman".</li>
+        </ul>
+        Con <code>m=2</code> y <code>n=2</code> los mismos presets dan 12/16, 18/32 (<code>b2</code> 12/16) y 18/32 (<code>b2</code> 12/16): en trazas tan cortas, más contadores y más histéresis significan más tiempo de entrenamiento.</div>
     </section>
 
     <!-- ============ 4 ============ -->
@@ -690,9 +840,10 @@
       <div class="panel">
         <p>Ningún esquema gana siempre. Elegí un escenario y compará cuántos aciertos logra cada predictor sobre la <b>misma secuencia exacta</b> de resultados.</p>
         <div class="preset-list">
-          <button class="btn ghost" onclick="cmpLoad('loops')">Bucles independientes repetidos</button>
-          <button class="btn ghost" onclick="cmpLoad('altsingle')">Un solo salto alternando (peor caso local de 1 bit)</button>
-          <button class="btn ghost" onclick="cmpLoad('corrpair')">Par de saltos correlacionados (mejor caso global)</button>
+          <button class="btn ghost" onclick="cmpLoad('loops')">Dos bucles independientes (10 y 6 iteraciones)</button>
+          <button class="btn ghost" onclick="cmpLoad('altsingle')">Un solo salto alternando</button>
+          <button class="btn ghost" onclick="cmpLoad('corrpair')">b2 repite a b1, b1 irregular (gana el global)</button>
+          <button class="btn ghost" onclick="cmpLoad('ownpat')">Salto con patrón propio y vecino irregular (gana el local)</button>
         </div>
 
         <div class="compare-grid">
@@ -706,7 +857,7 @@
           </div>
           <div class="compare-col">
             <h4 style="color:var(--nottaken)">Predictor GLOBAL (m=2, n=2)</h4>
-            <div class="tagline">Un único GHR compartido entre saltos</div>
+            <div class="tagline">Un único GHR compartido elige el contador de cada salto</div>
             <div class="stat-row">
               <div class="stat"><div class="n" id="cmpGlobalHits">–</div><div class="l">Aciertos</div></div>
               <div class="stat"><div class="n" id="cmpGlobalAcc">–</div><div class="l">Precisión</div></div>
@@ -736,8 +887,23 @@
           <li><code>10</code> ⇒ P2 débilmente preferido</li>
           <li><code>11</code> ⇒ P2 fuertemente preferido</li>
         </ul>
-        <p>El bit más significativo decide cuál predicción se usa (0 → P1 local, 1 → P2 global). El contador solo se mueve cuando P1 y P2 <b>discreparon</b>: si el que acertó fue P2, el contador sube; si fue P1, baja. Si ambos acertaron o ambos fallaron, no cambia nada — no hay evidencia de cuál es mejor.</p>
+        <p>El bit más significativo decide cuál predicción se usa (0 → P1, 1 → P2). El contador solo se mueve cuando P1 y P2 <b>discreparon</b>: si el que acertó fue P2, el contador sube; si fue P1, baja. Si ambos acertaron o ambos fallaron, no cambia nada — no hay evidencia de cuál es mejor.</p>
+        <div class="note">Dos aclaraciones sobre el apunte (p. 143). Primero, en el apunte P1 y P2 son dos predictores cualesquiera; que P1 sea el local y P2 el global es una convención de esta guía, la que usa el simulador. Segundo, el apunte rotula los estados como "P1 fuertemente <em>tomado</em>", "P2 débilmente <em>tomado</em>", etc. Es una errata: el juez no predice si el salto se toma, sino a cuál de los dos predictores conviene creerle, por eso acá dice "preferido".</div>
       </div>
+
+      <details class="card">
+        <summary>Ejemplo real: el predictor de torneo del Alpha 21264</summary>
+        <div class="body">
+          <p>El apunte da como ejemplo un predictor competitivo (<em>tournament predictor</em>) que combina:</p>
+          <ul>
+            <li>un <strong>predictor local</strong> que mira las últimas <strong>10</strong> ejecuciones del mismo salto;</li>
+            <li>un <strong>predictor global</strong> que mira los últimos <strong>12</strong> saltos ejecutados;</li>
+            <li>un <strong>juez</strong> que elige cuál de las dos predicciones usar.</li>
+          </ul>
+          <p>Al resolverse cada salto se actualizan los dos predictores según hayan acertado o no. El juez se actualiza solo si los dos predijeron distinto, para favorecer al que acertó. Este mecanismo es lo que sostiene la ejecución especulativa del Alpha 21264, con hasta 80 instrucciones en la ventana, y logra tasas de acierto de 90–100 % en benchmarks.</p>
+          <p class="src">Fuente: apuntes, sección 3.10 (p. 144).</p>
+        </div>
+      </details>
 
       <div class="panel">
         <h3>Probalo vos</h3>
@@ -761,7 +927,7 @@
     <!-- ============ QUIZ ============ -->
     <section class="block" id="s-quiz">
       <h2><span class="num">✓</span> Quiz de repaso</h2>
-      <p class="sub">Seis preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
+      <p class="sub">Ocho preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
       <div id="quizWrap"></div>
       <p class="quiz-score" id="quizScore"></p>
     </section>
@@ -971,16 +1137,20 @@ function localLoadPreset(name){
 localReset();
 
 /* ================= 3: GLOBAL PREDICTOR ================= */
-let globalHist=0, globalTable=[], globalHits=0, globalMiss=0, globalStepN=0, globalM=1, globalNextBranch='b1';
+// GHR de m bits compartido; cada salto (b1, b2) tiene su propia tabla de 2^m contadores de n bits.
+let globalHist=0, globalTable={}, globalHits=0, globalMiss=0, globalStepN=0, globalM=1, globalN=1, globalNextBranch='b1', globalPer={b1:[0,0], b2:[0,0]};
 
 function globalReset(){
   globalM = parseInt(document.getElementById('globalM').value);
+  globalN = parseInt(document.getElementById('globalN').value);
   globalHist = 0;
-  globalTable = new Array(1<<globalM).fill(0);
+  globalTable = { b1: new Array(1<<globalM).fill(0), b2: new Array(1<<globalM).fill(0) };
+  globalPer = {b1:[0,0], b2:[0,0]};
   globalHits=0; globalMiss=0; globalStepN=0; globalNextBranch='b1';
   document.querySelector('#globalTrace tbody').innerHTML = '';
   globalRender();
 }
+function globalPred(state){ return globalN===1 ? state : (state>=2?1:0); }
 function globalRender(){
   const regDiv = document.getElementById('globalReg');
   regDiv.innerHTML = '';
@@ -995,26 +1165,34 @@ function globalRender(){
   document.getElementById('globalMiss').textContent = globalMiss;
   const total = globalHits+globalMiss;
   document.getElementById('globalAcc').textContent = total? Math.round(100*globalHits/total)+'%':'–';
+  ['b1','b2'].forEach(id=>{
+    const [h,t] = globalPer[id];
+    document.getElementById(id==='b1'?'globalB1':'globalB2').textContent = t ? h+'/'+t : '–';
+  });
 
   const tbl = document.getElementById('globalTable');
   tbl.innerHTML='';
-  globalTable.forEach((state,idx)=>{
-    const row = document.createElement('div');
-    row.className = 'entry-row' + (idx===globalHist?' active':'');
-    const predTxt = predOf2bit(state);
-    row.innerHTML = `<span class="entry-idx">${bitsStr(idx,globalM)}</span><span class="entry-state" style="color:${predTxt==='T'?'var(--taken)':'var(--nottaken)'}">${STATE_CODE[state]}</span><span class="entry-pred">predice <b>${predTxt}</b> · ${STATE_LABEL[state]}</span>`;
-    tbl.appendChild(row);
+  ['b1','b2'].forEach(id=>{
+    globalTable[id].forEach((state,idx)=>{
+      const row = document.createElement('div');
+      row.className = 'entry-row' + (id===globalNextBranch && idx===globalHist?' active':'');
+      const predTxt = globalPred(state) ? 'T' : 'NT';
+      const stateTxt = globalN===1 ? state : STATE_CODE[state];
+      row.innerHTML = `<span class="entry-idx">${id} · ${bitsStr(idx,globalM)}</span><span class="entry-state" style="color:${predTxt==='T'?'var(--taken)':'var(--nottaken)'}">${stateTxt}</span><span class="entry-pred">predice <b>${predTxt}</b>${globalN===2?` · ${STATE_LABEL[state]}`:''}</span>`;
+      tbl.appendChild(row);
+    });
   });
 }
 function globalStep(actual){
   const branch = globalNextBranch;
-  const state = globalTable[globalHist];
-  const predBit = state>=2?1:0;
+  const state = globalTable[branch][globalHist];
+  const predBit = globalPred(state);
   const hit = predBit===actual;
   if(hit) globalHits++; else globalMiss++;
+  globalPer[branch][1]++; if(hit) globalPer[branch][0]++;
   const beforeHist = bitsStr(globalHist, globalM);
 
-  globalTable[globalHist] = update2bit(state, actual);
+  globalTable[branch][globalHist] = globalN===1 ? update1bit(state, actual) : update2bit(state, actual);
   globalHist = ((globalHist<<1)|actual) & ((1<<globalM)-1);
   globalStepN++;
   globalNextBranch = branch==='b1' ? 'b2' : 'b1';
@@ -1026,9 +1204,12 @@ function globalStep(actual){
   tbody.appendChild(tr);
   globalRender();
 }
+// Secuencias intercaladas b1, b2, b1, b2, …
+const IRREG = [1,0,0,1,1,1,0,1,0,0,0,1,1,0,1,0];
 const GLOBAL_PRESETS = {
-  corr:  [1,1, 0,0, 1,1, 0,0, 1,1, 0,0, 0,0, 1,1],
-  anti:  [1,0, 0,1, 1,0, 0,1, 1,0, 0,1, 1,0, 0,1]
+  d2020: [1,1, 0,0, 1,1, 0,0, 1,1, 0,0, 1,1, 0,0],
+  copy:  IRREG.flatMap(v=>[v, v]),
+  anti:  IRREG.flatMap(v=>[v, 1-v])
 };
 function globalLoadPreset(name){
   globalReset();
@@ -1058,44 +1239,54 @@ function runLocalSim(streams, m, n){
   }
   return {hits, total};
 }
-function runGlobalSim(interleaved, m){
-  let hist=0; const table = new Array(1<<m).fill(0);
+function runGlobalSim(pairs, m){
+  // pairs: [[id, bit], …] en orden de ejecución; GHR compartido, 2^m contadores de 2 bits por salto
+  let hist=0; const table = {};
   let hits=0, total=0;
-  interleaved.forEach(actual=>{
-    const state = table[hist];
+  pairs.forEach(([id, actual])=>{
+    if(!(id in table)) table[id] = new Array(1<<m).fill(0);
+    const state = table[id][hist];
     const predBit = state>=2?1:0;
     total++;
     if(predBit===actual) hits++;
-    table[hist] = update2bit(state, actual);
+    table[id][hist] = update2bit(state, actual);
     hist = ((hist<<1)|actual) & ((1<<m)-1);
   });
   return {hits, total};
 }
-function cmpLoad(scenario){
-  let localRes, globalRes, explain;
-  if(scenario==='loops'){
-    const loopA = [1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0];
-    const loopB = [1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0];
-    localRes = runLocalSim([{id:'b1',seq:loopA},{id:'b2',seq:loopB}], 2, 2);
-    const interleaved = [];
-    for(let i=0;i<loopA.length;i++){ interleaved.push(loopA[i]); interleaved.push(loopB[i]); }
-    globalRes = runGlobalSim(interleaved, 2);
-    explain = 'Con bucles independientes que no se correlacionan entre sí, ambos predictores aprenden igual de bien: cada uno converge al patrón dominante (Tomado) y solo falla en las transiciones de entrada/salida del bucle.';
-  } else if(scenario==='altsingle'){
-    const alt = [];
-    for(let i=0;i<20;i++) alt.push(i%2);
-    localRes = runLocalSim([{id:'b1', seq:alt}], 2, 2);
-    globalRes = runGlobalSim(alt, 2);
-    explain = 'Al ser un único salto, local y global terminan siendo equivalentes (ambos usan, en la práctica, la historia reciente del mismo salto). Con m=2 bits, el patrón alternado de período 2 se aprende perfectamente después de un breve arranque — muy distinto a lo que pasaba con el contador de 1 bit del principio, que fallaba siempre.';
-  } else if(scenario==='corrpair'){
-    const b1 = [1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0];
-    const b2 = [1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0]; // igual a b1 -> correlación perfecta
-    localRes = runLocalSim([{id:'b1',seq:b1},{id:'b2',seq:b2}], 2, 2);
-    const interleaved = [];
-    for(let i=0;i<b1.length;i++){ interleaved.push(b1[i]); interleaved.push(b2[i]); }
-    globalRes = runGlobalSim(interleaved, 2);
-    explain = 'Acá está el punto: b1 y b2 son dos instrucciones de salto distintas, cada una con su propio patrón interno poco predecible en aislamiento, pero perfectamente correlacionadas entre sí. El predictor global, que ve la secuencia intercalada real, aprovecha esa correlación; el local, al separar la historia por dirección, no puede verla y tarda más (o no logra) converger igual de bien.';
+function cmpInterleave(a, b){
+  const out = [];
+  for(let i=0;i<Math.max(a.length,b.length);i++){
+    if(i<a.length) out.push(['b1', a[i]]);
+    if(i<b.length) out.push(['b2', b[i]]);
   }
+  return out;
+}
+function cmpLoops(iters, reps){
+  const o = [];
+  for(let k=0;k<reps;k++){ for(let i=0;i<iters-1;i++) o.push(1); o.push(0); }
+  return o;
+}
+function cmpLoad(scenario){
+  let localRes, globalRes, explain, b1, b2;
+  if(scenario==='loops'){
+    b1 = cmpLoops(10, 3); b2 = cmpLoops(6, 5);
+    explain = 'Dos bucles de distinta longitud (10 y 6 iteraciones) intercalados: el resultado de uno no dice nada del otro. Los dos predictores quedan prácticamente empatados (38 contra 39 aciertos de 60): los dos aprenden el Tomado dominante y fallan en las salidas y en el arranque. Ojo: si los dos bucles tuvieran la misma longitud, saldrían a la vez y estarían correlacionados, y ahí el global ganaría.';
+  } else if(scenario==='altsingle'){
+    b1 = []; for(let i=0;i<20;i++) b1.push(i%2); b2 = [];
+    explain = 'Con un único salto, el GHR solo contiene la historia de ese salto, así que local y global son el mismo predictor y dan lo mismo (17/20). Con m=2 el patrón alternado se aprende tras un breve arranque, muy distinto a lo que pasaba con el predictor de 1 bit sin historia, que fallaba siempre.';
+  } else if(scenario==='corrpair'){
+    b1 = [1,0,0,1,1,1,0,1,0,0,0,1,1,0,1,0, 1,0,0,1,1,1,0,1,0,0,0,1,1,0,1,0];
+    b2 = b1.slice(); // b2 repite lo que acaba de hacer b1
+    explain = 'b1 sigue un patrón irregular que ninguno de los dos predice bien (14/32 aciertos en ambos). Pero b2 siempre repite lo que acaba de hacer b1: el global lo ve en el GHR y acierta b2 en 28 de 32, mientras que el local, que solo mira la historia propia de b2, se queda en 14/32. Total: 42/64 contra 28/64.';
+  } else if(scenario==='ownpat'){
+    b1 = []; for(let i=0;i<10;i++) b1.push(1,1,0); // T, T, N repetido
+    b2 = [1,0,0,1,1,1,0,1,0,0,0,1,1,0,1,0,1,1,0,0,1,0,1,1,1,0,0,0,1,0];
+    explain = 'b1 repite su propio patrón T, T, N y b2 es irregular y no tiene relación con b1. El local aprende el patrón de b1 con su historia propia (25/30 en b1, 38/60 en total). En el global, el GHR mezcla a b1 con el ruido de b2 y no lo aprende (12/30 en b1, 23/60 en total).';
+  }
+  const pairs = cmpInterleave(b1, b2);
+  localRes = runLocalSim([{id:'b1',seq:b1},{id:'b2',seq:b2}], 2, 2);
+  globalRes = runGlobalSim(pairs, 2);
   document.getElementById('cmpLocalHits').textContent = localRes.hits + '/' + localRes.total;
   document.getElementById('cmpLocalAcc').textContent = Math.round(100*localRes.hits/localRes.total)+'%';
   document.getElementById('cmpGlobalHits').textContent = globalRes.hits + '/' + globalRes.total;
@@ -1205,10 +1396,12 @@ judgeRender();
 })();
 
 stdQuiz([
-  { q: '¿Por qué un pipeline necesita predecir los saltos condicionales?', opts: ['Porque la dirección destino nunca se puede calcular', 'Porque el resultado del salto recién se conoce en EX y esperar costaría ciclos en cada salto', 'Porque los saltos se ejecutan fuera de orden', 'Porque la caché de instrucciones no guarda saltos'], correct: 1, exp: 'En IF todavía no se sabe si el salto se toma; se resuelve varias etapas después. Como hay un salto cada 5–6 instrucciones, esperar sería carísimo.' },
-  { q: '¿Qué ventaja tiene el contador saturado de 2 bits sobre un predictor de 1 bit?', opts: ['Predice también la dirección destino', 'Necesita dos resultados seguidos distintos para cambiar de predicción, así una excepción aislada no la arruina', 'Ocupa menos memoria', 'Nunca falla en un bucle'], correct: 1, exp: 'Es la histéresis: el de 1 bit falla dos veces por bucle (al entrar y al salir); el de 2 bits tolera la salida aislada del bucle.' },
+  { q: '¿Por qué un pipeline necesita predecir los saltos condicionales?', opts: ['Porque la dirección destino nunca se puede calcular', 'Porque en IF todavía no se sabe si el salto se toma ni a dónde va, y esperar costaría ciclos en cada salto', 'Porque los saltos se ejecutan fuera de orden', 'Porque la caché de instrucciones no guarda saltos'], correct: 1, exp: 'En el DLX base la condición y el destino se calculan en EX y el PC se carga en MEM: esperar cuesta 3 ciclos por salto (1 si se resuelve en ID). Con un salto cada 7–8 instrucciones, según el apunte, eso es carísimo.' },
+  { q: '¿Qué hace la predicción estática "por dirección"?', opts: ['Predice tomados los saltos hacia atrás y no tomados los saltos hacia adelante', 'Predice según la dirección destino guardada en la BTAC', 'Predice según los bits bajos de la dirección del salto', 'Predice siempre tomado'], correct: 0, exp: 'Los saltos hacia atrás suelen cerrar bucles y se repiten; los hacia adelante suelen ser if-then-else. Funciona bien con muchos bucles y mal con mucho if-then-else.' },
+  { q: '¿Qué ventaja tiene el contador saturado de 2 bits sobre un predictor de 1 bit?', opts: ['Predice también la dirección destino', 'Desde un estado fuerte necesita dos resultados seguidos distintos para cambiar de predicción, así una excepción aislada no la arruina', 'Ocupa menos memoria', 'Nunca falla en un bucle'], correct: 1, exp: 'Es la histéresis: en bucles anidados el de 1 bit falla dos veces por cada vuelta del interno (al salir y al reentrar); el de 2 bits, que quedó en un estado fuerte, tolera la salida aislada y falla la mitad.' },
   { q: 'En un predictor local con m bits de historia, ¿qué indexa la tabla de contadores?', opts: ['Los últimos m resultados de todos los saltos del programa', 'Los últimos m resultados de ese mismo salto', 'Los m bits bajos de la dirección destino', 'El número de iteración del bucle'], correct: 1, exp: 'Cada instrucción de salto tiene su propio registro de historia; ese patrón elige uno de los 2^m contadores.' },
-  { q: '¿Qué captura un predictor global que uno local no puede ver?', opts: ['Los bucles largos', 'La correlación entre saltos distintos, porque el GHR es compartido por todos', 'La dirección destino del salto', 'Los fallos de la caché'], correct: 1, exp: 'El GHR se actualiza con cada salto que se resuelve, sin importar cuál: la tabla se indexa por lo que pasó últimamente, no por quién lo hizo.' },
+  { q: '¿Qué captura un predictor global que uno local no puede ver?', opts: ['Los bucles largos', 'La correlación entre saltos distintos, porque el GHR es compartido por todos', 'La dirección destino del salto', 'Los fallos de la caché'], correct: 1, exp: 'El GHR se actualiza con cada salto que se resuelve, sin importar cuál. Cada salto elige su contador según lo que hicieron los últimos saltos del programa, así b2 puede aprender qué hace después de que b1 se tomó.' },
+  { q: 'En un predictor de dos niveles (2,2) con 4K entradas, ¿cuántos bits de predicción hacen falta?', opts: ['8 Kbits', '16 Kbits', '32 Kbits', '64 Kbits'], correct: 2, exp: 'Cada entrada tiene 2^m = 4 contadores de n = 2 bits: 4 × 2 × 4K = 32 Kbits. Los 2 bits de historia global eligen cuál de los 4 contadores se usa.' },
   { q: 'En el predictor híbrido, ¿cuándo se actualiza el contador del juez?', opts: ['En cada salto', 'Solo cuando P1 y P2 discreparon: sube si acertó P2 y baja si acertó P1', 'Solo cuando ambos fallan', 'Cuando cambia de proceso'], correct: 1, exp: 'Si ambos aciertan o ambos fallan no hay evidencia de cuál es mejor, así que el juez no se mueve.' },
   { q: 'Según las mediciones de SPEC citadas, ¿en qué tipo de código el híbrido elige más seguido el predictor global?', opts: ['En código de punto flotante', 'En código con enteros (casi un 40% de las veces)', 'En ambos por igual', 'En ninguno: siempre elige el local'], correct: 1, exp: 'El código entero tiene muchas ramas de control entrelazadas que se benefician de la correlación; el numérico, con bucles aislados, se predice mejor con historia local (menos del 15%).' },
 ]);
