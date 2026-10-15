@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rendimiento y consumo | Computer Architecture Lab</title>
+<meta
+  name="description"
+  content="Unidad 1: tendencias tecnológicas, tiempo de CPU y CPI, MIPS, benchmarks, ley de Amdahl, potencia y energía, técnicas power aware y costo del circuito integrado, con calculadoras interactivas."
+/>
+<script>
+  // Aplica el tema guardado/del sistema antes del render para evitar parpadeo.
+  (function () {
+    try {
+      var t = localStorage.getItem('tw-theme');
+      if (!t) {
+        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  })();
+</script>
+<style>
+  /* ==== STD:TOKENS v1 ==== (no editar a mano: se sincroniza desde el template de la skill guia-arquitectura) */
+  :root{
+    --bg: #f4f6fb;
+    --bg-grad: radial-gradient(1200px 520px at 50% -160px, #e9eefb 0%, var(--bg) 70%);
+    --bg-panel: #ffffff;
+    --bg-panel-2: #eef2f7;
+    --line: #d8dee6;
+    --line-soft: #e4e9f0;
+    --text: #1d2433;
+    --muted: #4a5568;
+    --accent: #1f6feb;
+    --accent-ink: #ffffff;
+    --focus: #0a4bce;
+    --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
+    --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+    --highlight: #b45309;
+    --ok: #0f766e;
+    --ok-soft: #e6f4f2;
+    --err: #c0392b;
+    --err-soft: #fbeae7;
+    --warn: #b45309;
+    --warn-soft: #fdf2e3;
+  }
+  html[data-theme='dark']{
+    --bg: #0d1524;
+    --bg-grad: radial-gradient(1200px 560px at 50% -160px, #172236 0%, var(--bg) 68%);
+    --bg-panel: #131d2e;
+    --bg-panel-2: #1a2942;
+    --line: #2a3a52;
+    --line-soft: #223047;
+    --text: #e7edf3;
+    --muted: #9fb0c8;
+    --accent: #4d9fff;
+    --accent-ink: #06121f;
+    --focus: #7bb8ff;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.35);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+    --highlight: #e2a640;
+    --ok: #4fc9b8;
+    --ok-soft: #163431;
+    --err: #e2664f;
+    --err-soft: #3a2019;
+    --warn: #e2a640;
+    --warn-soft: #3a2c17;
+  }
+  /* ==== /STD:TOKENS ==== */
+
+  /* ==== STD:SHELL v1 ==== (header, nav lateral, secciones, footer) */
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; background:var(--bg); }
+  body{
+    margin:0;
+    background:var(--bg);
+    background:var(--bg-grad);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height:1.55;
+    transition:background-color .2s ease, color .2s ease;
+  }
+  code, .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a{ color:var(--accent); }
+  :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+
+  .skip-link{
+    position:absolute; left:-999px; top:0;
+    background:var(--accent); color:var(--accent-ink); padding:8px 12px; z-index:20;
+    border-radius:0 0 6px 0;
+  }
+  .skip-link:focus{ left:8px; top:8px; }
+
+  header.site{
+    padding:20px 24px;
+    background:var(--bg-panel);
+    border-bottom:1px solid var(--line);
+    box-shadow:var(--shadow-sm);
+  }
+  .site-top{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    margin-bottom:6px;
+  }
+  .backlink{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--accent); text-decoration:none; font-size:.9rem; font-weight:600;
+  }
+  .backlink:hover{ text-decoration:underline; }
+  header.site .kicker{ color:var(--muted); font-size:.9rem; margin:0; }
+  header.site h1{ margin:10px 0 0; font-size:clamp(24px,3vw,34px); letter-spacing:-.01em; max-width:24ch; }
+  header.site .lede{ color:var(--muted); font-size:1rem; max-width:72ch; margin:10px 0 22px; }
+  header.site .lede b{ color:var(--text); }
+  header.site .hero{ max-width:760px; overflow-x:auto; }
+
+  .theme-toggle{
+    flex:0 0 auto;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border:1px solid var(--line); background:var(--bg-panel-2); color:var(--text);
+    border-radius:999px; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer;
+    transition:border-color .15s ease, background-color .2s ease;
+  }
+  .theme-toggle:hover{ border-color:var(--muted); }
+  .theme-toggle .icon{ font-size:1rem; line-height:1; }
+  .theme-toggle .theme-label-dark{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-light{ display:none; }
+  html[data-theme='dark'] .theme-toggle .theme-label-dark{ display:inline; }
+
+  .shell{ display:grid; grid-template-columns:260px minmax(0,1fr); min-height:100vh; }
+  nav.side{
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    background:var(--bg-panel);
+    border-right:1px solid var(--line);
+    padding:22px 16px 40px;
+  }
+  nav.side .brand{ font-weight:700; font-size:15px; letter-spacing:.2px; margin-bottom:2px; }
+  nav.side .brand small{ display:block; color:var(--muted); font-weight:400; font-size:12px; margin-top:3px; }
+  nav.side ol{ list-style:none; margin:22px 0 0; padding:0; }
+  nav.side .grp{ margin-bottom:18px; }
+  nav.side .grp-title{
+    color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    margin:0 0 6px 2px; font-weight:600;
+  }
+  nav.side a{
+    display:block; color:var(--text); text-decoration:none; font-size:13.5px;
+    padding:5px 8px; border-radius:6px; opacity:.82;
+  }
+  nav.side a:hover{ background:var(--bg-panel-2); opacity:1; }
+  nav.side a.active{ background:var(--bg-panel-2); color:var(--accent); opacity:1; }
+
+  main{ padding:0 0 100px; min-width:0; }
+  section.block{
+    padding:40px 48px;
+    border-bottom:1px solid var(--line);
+    max-width:1080px;
+    scroll-margin-top:12px;
+  }
+  section.block h2{ font-size:22px; margin:0 0 6px; display:flex; align-items:baseline; gap:10px; }
+  section.block h2 .num{ color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; flex:0 0 auto; }
+  section.block .sub{ color:var(--muted); font-size:14px; margin:0 0 22px; max-width:66ch; }
+  section.block h3{ font-size:17px; margin:30px 0 6px; scroll-margin-top:12px; }
+  section.block p{ max-width:72ch; }
+
+  footer.pagefoot{ padding:30px 48px; color:var(--muted); font-size:12.5px; }
+
+  @media (max-width:860px){
+    .shell{ grid-template-columns:minmax(0,1fr); }
+    nav.side{ position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line); }
+    section.block{ padding:28px 20px; }
+    footer.pagefoot{ padding:24px 20px; }
+  }
+  @media (max-width:640px){
+    header.site{ padding:16px; }
+    header.site .site-top{ flex-direction:column; }
+  }
+  /* ==== /STD:SHELL ==== */
+
+  /* ==== STD:COMPONENTS v1 ==== (piezas reutilizables dentro de las secciones) */
+  /* Tarjeta desplegable de teoría */
+  details.card{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    margin-bottom:10px; overflow:hidden;
+  }
+  details.card summary{
+    cursor:pointer; padding:14px 18px; font-weight:600; font-size:14.5px;
+    display:flex; align-items:center; gap:10px; list-style:none;
+  }
+  details.card summary::-webkit-details-marker{ display:none; }
+  details.card summary::before{
+    content:"+"; color:var(--highlight); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; width:14px;
+  }
+  details.card[open] summary::before{ content:"–"; }
+  details.card .body{ padding:0 18px 18px; font-size:14.5px; }
+  details.card .body p{ margin:0 0 12px; }
+  details.card .body ul{ margin:0 0 12px; padding-left:20px; }
+  details.card .body li{ margin-bottom:6px; }
+  details.card .body strong{ color:var(--highlight); }
+
+  /* Caja de contenido fija (texto + diagrama, sin desplegar) */
+  .panel{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px 22px; margin:14px 0; box-shadow:var(--shadow-sm);
+  }
+  .panel > h3:first-child{ margin-top:0; }
+
+  /* Tabla comparativa */
+  .table-scroll{ overflow-x:auto; }
+  table.cmp{ width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:13.5px; }
+  table.cmp th, table.cmp td{ border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top; }
+  table.cmp th{ background:var(--bg-panel-2); color:var(--muted); font-weight:600; }
+  table.cmp td.hi{ color:var(--ok); }
+
+  /* Fórmula / regla destacada */
+  .formula{
+    background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; margin:10px 0 14px;
+  }
+
+  /* Nota al margen (.info para una aclaración, sin variante para un "ojo con esto") */
+  .note{
+    border-left:3px solid var(--warn); border-radius:0 8px 8px 0;
+    padding:12px 16px; background:var(--warn-soft);
+    font-size:13.5px; margin:14px 0; color:var(--text); max-width:80ch;
+  }
+  .note.info{ border-left-color:var(--ok); background:var(--ok-soft); }
+
+  /* Etiquetas */
+  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px; }
+  .pill{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:12.5px; color:var(--muted); }
+  .pill b{ color:var(--text); }
+
+  /* Panel de simulador / widget interactivo */
+  .sim{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:24px; margin:10px 0 16px; }
+  .sim .cfg{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px; }
+  .sim .cfg label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+  .sim select, .sim input[type=text], .sim input[type=number]{
+    width:100%; background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
+    padding:9px 10px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px;
+  }
+  .sim .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+  .sim .msg{ padding:11px 14px; border-radius:8px; font-size:13.5px; margin:12px 0; background:var(--bg-panel-2); border:1px solid var(--line); }
+  .sim .msg.ok{ background:var(--ok-soft); border-color:var(--ok); color:var(--ok); }
+  .sim .msg.err{ background:var(--err-soft); border-color:var(--err); color:var(--err); }
+  button.btn{
+    background:var(--accent); color:var(--accent-ink); border:1px solid var(--accent); font-weight:600; font-size:13.5px;
+    padding:9px 16px; border-radius:8px; cursor:pointer; font-family:inherit;
+  }
+  button.btn:hover{ filter:brightness(1.08); }
+  button.btn.ghost{ background:transparent; color:var(--text); border-color:var(--line); }
+  button.btn.ghost:hover{ background:var(--bg-panel-2); filter:none; }
+  button.btn.ghost.sel{ border-color:var(--accent); color:var(--accent); background:var(--bg-panel-2); }
+  button.btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  /* Contadores */
+  .stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 18px; min-width:110px; }
+  .stat .n{ font-size:22px; font-weight:700; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .stat .l{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stat.ok .n{ color:var(--ok); }
+  .stat.err .n{ color:var(--err); }
+
+  /* Quiz de repaso (lo arma stdQuiz() a partir de un array) */
+  .quiz-item{ background:var(--bg-panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:14px; }
+  .quiz-item p.q{ font-weight:600; margin:0 0 12px; font-size:14.5px; }
+  .quiz-item .opts{ display:flex; flex-direction:column; gap:8px; }
+  .quiz-item label{
+    display:flex; gap:10px; align-items:flex-start; background:var(--bg-panel-2); border:1px solid var(--line);
+    padding:9px 12px; border-radius:8px; cursor:pointer; font-size:13.5px;
+  }
+  .quiz-item label:hover{ border-color:var(--muted); }
+  .quiz-item label input{ margin-top:3px; }
+  .quiz-item .fb{ margin-top:10px; padding:10px 12px; border-radius:8px; font-size:13px; display:none; }
+  .quiz-item .fb.ok{ background:var(--ok-soft); border:1px solid var(--ok); color:var(--ok); display:block; }
+  .quiz-item .fb.bad{ background:var(--err-soft); border:1px solid var(--err); color:var(--err); display:block; }
+  .quiz-score{ font-size:14px; color:var(--muted); margin-top:6px; }
+
+  @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
+  /* ==== /STD:COMPONENTS ==== */
+
+  /* ==== PAGE:TOKENS ==== parte serial/paralela (Amdahl), curvas de los gráficos y barras de contribución */
+  :root{
+    --serial: #b4542b;
+    --serial-soft: #f8e6dd;
+    --parallel: #2f6fb3;
+    --parallel-soft: #e0ebf7;
+    --curve: #2f6fb3;
+    --curve-ref: #8791a5;
+    --grid: #e1e6ee;
+    --bar-ink: #ffffff;
+  }
+  html[data-theme='dark']{
+    --serial: #ec8a5e;
+    --serial-soft: #3a2219;
+    --parallel: #6fa8ea;
+    --parallel-soft: #182c45;
+    --curve: #6fa8ea;
+    --curve-ref: #7d889f;
+    --grid: #26364d;
+    --bar-ink: #0d1524;
+  }
+
+  /* ==== PAGE ==== CSS propio de esta guía (todo bajo .rend y la clase de cada widget) */
+  .rend .src{ font-size:13px; color:var(--muted); }
+  .rend .formula{ overflow-x:auto; white-space:normal; overflow-wrap:anywhere; }
+  .rend .formula .big{ font-size:15px; font-weight:600; }
+  .rend .two{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+  .rend .two .panel{ margin:0; }
+  .rend .sim .stat{ min-width:96px; }
+  .rend .sim .hint{ font-size:12.5px; color:var(--muted); margin:6px 0 0; }
+
+  /* Calculadora de CPI */
+  .cpi table.cmp input[type=number]{ min-width:70px; }
+  .cpi table.cmp td{ vertical-align:middle; }
+  .cpi .cpi-bar{ display:flex; height:26px; border-radius:6px; overflow:hidden; border:1px solid var(--line); margin:4px 0 6px; }
+  .cpi .cpi-bar span{ display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:600; color:var(--bar-ink); white-space:nowrap; overflow:hidden; }
+  .cpi .cpi-bar .t0{ background:var(--parallel); }
+  .cpi .cpi-bar .t1{ background:var(--serial); }
+  .cpi .cpi-bar .t2{ background:var(--ok); }
+  .cpi .cpi-bar .t3{ background:var(--highlight); }
+
+  /* Amdahl */
+  .amd .amd-range{ display:flex; align-items:center; gap:10px; }
+  .amd .amd-range input[type=range]{ flex:1; min-width:0; accent-color:var(--accent); }
+  .amd .amd-range output{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px; min-width:48px; text-align:right; }
+  .amd .amd-time{ display:flex; height:28px; border-radius:6px; overflow:hidden; border:1px solid var(--line); background:var(--bg-panel-2); margin:4px 0 4px; }
+  .amd .amd-time span{ display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:600; color:var(--bar-ink); white-space:nowrap; overflow:hidden; }
+  .amd .amd-time .s{ background:var(--serial); }
+  .amd .amd-time .p{ background:var(--parallel); }
+  .amd .amd-lbl{ font-size:12px; color:var(--muted); margin:10px 0 2px; }
+  .amd svg{ width:100%; height:auto; display:block; margin:8px 0 4px; }
+  .amd svg .grid{ stroke:var(--grid); stroke-width:1; }
+  .amd svg .axis{ stroke:var(--muted); stroke-width:1; }
+  .amd svg .tick{ fill:var(--muted); font-size:11px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .amd svg .curve{ fill:none; stroke:var(--curve); stroke-width:2.5; }
+  .amd svg .ideal{ fill:none; stroke:var(--curve-ref); stroke-width:1.5; stroke-dasharray:2 4; }
+  .amd svg .limit{ stroke:var(--serial); stroke-width:1.5; stroke-dasharray:6 4; }
+  .amd svg .dot{ fill:var(--curve); stroke:var(--bg-panel); stroke-width:2; }
+  .amd svg .lbl{ font-size:11.5px; }
+  .amd svg .lbl.l{ fill:var(--serial); }
+  .amd svg .lbl.i{ fill:var(--muted); }
+
+  /* Potencia */
+  .pot .pot-range{ display:flex; align-items:center; gap:10px; }
+  .pot .pot-range input[type=range]{ flex:1; min-width:0; accent-color:var(--accent); }
+  .pot .pot-range output{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13.5px; min-width:48px; text-align:right; }
+  .pot .pot-blocks{ display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 14px; }
+  .pot .pot-blk{ border:1px solid var(--line); background:var(--parallel-soft); border-radius:6px; padding:6px 10px; font-size:12px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  /* Costo */
+  .cost .cost-cmp{ font-size:13px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site">
+  <div class="site-top">
+    <a class="backlink" href="index.html">&larr; Inicio</a>
+    <button
+      id="theme-toggle"
+      class="theme-toggle"
+      type="button"
+      aria-pressed="false"
+      title="Cambiar entre modo claro y oscuro"
+    >
+      <span class="icon" aria-hidden="true">🌙</span>
+      <span class="theme-label-light">Modo oscuro</span>
+      <span class="theme-label-dark">Modo claro</span>
+    </button>
+  </div>
+  <p class="kicker">Arquitectura de Computadoras — Unidad 1: tendencias tecnológicas, costo, rendimiento y consumo</p>
+  <h1>Rendimiento, consumo y costo del procesador</h1>
+  <p class="lede">Cómo se mide si una máquina es más rápida que otra, por qué la frecuencia dejó de subir y qué límite pone la parte serial de un programa. Vas a poder calcular <b>CPI y tiempo de CPU</b> a partir de una mezcla de instrucciones, ver la <b>ley de Amdahl</b> en un gráfico y jugar con la <b>potencia</b> al escalar tensión y frecuencia.</p>
+</header>
+
+<div class="shell">
+
+  <nav class="side" id="sidenav" aria-label="Secciones de la guía">
+    <div class="brand">Rendimiento y consumo<small>Unidad 1 — tendencias, potencia, CPI y Amdahl</small></div>
+    <ol>
+      <li class="grp">
+        <p class="grp-title">Contexto tecnológico</p>
+        <a href="#s-arquitectura">1.1–1.3 Arquitectura e ISA</a>
+        <a href="#s-moore">1.4–1.6 Ley de Moore</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Potencia y energía</p>
+        <a href="#s-potencia">1.6.3–1.7.1 Energía y potencia</a>
+        <a href="#s-profundidad">1.7.2–1.7.4 Profundidad del pipeline</a>
+        <a href="#s-power-aware">1.7.5–1.7.7 Técnicas power aware</a>
+        <a href="#s-cables">1.7.8 Retardo de interconexión</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Medir el rendimiento</p>
+        <a href="#s-rendimiento">1.7.9 Latencia y throughput</a>
+        <a href="#s-cpi">1.7.10–1.8.2 Tiempo de CPU y CPI</a>
+        <a href="#s-benchmarks">1.8.3–1.8.5 Benchmarks y SPEC</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Paralelismo</p>
+        <a href="#s-amdahl">1.8.6 Ley de Amdahl</a>
+        <a href="#s-heterogeneos">1.8.7–1.8.8 Heterogéneos y Pollack</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Costo</p>
+        <a href="#s-costo">1.8.9 Costo del circuito integrado</a>
+      </li>
+      <li class="grp">
+        <p class="grp-title">Autoevaluación</p>
+        <a href="#s-quiz">Quiz de repaso</a>
+      </li>
+    </ol>
+  </nav>
+
+  <main id="main">
+
+    <!-- ============ 1.1–1.3 ARQUITECTURA ============ -->
+    <section class="block rend" id="s-arquitectura">
+      <h2><span class="num">1.1–1.3</span> Arquitectura, microarquitectura y niveles</h2>
+      <p class="sub">Qué ve el programador, qué decide el diseñador del procesador y en qué capas se estudia una computadora.</p>
+
+      <details class="card" open>
+        <summary>Arquitectura (ISA) y microarquitectura</summary>
+        <div class="body">
+          <p>La <strong>arquitectura</strong> es la máquina tal como la ve el programador: su estructura conceptual y su comportamiento funcional. Su parte central es la <strong>ISA</strong> (Instruction Set Architecture): tipos y tamaños de operandos, registros visibles, modelo de memoria, manejo de interrupciones y excepciones, y qué instrucciones hay y qué hace cada una.</p>
+          <p>La <strong>microarquitectura</strong> es la organización de un procesador concreto que implementa esa ISA: segmentación, paralelismo a nivel de instrucción, ejecución fuera de orden y especulativa, predicción de saltos, cachés. Dos procesadores con la misma ISA pueden tener microarquitecturas muy distintas.</p>
+          <p>Cuando se habla de "arquitectura de computadoras" en sentido amplio se incluyen las dos cosas, más cuestiones de sistema como la interconexión en multiprocesadores.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Niveles de descripción y diseño</summary>
+        <div class="body">
+          <p>La computadora se estudia como una pila de capas: aplicación → lenguaje de alto nivel → sistema operativo / compilador → <strong>ISA</strong> → organización del hardware → circuito digital → sistema físico. El circuito digital interesa por los retardos entre compuertas; el sistema físico, por cómo se genera calor.</p>
+          <p>En cada nivel hay dos procesos opuestos: la <strong>síntesis</strong> parte de la especificación y llega a una implementación con los elementos del nivel de abajo; el <strong>análisis</strong> parte de esa implementación y recupera la función que cumple. Ejemplo del apunte: se especifica un sumador, la síntesis da la red de compuertas y el análisis de esa red confirma que suma.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Una arquitectura tiene que soportar el paso del tiempo</summary>
+        <div class="body">
+          <p>Tecnología, software y aplicaciones cambian siempre. Arquitecturas como IBM 360 (1964), x86 (1978) o SPARC (1992) sobrevivieron décadas cambiando la <strong>microarquitectura</strong> y conservando la <strong>arquitectura</strong>: del 286 al Pentium 4 se ejecuta el mismo código.</p>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, secciones 1.1 a 1.3 y 1.6.2 (p. 9–11 y 18).</p>
+    </section>
+
+    <!-- ============ 1.4–1.6 MOORE ============ -->
+    <section class="block rend" id="s-moore">
+      <h2><span class="num">1.4–1.6</span> Escalado tecnológico y ley de Moore</h2>
+      <p class="sub">Por qué durante décadas alcanzó con esperar al próximo nodo, y qué se rompió alrededor de 2004.</p>
+
+      <details class="card" open>
+        <summary>De válvulas a CMOS</summary>
+        <div class="body">
+          <p>Desde las primeras computadoras de válvulas (1930) hasta los chips CMOS actuales, el tamaño de una computadora pasó de un edificio (~10⁶ m³) a un chip (~10⁻¹² m³), el retardo de compuerta bajó a nanosegundos o menos y la energía para conmutar un dispositivo pasó de ~100 J a ~10⁻¹⁴ J. El rendimiento se mide en operaciones de punto flotante por segundo: unas 100 op/s en la EDSAC (1949), 10⁶ con los circuitos integrados (1965), 1 petaflop (10¹⁵) en 2012.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>La ley de Moore</summary>
+        <div class="body">
+          <p>En 1965 Gordon Moore anticipó que la complejidad de los circuitos integrados se duplicaría cada año con una baja de costo proporcional; en 1975 corrigió la predicción a <strong>el doble de transistores por chip cada dos años</strong>. Más transistores por el mismo costo es lo que llevó procesadores a todas partes.</p>
+          <p>La mejora no vino solo de la tecnología. El apunte da un ejemplo: la tecnología multiplicó la frecuencia por 13 y la microarquitectura (más etapas, menos retardo por etapa) por otros 4, en total ×52. En rendimiento, la tecnología aportó ×13 y la microarquitectura (mejores predictores, ejecución fuera de orden) ×6, en total ×78. Solo mejora la frecuencia lo que reduce el retardo del camino crítico.</p>
+          <p>El escalado está cerca de su fin: las predicciones lo ubican en el nodo de 3 nm, alrededor de 2022–2025. Las salidas que se exploran van desde transistores gate-all-around y chips 3D hasta computación cuántica o neuromórfica.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>El Pentium 4 y el fin de la carrera por la frecuencia</summary>
+        <div class="body">
+          <p>El Pentium 4 (2000, NetBurst) apostó todo a la frecuencia: pipeline de hasta 31 etapas (Prescott), de 1,3 a ~3,8 GHz, pero con un IPC bajo (0,5 a 1) y de 75 a más de 100 W. Más transistores, frecuencia que se estanca, potencia que se dispara y rendimiento monohilo que crece poco.</p>
+          <p>La respuesta fue el <strong>Intel Core 2</strong> (2006): pipelines más cortos, frecuencia más baja, mayor IPC y <strong>varios núcleos por chip</strong>. Desde ahí el rendimiento depende de paralelizar, no solo del reloj.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Retos: potencia, soft errors, paralelismo y cables</summary>
+        <div class="body">
+          <ul>
+            <li><strong>Potencia:</strong> la disipación crece con el cubo de la frecuencia (ver 1.7.1); no se puede subir f sin pagar en vatios.</li>
+            <li><strong>Soft errors:</strong> una partícula ionizante (rayos cósmicos, radiación, neutrones térmicos) cambia un bit sin que el hardware esté roto. Con junturas más chicas, la carga de la partícula pesa más y la tasa de errores crece de forma exponencial con la densidad; hace falta hardware que los detecte o corrija.</li>
+            <li><strong>Paralelismo:</strong> desde 2004–2005 el rendimiento por más densidad se frenó y llegaron los multicore; el software tiene que tener varios hilos o procesos para correr más rápido.</li>
+            <li><strong>Wire delay:</strong> la fracción del chip que una señal alcanza en un ciclo es cada vez menor (ver 1.7.8).</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>¿Por qué no se puede subir la frecuencia indefinidamente?</summary>
+        <div class="body">
+          <ul>
+            <li><strong>Cierre de timing:</strong> todas las señales tienen que estabilizarse dentro del período; a frecuencias muy altas el período es menor que los retardos de compuertas, cables y memorias.</li>
+            <li><strong>Clock skew:</strong> el reloj no llega a la vez a todo el chip; unos pocos picosegundos de diferencia ya violan setup y hold.</li>
+            <li><strong>Interconexiones:</strong> el retardo de los cables domina sobre el de las compuertas y no baja al acortar el período.</li>
+            <li><strong>Power wall:</strong> P ∝ C·V²·f; más frecuencia es más potencia y más calor, como mostró el Pentium 4.</li>
+            <li><strong>Variabilidad y ruido:</strong> las variaciones de proceso, tensión y temperatura (PVT) se comen el margen de tiempo.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Ancho de banda frente a latencia</summary>
+        <div class="body">
+          <p>No todo evoluciona al mismo ritmo:</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Tecnología</th><th>Capacidad</th><th>Velocidad / latencia</th></tr></thead>
+              <tbody>
+                <tr><td>Lógica</td><td>×2 en 3 años</td><td>×2 en 3 años</td></tr>
+                <tr><td>DRAM</td><td>×4 en 3 años</td><td>×2 en 10 años</td></tr>
+                <tr><td>Disco</td><td>×2 en 3 años</td><td>×2 en 10 años</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>En procesadores, Ethernet, memoria y discos, el <strong>ancho de banda</strong> mejoró mucho más que la <strong>latencia</strong>. El ancho de banda se compra con infraestructura (más recursos en paralelo); la latencia solo baja con mejor tecnología, materiales o algoritmos, y es mucho más cara de mejorar.</p>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, secciones 1.4 a 1.6.2 (p. 11–19).</p>
+    </section>
+
+    <!-- ============ 1.6.3–1.7.1 POTENCIA ============ -->
+    <section class="block rend pot" id="s-potencia">
+      <h2><span class="num">1.6.3–1.7.1</span> Energía y potencia</h2>
+      <p class="sub">Qué consume un procesador, por qué la potencia crece con el cubo de la frecuencia y qué es el power wall.</p>
+
+      <details class="card" open>
+        <summary>Energía no es lo mismo que potencia</summary>
+        <div class="body">
+          <p>Toda la energía que entra al procesador termina como <strong>calor</strong>: transforma información, no hace trabajo mecánico. La <strong>potencia</strong> es energía por unidad de tiempo (la derivada); la <strong>energía</strong> es la potencia integrada en el tiempo (el área bajo la curva).</p>
+          <p>La misma energía entregada en menos tiempo es más potencia. Y la potencia es la que define la temperatura: el chip se comporta como un capacitor térmico (capacidad + resistencia térmica, con una constante de tiempo), así que a más potencia, mayor salto térmico. Si además esa potencia se concentra en un área chica, la <strong>densidad de potencia</strong> sube y el material puede fundirse.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Componentes: dinámica y estática</summary>
+        <div class="body">
+          <ul>
+            <li><strong>Conmutación (dinámica):</strong> P = C·V²·f. Es capacitiva: se gasta al cargar y descargar las capacidades cada vez que un nodo cambia de estado.</li>
+            <li><strong>Fuga (estática):</strong> P = I<sub>corte</sub>·V<sub>corte</sub> + I<sub>sat</sub>·V<sub>sat</sub>. Las corrientes de los transistores "apagados" no son cero; se consume aunque no se conmute.</li>
+            <li><strong>Cortocircuito:</strong> aparece con dos transistores en oposición, uno en corte y otro en saturación, entre los que se forma un camino de cortocircuito. El apunte la agrupa con la estática.</li>
+          </ul>
+          <p>Lo deseable es que la mayor parte de la potencia sea dinámica, o sea, gastada en trabajo útil.</p>
+        </div>
+      </details>
+
+      <div class="formula"><span class="big">P<sub>dinámica</sub> = C · V² · f</span> &nbsp;·&nbsp; si V ∝ f &nbsp;⇒&nbsp; P ∝ f³</div>
+
+      <details class="card">
+        <summary>Por qué P crece con f³</summary>
+        <div class="body">
+          <p>Para que un transistor conmute a cierta frecuencia hace falta una tensión mínima, y a más frecuencia, más tensión. Si se toma V proporcional a f, la potencia dinámica queda C·(kf)²·f ∝ <strong>f³</strong>: subir la frecuencia un 26 % casi duplica la potencia (1,26³ ≈ 2), y bajarla a la mitad la divide por 8.</p>
+          <div class="note">Ojo: el apunte (p. 22) dice que "la tensión aumentará con el cubo de la frecuencia". Lo que crece con f³ es la <strong>potencia</strong>; la tensión crece aproximadamente en proporción a f. Así lo usa el mismo apunte en p. 24 y 27.</div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Power wall y fin del escalado de Dennard</summary>
+        <div class="body">
+          <p>La densidad de potencia creció con cada generación hasta chocar con un límite físico (en la figura del apunte, a la altura del Pentium III). En 2004–2005 los procesadores directamente se rompían por calor, y se fijó un techo de unos <strong>100 W/cm²</strong>. La refrigeración por aire permite estirar un poco ese límite, pero no eliminarlo.</p>
+          <p>El <strong>escalado de Dennard</strong> decía que, al achicar el transistor, tensión y corriente bajan con la longitud y la <strong>densidad de potencia se mantiene constante</strong>. Mientras se cumplió, achicar los transistores no subía la densidad de potencia. Hacia 2003, los límites de potencia por el fin del escalado de Dennard, junto con el límite del ILP disponible, frenaron el crecimiento del rendimiento monohilo (ver 1.8.5).</p>
+        </div>
+      </details>
+
+      <h3 id="s-potencia-sim">Calculadora: escalar tensión, frecuencia y bloques</h3>
+      <p>Todos los valores son relativos a un bloque de referencia (área 1, potencia 1, throughput 1). Solo se modela la potencia dinámica, P ∝ V²·f por bloque.</p>
+      <div class="sim">
+        <div class="cfg">
+          <div>
+            <label for="pot-mode">Relación V–f</label>
+            <select id="pot-mode">
+              <option value="tied">V acompaña a f (V ∝ f)</option>
+              <option value="free">V fija (independiente)</option>
+            </select>
+          </div>
+          <div>
+            <label for="pot-n">Bloques en paralelo</label>
+            <select id="pot-n"><option value="1">1</option><option value="2">2</option><option value="4">4</option></select>
+          </div>
+          <div>
+            <label for="pot-f">Frecuencia por bloque (× f)</label>
+            <div class="pot-range"><input type="range" id="pot-f" min="25" max="200" step="5" value="100"><output id="pot-f-out" for="pot-f">1,00</output></div>
+          </div>
+          <div>
+            <label for="pot-v">Tensión por bloque (× V)</label>
+            <div class="pot-range"><input type="range" id="pot-v" min="25" max="200" step="5" value="100"><output id="pot-v-out" for="pot-v">1,00</output></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn ghost" id="pot-fig13">Figura 13: 2 bloques a V/2 y f/2</button>
+          <button type="button" class="btn ghost" id="pot-up">Subir f un 25 % (V ∝ f)</button>
+          <button type="button" class="btn ghost" id="pot-dvfs">Bajar f a la mitad con V fija</button>
+          <button type="button" class="btn ghost" id="pot-reset">Reiniciar</button>
+        </div>
+        <div class="pot-blocks" id="pot-blocks" aria-hidden="true"></div>
+        <div class="stat-row">
+          <div class="stat"><div class="n" id="pot-thr">1</div><div class="l">Throughput</div></div>
+          <div class="stat"><div class="n" id="pot-p">1</div><div class="l">Potencia total</div></div>
+          <div class="stat"><div class="n" id="pot-a">1</div><div class="l">Área</div></div>
+          <div class="stat"><div class="n" id="pot-d">1</div><div class="l">Densidad P/A</div></div>
+          <div class="stat"><div class="n" id="pot-e">1</div><div class="l">Energía por op.</div></div>
+        </div>
+        <div class="msg" id="pot-msg" aria-live="polite">Referencia: un bloque a tensión V y frecuencia f.</div>
+        <p class="hint">Energía por operación = potencia / throughput ∝ V². Por eso bajar la tensión es lo que de verdad ahorra energía; bajar solo f reduce la potencia pero no la energía de cada operación.</p>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 1.6.3 a 1.7.1 (p. 19–22) y escalado de Dennard en 1.8.5 (p. 37–38).</p>
+    </section>
+
+    <!-- ============ 1.7.2–1.7.4 PROFUNDIDAD ============ -->
+    <section class="block rend" id="s-profundidad">
+      <h2><span class="num">1.7.2–1.7.4</span> Cómo seguir mejorando: núcleos y profundidad del pipeline</h2>
+      <p class="sub">Si la frecuencia ya no puede subir libremente, dónde se gana rendimiento y cuántas etapas conviene poner.</p>
+
+      <details class="card" open>
+        <summary>La estrategia después del power wall</summary>
+        <div class="body">
+          <ul>
+            <li>Trabajar a nivel de <strong>core</strong> balanceando potencia y rendimiento: se fija una potencia máxima (por ejemplo 100 W) y, dentro de ese presupuesto, se evalúa si agregar núcleos mejora y de qué tipo.</li>
+            <li>Integrar <strong>varios cores por chip</strong> y balancear complejidad de cada core contra cantidad de cores.</li>
+            <li>Usar chips <strong>heterogéneos</strong> (cores simples y complejos) y aceleradores on-chip.</li>
+          </ul>
+          <p>El precio: cores distintos necesitan compiladores y código distintos, mezclados en el mismo espacio de memoria.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>¿Cuántas etapas poner? El retardo FO4</summary>
+        <div class="body">
+          <p>Segmentar solapa instrucciones y, en el caso ideal, multiplica el throughput por la cantidad de etapas. Para comparar profundidades sin depender de la tecnología, el retardo de cada etapa se mide en <strong>FO4</strong> (fan-out of four): el retardo de un inversor que maneja cuatro copias de sí mismo. Menos FO4 por etapa = etapas más cortas = pipeline más profundo.</p>
+          <p>Más etapas suben los bips (miles de millones de instrucciones por segundo) hasta un óptimo, y después bajan por dos motivos: el tiempo de los latches entre etapas pesa cada vez más frente a la lógica útil, y cada vaciado del pipeline (salto mal predicho, excepción) tira más instrucciones.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Métricas: bips/W, bips²/W y bips³/W</summary>
+        <div class="body">
+          <p>El gráfico del apunte (figura 11) normaliza cinco curvas contra la profundidad: IPC, bips, bips/W, bips²/W y bips³/W.</p>
+          <ul>
+            <li><strong>bips/W</strong> cae a medida que el pipeline se hace más profundo: más latches, más capacidad conmutada, más potencia por instrucción.</li>
+            <li><strong>bips²/W</strong> y <strong>bips³/W</strong> pesan más el rendimiento: se mantienen y después caen cuando la potencia empieza a dominar.</li>
+            <li>La zona donde las curvas empiezan a caer es el mejor compromiso para <strong>propósito general</strong>; hacia menos etapas está el menor consumo (<strong>embebidos</strong>), y hacia más etapas el máximo rendimiento a costa de potencia (<strong>alto rendimiento</strong>).</li>
+          </ul>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Métrica</th><th>Si V ∝ f (bips ∝ f, W ∝ f³)</th><th>Lectura</th></tr></thead>
+              <tbody>
+                <tr><td>bips/W</td><td>∝ 1/f²</td><td>baja rápido al subir f</td></tr>
+                <tr><td>bips²/W</td><td>∝ 1/f</td><td>baja más lento al subir f</td></tr>
+                <tr><td>bips³/W</td><td class="hi">constante</td><td>no cambia al escalar V y f</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note">Ojo: el apunte (p. 24) dice que la métrica independiente de la tensión es bips²/W, "ya que bips² contiene V²". Con la misma relación V ∝ f que usa el apunte, la que no cambia al escalar tensión y frecuencia es <strong>bips³/W</strong> (f³/f³), como muestra la tabla. La tabla es una derivación propia a partir de las fórmulas del apunte.</div>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, secciones 1.7.2 a 1.7.4 (p. 22–24).</p>
+    </section>
+
+    <!-- ============ 1.7.5–1.7.7 POWER AWARE ============ -->
+    <section class="block rend" id="s-power-aware">
+      <h2><span class="num">1.7.5–1.7.7</span> Técnicas power aware y paralelismo frente a frecuencia</h2>
+      <p class="sub">Cómo se recorta la potencia sin perder rendimiento, y por qué dos bloques lentos le ganan a uno rápido.</p>
+
+      <details class="card" open>
+        <summary>Técnicas power aware</summary>
+        <div class="body">
+          <ul>
+            <li><strong>Clock gating:</strong> se corta el reloj de una parte del circuito; sus flip-flops dejan de conmutar y no gastan potencia dinámica.</li>
+            <li><strong>Power gating:</strong> se desconecta de la alimentación una unidad funcional que no se usa; consume prácticamente cero, también en fuga.</li>
+            <li><strong>Dominios de reloj:</strong> las zonas que no necesitan ir rápido (por ejemplo, una caché) trabajan con un reloj más lento.</li>
+            <li><strong>DVFS</strong> (voltaje y frecuencia dinámicos): V y f se ajustan en marcha según la carga; cuando hace falta velocidad, suben las dos.</li>
+            <li><strong>Distintas tensiones de umbral</strong> (el apunte lo llama voltage gating): transistores con umbrales distintos en el mismo diseño, para optimizar retardo o fuga según el bloque (cachés, por ejemplo).</li>
+            <li><strong>Cores simples:</strong> consumen menos que los complejos.</li>
+          </ul>
+          <div class="note">Ojo: el apunte (p. 24) dice que los dominios de reloj convienen porque "la potencia aumenta con el cubo de la frecuencia". Eso vale si la tensión baja junto con f (DVFS). Si un dominio solo baja la frecuencia y mantiene V, el ahorro de potencia es lineal en f. Probalo en la calculadora de 1.6.3 con "V fija".</div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Cores simples frente a cores complejos</summary>
+        <div class="body">
+          <p>Un <strong>core simple</strong> ejecuta en orden, sin especulación ni predicción ni reordenamiento: sirve para paralelismo de datos. Un <strong>core complejo</strong> reordena, predice y extrae ILP con muchos más transistores y más potencia, y rinde también en código sin paralelismo.</p>
+          <ul>
+            <li>Con <strong>pocos núcleos</strong> (poco paralelismo) conviene el complejo: el simple casi no mejora aunque se le dé más potencia.</li>
+            <li>Con <strong>buen paralelismo y muchos núcleos</strong>, para el mismo throughput los simples consumen mucho menos (en la figura del apunte, a 2,5 de throughput relativo, 8 simples contra 8 complejos).</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Diseño para bajo consumo: qué perilla tocar</summary>
+        <div class="body">
+          <div class="formula">P<sub>chip</sub> = N · V<sub>dd</sub>² · C · f · A &nbsp; (N transistores, A factor de actividad)</div>
+          <ul>
+            <li>Bajar <strong>f</strong>: menos instrucciones por segundo.</li>
+            <li>Bajar <strong>V<sub>dd</sub></strong>: obliga a bajar la frecuencia y achica el margen de ruido entre 0 y 1.</li>
+            <li>Bajar <strong>N</strong>: menos operaciones en paralelo.</li>
+            <li>Bajar <strong>C</strong>: en DRAM, los datos duran menos y hay que refrescar más seguido.</li>
+            <li>Bajar <strong>A</strong>: se hacen menos operaciones.</li>
+          </ul>
+          <p>Todas cuestan rendimiento por separado. El truco es combinarlas: <strong>más hardware en paralelo, más lento</strong>.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Más hardware en paralelo, menos potencia</summary>
+        <div class="body">
+          <p><strong>Ejemplo estéreo.</strong> Un bloque procesa los dos canales. Si se pone un bloque por canal, cada uno hace la mitad del trabajo y puede ir a f/2, lo que permite bajarle la tensión a V' &lt; V:</p>
+          <div class="formula">P<sub>total</sub> = ½·f·V'²·C·N (L) + ½·f·V'²·C·N (R) = f·V'²·C·N &nbsp;&lt;&nbsp; f·V²·C·N</div>
+          <p>El trabajo por segundo es el mismo; el ahorro sale solo de que V' &lt; V, y entra al cuadrado.</p>
+          <div class="note">Ojo: el apunte (p. 26) escribe f·V·C·N, sin el cuadrado de la tensión. Con V² el ahorro por bajar la tensión es cuadrático, no lineal; la fórmula de la misma página (ρ = N·V<sub>dd</sub>²·C·f·A) sí tiene el cuadrado.</div>
+          <p><strong>Ejemplo del bloque partido en dos (figura 13).</strong> Un bloque de área A consume P a tensión V y frecuencia f. Se reemplaza por dos bloques iguales a V/2 y f/2:</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th></th><th>Un bloque</th><th>Dos bloques a V/2, f/2</th></tr></thead>
+              <tbody>
+                <tr><td>Throughput</td><td>1</td><td>2 × ½ = 1</td></tr>
+                <tr><td>Potencia de cada bloque</td><td>P</td><td>(½)²·½·P = P/8</td></tr>
+                <tr><td>Potencia total</td><td>P</td><td class="hi">2 × P/8 = P/4</td></tr>
+                <tr><td>Área</td><td>A</td><td>2A</td></tr>
+                <tr><td>Densidad de potencia</td><td>P/A</td><td class="hi">(P/4)/(2A) = P/(8A)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Mismo throughput con un cuarto de la potencia y un octavo de la densidad. Ese es el argumento de fondo para los multicore.</p>
+          <div class="note">Ojo: el apunte (p. 27) concluye que la densidad queda en 1/16 de la original, porque divide la potencia de <em>un</em> bloque (0,125·P) por el área de <em>los dos</em> (2A). Con sus propios números da 1/8: la potencia total es P/4 sobre un área 2A. La figura 13 de la misma página marca "pwr Den = 0,125". Podés comprobarlo con el botón "Figura 13" de la calculadora de 1.6.3.</div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Tensión mínima para cada frecuencia</summary>
+        <div class="body">
+          <p>A muy baja tensión el procesador no llega a frecuencias altas; para ir más rápido hace falta más tensión (por ejemplo, 1,3 V a 5 GHz). Para una frecuencia dada conviene trabajar con la <strong>tensión mínima funcional</strong>: cualquier exceso se paga al cuadrado en potencia sin ganar velocidad.</p>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, secciones 1.7.5 a 1.7.7 (p. 24–28).</p>
+    </section>
+
+    <!-- ============ 1.7.8 CABLES ============ -->
+    <section class="block rend" id="s-cables">
+      <h2><span class="num">1.7.8</span> Retardo de las interconexiones</h2>
+      <p class="sub">Por qué los transistores más rápidos no alcanzan si los cables no acompañan.</p>
+      <div class="panel">
+        <p>El retardo del transistor escala con la tecnología; el de las <strong>interconexiones globales no</strong>, y hasta crece a medida que hay más transistores. Con cada nodo, la fracción del chip que una señal recorre en un ciclo de reloj es más chica: para la misma distancia hay que atravesar más dispositivos, que se comportan como líneas de transmisión.</p>
+        <p>Los <strong>repetidores</strong> mantienen la señal en cables largos, pero cuestan energía. La consecuencia de diseño es partir el chip en núcleos que se comunican poco entre sí (multi y many cores) en lugar de un único núcleo enorme.</p>
+      </div>
+      <p class="src">Fuente: apuntes, sección 1.7.8 (p. 28–30).</p>
+    </section>
+
+    <!-- ============ 1.7.9 RENDIMIENTO ============ -->
+    <section class="block rend" id="s-rendimiento">
+      <h2><span class="num">1.7.9</span> Rendimiento: latencia, throughput y comparación</h2>
+      <p class="sub">Qué significa que una máquina sea "más rápida" y cómo se dice cuántas veces.</p>
+
+      <details class="card" open>
+        <summary>La medida fundamental es el tiempo</summary>
+        <div class="body">
+          <p>Según qué le importe al usuario, "rendimiento" es una de dos cosas:</p>
+          <ul>
+            <li><strong>Tiempo de respuesta</strong> (latencia, tiempo de ejecución T<sub>ej</sub>): cuánto tarda <em>una</em> tarea desde que se lanza hasta que llega el resultado. Es lo que importa en un sistema de tiempo real.</li>
+            <li><strong>Throughput</strong> (productividad): cuántas tareas se completan por unidad de tiempo. Es lo que importa en una base de datos que procesa miles de transacciones.</li>
+          </ul>
+          <div class="two">
+            <div class="panel"><h3>Concorde</h3><p>Hace el viaje en menos tiempo: mejor <strong>tiempo de respuesta</strong>.</p></div>
+            <div class="panel"><h3>Boeing</h3><p>Lleva muchos más pasajeros por hora: mejor <strong>throughput</strong>.</p></div>
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Rendimiento relativo</summary>
+        <div class="body">
+          <div class="formula">P(x) = T<sub>ej</sub>(y) / T<sub>ej</sub>(x) = n</div>
+          <p>Si P(x) = n, la máquina x es <strong>n veces más rápida</strong> que la de referencia y. Ejemplo: si y tarda 15 s y x tarda 10 s, x es 1,5 veces más rápida. Siempre se compara con tiempos, nunca con una tasa intermedia como MIPS (ver 1.8.1).</p>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, sección 1.7.9 (p. 30–31).</p>
+    </section>
+
+    <!-- ============ 1.7.10–1.8.2 CPI ============ -->
+    <section class="block rend cpi" id="s-cpi">
+      <h2><span class="num">1.7.10–1.8.2</span> Tiempo de CPU, CPI y MIPS</h2>
+      <p class="sub">La ecuación que descompone el tiempo en tres factores, cómo se calcula un CPI ponderado y por qué MIPS engaña.</p>
+
+      <details class="card" open>
+        <summary>La ecuación del tiempo de CPU</summary>
+        <div class="body">
+          <div class="formula"><span class="big">T<sub>CPU</sub> = IC × CPI / f</span> &nbsp;= ciclos × T<sub>ciclo</sub> = ciclos / f</div>
+          <p><strong>IC</strong> es la cantidad de instrucciones ejecutadas, <strong>CPI</strong> los ciclos de reloj promedio por instrucción (ciclos / IC) y <strong>f</strong> la frecuencia. Ninguno alcanza solo: una máquina con más GHz puede perder si su CPI o su IC son peores.</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Factor</th><th>Lo determinan</th></tr></thead>
+              <tbody>
+                <tr><td>Frecuencia f</td><td>tecnología del hardware y organización</td></tr>
+                <tr><td>CPI</td><td>organización y arquitectura del repertorio (ISA)</td></tr>
+                <tr><td>Cantidad de instrucciones IC</td><td>ISA y tecnología de compiladores</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>En una aplicación real se suman más capas: lenguaje de programación, compilador, ISA, datapath y control, y frecuencia.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>CPI ponderado y ejemplos del apunte</summary>
+        <div class="body">
+          <div class="formula">CPI = Σ (F<sub>j</sub> × CPI<sub>j</sub>) &nbsp; (F<sub>j</sub>: fracción de instrucciones del tipo j)</div>
+          <p><strong>Ejemplo 1 (p. 32):</strong> 50 % ALU (1 ciclo), 20 % load (2), 10 % store (2), 20 % saltos (2).</p>
+          <div class="formula">CPI = 0,5×1 + 0,2×2 + 0,1×2 + 0,2×2 = 0,5 + 0,4 + 0,2 + 0,4 = 1,5</div>
+          <div class="note">Ojo: el apunte (p. 32) escribe "(0,5×1)+(0,4×2)+(0,2×2)+(0,4×2) = 1,5": pone las contribuciones (0,4; 0,2; 0,4) donde van las fracciones, y esa expresión en realidad suma 2,5. El resultado correcto es 1,5, con la cuenta de arriba.</div>
+          <p><strong>Ejemplo 2 (p. 32–33):</strong> 160 MHz, el programa corre 6 s; 43 % aritmético-lógicas (1 ciclo), 21 % loads (2), 12 % stores (2), 24 % saltos (2).</p>
+          <ul>
+            <li>CPI = 0,43 + 0,42 + 0,24 + 0,48 = <strong>1,57</strong></li>
+            <li>MIPS = f(MHz) / CPI = 160 / 1,57 ≈ <strong>101,9</strong></li>
+            <li>IC = T × f / CPI = 6 × 160·10⁶ / 1,57 ≈ <strong>611,5 millones</strong></li>
+            <li>Comprobación: MIPS = IC / (T × 10⁶) = 611,5·10⁶ / (6·10⁶) ≈ 101,9</li>
+          </ul>
+          <div class="note">Ojo: el apunte (p. 33) da 105,76 MIPS y 634,39 millones de instrucciones; con sus datos sale 101,9 MIPS y unos 611,5 millones. Además escribe "MIPS = Recuento / (Frecuencia × Tiempo)" y obtiene 1,76 MIPS: esa fórmula está mal, la correcta es <strong>MIPS = IC / (T × 10⁶)</strong>, que da 101,9, igual que f/CPI.</div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>MIPS y MFLOPS: por qué no sirven para comparar máquinas</summary>
+        <div class="body">
+          <div class="formula">MIPS = IC / (T<sub>ej</sub> × 10⁶) = f(MHz) / CPI &nbsp;·&nbsp; MFLOPS = operaciones de punto flotante / (T<sub>ej</sub> × 10⁶)</div>
+          <ul>
+            <li><strong>MIPS</strong> depende del repertorio de instrucciones: una ISA con instrucciones más simples necesita más instrucciones para el mismo programa, muestra más MIPS y puede tardar más. Tampoco sirve entre programas distintos en la misma máquina.</li>
+            <li><strong>MFLOPS</strong> depende de la máquina y del programa, no aplica fuera del punto flotante y el conjunto de operaciones de punto flotante no es el mismo en todas las máquinas.</li>
+          </ul>
+          <p>La única medida confiable es el <strong>tiempo de ejecución</strong> de programas reales.</p>
+        </div>
+      </details>
+
+      <h3 id="s-cpi-sim">Calculadora: mezcla de instrucciones → CPI, MIPS e IC</h3>
+      <div class="sim">
+        <div class="table-scroll">
+          <table class="cmp">
+            <thead><tr><th>Tipo</th><th>% de instrucciones</th><th>Ciclos</th><th>Aporte al CPI</th></tr></thead>
+            <tbody>
+              <tr><td>ALU</td><td><input type="number" id="cpi-p0" min="0" max="100" step="1" value="43" aria-label="Porcentaje ALU"></td><td><input type="number" id="cpi-c0" min="1" max="50" step="1" value="1" aria-label="Ciclos ALU"></td><td class="mono" id="cpi-x0"></td></tr>
+              <tr><td>Load</td><td><input type="number" id="cpi-p1" min="0" max="100" step="1" value="21" aria-label="Porcentaje load"></td><td><input type="number" id="cpi-c1" min="1" max="50" step="1" value="2" aria-label="Ciclos load"></td><td class="mono" id="cpi-x1"></td></tr>
+              <tr><td>Store</td><td><input type="number" id="cpi-p2" min="0" max="100" step="1" value="12" aria-label="Porcentaje store"></td><td><input type="number" id="cpi-c2" min="1" max="50" step="1" value="2" aria-label="Ciclos store"></td><td class="mono" id="cpi-x2"></td></tr>
+              <tr><td>Saltos</td><td><input type="number" id="cpi-p3" min="0" max="100" step="1" value="24" aria-label="Porcentaje saltos"></td><td><input type="number" id="cpi-c3" min="1" max="50" step="1" value="2" aria-label="Ciclos saltos"></td><td class="mono" id="cpi-x3"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="cfg">
+          <div><label for="cpi-f">Frecuencia (MHz)</label><input type="number" id="cpi-f" min="1" step="1" value="160"></div>
+          <div><label for="cpi-t">Tiempo de ejecución (s)</label><input type="number" id="cpi-t" min="0.001" step="0.5" value="6"></div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn ghost" id="cpi-ex1">Ejemplo 1 (p. 32)</button>
+          <button type="button" class="btn ghost" id="cpi-ex2">Ejemplo 2 (p. 33)</button>
+          <button type="button" class="btn ghost" id="cpi-fast">Saltos de 1 ciclo</button>
+        </div>
+        <p class="hint">Cómo se reparten los ciclos (aporte de cada tipo al CPI):</p>
+        <div class="cpi-bar" id="cpi-bar" aria-hidden="true"></div>
+        <div class="stat-row">
+          <div class="stat"><div class="n" id="cpi-cpi">–</div><div class="l">CPI</div></div>
+          <div class="stat"><div class="n" id="cpi-mips">–</div><div class="l">MIPS</div></div>
+          <div class="stat"><div class="n" id="cpi-ic">–</div><div class="l">IC (millones)</div></div>
+          <div class="stat"><div class="n" id="cpi-ti">–</div><div class="l">ns por instr.</div></div>
+        </div>
+        <div class="msg" id="cpi-msg" aria-live="polite"></div>
+      </div>
+      <p class="src">Fuente: apuntes, secciones 1.7.10 a 1.8.2 (p. 31–34).</p>
+    </section>
+
+    <!-- ============ 1.8.3–1.8.5 BENCHMARKS ============ -->
+    <section class="block rend" id="s-benchmarks">
+      <h2><span class="num">1.8.3–1.8.5</span> Benchmarks, SPEC y evolución del rendimiento</h2>
+      <p class="sub">Con qué programas se mide una máquina y cuánto creció el rendimiento a lo largo de cuarenta años.</p>
+
+      <details class="card" open>
+        <summary>Qué es un benchmark y qué tipos hay</summary>
+        <div class="body">
+          <p>Un benchmark es un conjunto de programas que se ejecuta para medir el rendimiento de un sistema. Se le piden dos cosas: poder <strong>afinar</strong> la configuración de una arquitectura y poder <strong>elegir</strong>, entre las disponibles, la que va a correr la aplicación con el desempeño buscado. La única forma fiable es correr <strong>programas reales</strong>; de menos a más representativos:</p>
+          <ul>
+            <li><strong>Programas de juguete:</strong> 10 a 100 líneas con resultado conocido (criba de Eratóstenes, puzzle, quicksort).</li>
+            <li><strong>Sintéticos:</strong> imitan la frecuencia de operaciones y operandos de programas reales (Whetstone, Dhrystone).</li>
+            <li><strong>Programas reales con cargas fijas:</strong> la medida más aceptada hoy.</li>
+          </ul>
+          <p>Conviene elegir el benchmark que más se parezca a la aplicación que se va a correr, y hay suites separadas para enteros y para punto flotante porque una máquina puede liderar en una y no en la otra (en el ejemplo del apunte, el POWER en punto flotante y el Xeon 5160 en enteros).</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>La familia SPEC y otros</summary>
+        <div class="body">
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Suite</th><th>Contenido</th></tr></thead>
+              <tbody>
+                <tr><td>SPEC89</td><td>10 programas, un único valor</td></tr>
+                <tr><td>SPEC92</td><td>6 enteros (SPECint92) y 14 de punto flotante (SPECfp92), sin límites en las opciones de compilación</td></tr>
+                <tr><td>SPEC95</td><td>8 enteros y 10 de punto flotante; dos modos: la mejor compilación por programa o la misma para todos (<em>base</em>)</td></tr>
+                <tr><td>SPEC2000</td><td>12 enteros y 14 de punto flotante, con las mismas dos opciones (spec y spec_base)</td></tr>
+                <tr><td>SPEC2006</td><td>sucesor de SPEC2000</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Otros: <strong>HPC</strong> (LINPACK, SPEChpc96, NAS Parallel Benchmark), <strong>servidores</strong> (SPECweb, SPECSFS, TPC-C), <strong>gráficos</strong> (SPECviewperf, SPECapc), Winbench y EEMBC (embebidos). Como las necesidades cambian, los benchmarks también tienen que evolucionar.</p>
+          <p>En el gráfico SPECint95 contra frecuencia del apunte, cada familia (Alpha, AMD, Intel) sigue una curva en la que más frecuencia da más rendimiento; el salto del Alpha a igual frecuencia se debe a un cambio de microarquitectura (mejores predictores).</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Cuarenta años de rendimiento (relativo al VAX 11/780)</summary>
+        <div class="body">
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Período</th><th>Mejora anual</th><th>Se duplica cada</th><th>Por qué</th></tr></thead>
+              <tbody>
+                <tr><td>hasta ~1986</td><td>~22 %</td><td>~3,5 años</td><td>avance tecnológico</td></tr>
+                <tr><td>1986–2003</td><td>~52 %</td><td class="hi">~1,7 años</td><td>ideas de arquitectura y organización (RISC)</td></tr>
+                <tr><td>2003–2011</td><td>~23 %</td><td>~3,3 años</td><td>límites de potencia (fin de Dennard) y del ILP</td></tr>
+                <tr><td>2011–2015</td><td>&lt; 12 %</td><td class="hi">~6 años</td><td>límites del paralelismo (Amdahl)</td></tr>
+                <tr><td>desde 2015</td><td>~3,5 %</td><td>~20 años</td><td>fin de la ley de Moore</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="formula">años para duplicar = ln 2 / ln(1 + r)</div>
+          <div class="note">Ojo: el apunte (p. 37–38) dice que el 52 % anual "implica una duplicación cada 2 años" y que con menos del 12 % anual "se duplicó cada 8 años". Con la fórmula de arriba, 52 % duplica en unos 1,7 años (1,52² ≈ 2,3) y 12 % en unos 6 años (1,12⁶ ≈ 1,97). Los valores de 22 %, 23 % y 3,5 % no tienen duplicación en el apunte salvo el último (20 años, correcto); los otros dos están calculados con la misma fórmula.</div>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, secciones 1.8.3 a 1.8.5 (p. 35–38).</p>
+    </section>
+
+    <!-- ============ 1.8.6 AMDAHL ============ -->
+    <section class="block rend amd" id="s-amdahl">
+      <h2><span class="num">1.8.6</span> Ley de Amdahl</h2>
+      <p class="sub">Cuánto acelera mejorar una parte del sistema, y por qué la parte serial pone un techo que ningún número de procesadores rompe.</p>
+
+      <details class="card" open>
+        <summary>La fórmula</summary>
+        <div class="body">
+          <p>Conviene mejorar lo que más tiempo ocupa. Si una fracción F<sub>m</sub> del tiempo original se acelera A<sub>m</sub> veces y el resto (1 − F<sub>m</sub>) queda igual:</p>
+          <div class="formula">T<sub>mejorado</sub> = T<sub>antiguo</sub> × [ (1 − F<sub>m</sub>) + F<sub>m</sub> / A<sub>m</sub> ]</div>
+          <div class="formula"><span class="big">A = T<sub>antiguo</sub> / T<sub>mejorado</sub> = 1 / [ (1 − F<sub>m</sub>) + F<sub>m</sub> / A<sub>m</sub> ]</span></div>
+          <p>Para que A sea grande, F<sub>m</sub> y A<sub>m</sub> tienen que ser grandes los dos. Con paralelismo, A<sub>m</sub> es la cantidad de procesadores S, y aunque S → ∞ el speedup no supera <strong>1 / (1 − F<sub>m</sub>)</strong>: "no se pueden agregar más núcleos de los que se pueden paralelizar".</p>
+          <p><strong>Ejemplo del apunte:</strong> 10 procesadores, 80 % paralelizable.</p>
+          <div class="formula">Speedup = 1 / (0,2 + 0,8/10) = 1 / 0,28 ≈ 3,57 &nbsp; (techo: 1/0,2 = 5)</div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>La tortuga y el conejo</summary>
+        <div class="body">
+          <p>Una tortuga corre una posta de 100 m en T minutos. Para mejorar, un conejo infinitamente rápido corre la segunda mitad en tiempo cero. El total baja solo a T/2: la tortuga sigue gastando T/2 en su mitad. Si la tortuga corre solo 1/4 del recorrido, el total es T/4. Lo que manda es la <strong>fracción que sigue siendo lenta</strong>, no lo rápido que sea lo mejorado.</p>
+        </div>
+      </details>
+
+      <h3 id="s-amdahl-sim">Calculadora: speedup en función de N y F<sub>m</sub></h3>
+      <div class="sim">
+        <div class="cfg">
+          <div>
+            <label for="amd-fm">Fracción paralelizable F<sub>m</sub></label>
+            <div class="amd-range"><input type="range" id="amd-fm" min="0" max="100" step="1" value="80"><output id="amd-fm-out" for="amd-fm">80 %</output></div>
+          </div>
+          <div>
+            <label for="amd-n">Procesadores N</label>
+            <div class="amd-range"><input type="range" id="amd-n" min="1" max="128" step="1" value="10"><output id="amd-n-out" for="amd-n">10</output></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn ghost" id="amd-ex">Ejemplo del apunte (80 %, 10)</button>
+          <button type="button" class="btn ghost" id="amd-tortuga">Tortuga y conejo (50 %)</button>
+          <button type="button" class="btn ghost" id="amd-95">95 % paralelizable</button>
+        </div>
+        <div class="stat-row">
+          <div class="stat ok"><div class="n" id="amd-s">–</div><div class="l">Speedup</div></div>
+          <div class="stat err"><div class="n" id="amd-lim">–</div><div class="l">Techo 1/(1−F<sub>m</sub>)</div></div>
+          <div class="stat"><div class="n" id="amd-eff">–</div><div class="l">Eficiencia S/N</div></div>
+        </div>
+        <p class="amd-lbl" id="amd-t0-lbl">Tiempo original:</p>
+        <div class="amd-time" id="amd-t0" aria-hidden="true"></div>
+        <p class="amd-lbl" id="amd-t1-lbl">Tiempo con N procesadores:</p>
+        <div class="amd-time" id="amd-t1" aria-hidden="true"></div>
+        <svg id="amd-chart" viewBox="0 0 560 260" role="img" aria-label="Speedup en función de la cantidad de procesadores"></svg>
+        <div class="msg" id="amd-msg" aria-live="polite"></div>
+        <p class="hint">Eje horizontal en escala logarítmica (1 a 128 procesadores). Línea punteada gris: speedup ideal S = N. Línea discontinua: techo de Amdahl.</p>
+      </div>
+      <p class="src">Fuente: apuntes, sección 1.8.6 (p. 38–39).</p>
+    </section>
+
+    <!-- ============ 1.8.7–1.8.8 HETEROGENEOS ============ -->
+    <section class="block rend" id="s-heterogeneos">
+      <h2><span class="num">1.8.7–1.8.8</span> Multicore heterogéneo y regla de Pollack</h2>
+      <p class="sub">Si la parte serial no se acelera con más núcleos, cómo se reparte el silicio entre núcleos grandes y chicos.</p>
+
+      <details class="card" open>
+        <summary>Simétrico, asimétrico, heterogéneo</summary>
+        <div class="body">
+          <p>La parte serial no mejora agregando núcleos: solo la acelera un núcleo más rápido (más IPC) o un mejor algoritmo. De ahí los sistemas <strong>heterogéneos</strong>: un núcleo complejo para la parte serial y muchos simples para la paralela.</p>
+          <p>Se supone un chip con lugar para <strong>16 BCE</strong> (base core equivalent, el área de un núcleo básico) y un programa 80 % paralelizable:</p>
+          <ul>
+            <li><strong>(a) Simétrico, 16 núcleos de 1 BCE:</strong> mucho paralelismo, pero la parte serial corre en un núcleo lento y en esa fase los otros 15 quedan ociosos.</li>
+            <li><strong>(b) Simétrico, 4 núcleos de 4 BCE:</strong> cada núcleo es más rápido, pero hay pocos para la parte paralela.</li>
+            <li><strong>(c) Asimétrico, 1 núcleo de 4 BCE + 12 de 1 BCE:</strong> el grande ejecuta la parte serial y los chicos la paralela. Mejora las dos partes.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Regla de Pollack</summary>
+        <div class="body">
+          <div class="formula"><span class="big">Perf(R) ≈ √R</span> &nbsp; (R: complejidad, en área, transistores o potencia)</div>
+          <p>El rendimiento de un núcleo crece con la <strong>raíz cuadrada</strong> de su complejidad, pero el consumo crece <strong>linealmente</strong>. Duplicar los transistores de un núcleo da ≈ 1,41 veces el rendimiento (+41 %) con el doble de potencia.</p>
+          <p>Consecuencias: dos núcleos simples rinden más por vatio que uno el doble de grande (si hay paralelismo), y llevado al extremo sugiere chips con cientos de núcleos chicos y de baja potencia, como los arreglos masivamente paralelos (MPPA) de aceleradores y sistemas embebidos. En la práctica, rediseñar la microarquitectura en cada generación es difícil y las ganancias reales son menores.</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Complemento: las tres configuraciones con números (no está en los apuntes)</summary>
+        <div class="body">
+          <p>El apunte compara (a), (b) y (c) de forma cualitativa. El modelo de Hill y Marty combina Amdahl con Pollack: un núcleo de r BCE rinde √r, en la fase serial trabaja el núcleo más rápido y en la paralela todos. Con F<sub>m</sub> = 0,8 y 16 BCE:</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Configuración</th><th>Fase serial</th><th>Fase paralela</th><th>Speedup</th></tr></thead>
+              <tbody>
+                <tr><td>(a) 16 × 1 BCE</td><td>0,2 / 1 = 0,2</td><td>0,8 / 16 = 0,05</td><td>1 / 0,25 = 4,0</td></tr>
+                <tr><td>(b) 4 × 4 BCE</td><td>0,2 / 2 = 0,1</td><td>0,8 / (4 × 2) = 0,1</td><td>1 / 0,2 = 5,0</td></tr>
+                <tr><td>(c) 1 × 4 BCE + 12 × 1 BCE</td><td>0,2 / 2 = 0,1</td><td>0,8 / (2 + 12) ≈ 0,057</td><td class="hi">1 / 0,157 ≈ 6,4</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>El asimétrico gana porque acelera la parte serial sin resignar casi nada de la paralela.</p>
+          <p class="src">Fuente complementaria: M. D. Hill y M. R. Marty, "Amdahl's Law in the Multicore Era", IEEE Computer 41(7), 2008, <a href="https://research.cs.wisc.edu/multifacet/papers/ieeecomputer08_amdahl_multicore.pdf">research.cs.wisc.edu</a>.</p>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, secciones 1.8.7 y 1.8.8 (p. 40–41).</p>
+    </section>
+
+    <!-- ============ 1.8.9 COSTO ============ -->
+    <section class="block rend cost" id="s-costo">
+      <h2><span class="num">1.8.9</span> Costo del circuito integrado</h2>
+      <p class="sub">De qué depende lo que cuesta un chip y por qué un die más grande sale mucho más caro.</p>
+
+      <details class="card" open>
+        <summary>Wafer, die y yield</summary>
+        <div class="body">
+          <p>Los procesadores se imprimen por litografía en un <strong>wafer</strong> de silicio; cada <strong>die</strong> es la porción donde queda un procesador. Las impurezas se reparten por el wafer y arruinan los dies donde caen. Con dies más chicos entran más por wafer y una impureza descarta menos silicio.</p>
+          <ul>
+            <li><strong>Die yield:</strong> fracción de dies libres de defectos.</li>
+            <li><strong>Final test yield:</strong> fracción de chips encapsulados que pasan la prueba final (en la figura del apunte, más del 90 %).</li>
+          </ul>
+          <div class="formula">Costo del CI = (costo del die + costo de testeo + costo de encapsulado) / final test yield</div>
+          <div class="formula"><span class="big">Costo del die = costo del wafer / (dies por wafer × die yield)</span></div>
+          <p>El testeo depende de la complejidad y de la RAM del chip; el encapsulado, de la cantidad de pines y del material. Como un die más grande entra menos veces en el wafer <em>y</em> tiene más probabilidad de contener un defecto, el costo del die crece aproximadamente con el <strong>cuadrado de su área</strong> (según la figura del apunte).</p>
+          <div class="note">Ojo: el texto del apunte (p. 42) escribe "costo del wafer / dies por wafer <strong>×</strong> die yield", lo que daría un die más barato cuanto peor es el yield. El yield <strong>divide</strong>: solo los dies buenos reparten el costo del wafer. Así lo muestra la figura de la misma página.</div>
+        </div>
+      </details>
+
+      <h3 id="s-costo-sim">Calculadora de costo</h3>
+      <p>Los valores iniciales son de ejemplo (no vienen del apunte); cambialos para ver qué pesa más.</p>
+      <div class="sim">
+        <div class="cfg">
+          <div><label for="cost-wafer">Costo del wafer ($)</label><input type="number" id="cost-wafer" min="1" step="100" value="5000"></div>
+          <div><label for="cost-dies">Dies por wafer</label><input type="number" id="cost-dies" min="1" step="1" value="400"></div>
+          <div><label for="cost-yield">Die yield (%)</label><input type="number" id="cost-yield" min="1" max="100" step="1" value="50"></div>
+          <div><label for="cost-test">Testeo por die ($)</label><input type="number" id="cost-test" min="0" step="1" value="5"></div>
+          <div><label for="cost-pack">Encapsulado ($)</label><input type="number" id="cost-pack" min="0" step="1" value="5"></div>
+          <div><label for="cost-final">Final test yield (%)</label><input type="number" id="cost-final" min="1" max="100" step="1" value="95"></div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn ghost" id="cost-big">Die el doble de grande</button>
+          <button type="button" class="btn ghost" id="cost-reset">Valores de ejemplo</button>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="n" id="cost-die">–</div><div class="l">Costo del die</div></div>
+          <div class="stat ok"><div class="n" id="cost-ci">–</div><div class="l">Costo del CI</div></div>
+        </div>
+        <div class="msg" id="cost-msg" aria-live="polite"></div>
+        <p class="hint">"Die el doble de grande" supone que entran la mitad de dies por wafer y que el yield se eleva al cuadrado (las dos mitades del die tienen que salir sanas). Es un modelo simplificado propio, no está en los apuntes, pero muestra por qué el costo crece más rápido que el área.</p>
+      </div>
+      <p class="src">Fuente: apuntes, sección 1.8.9 (p. 42–43).</p>
+    </section>
+
+    <!-- ============ QUIZ ============ -->
+    <section class="block rend" id="s-quiz">
+      <h2><span class="num">✓</span> Quiz de repaso</h2>
+      <p class="sub">10 preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
+      <div id="quizWrap"></div>
+      <p class="quiz-score" id="quizScore"></p>
+    </section>
+
+    <footer class="pagefoot">Basado en los apuntes no oficiales de Arquitectura de Computadoras (UNC, FCEFyN), unidad 1. Hecho como material de repaso: el contenido no está validado de punta a punta y puede tener errores, así que contrastalo con la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
+  </main>
+</div>
+
+<script>
+/* ==== STD:SCRIPT v1 ==== (tema, scroll-spy del nav lateral y motor del quiz) */
+(function () {
+  var btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  function sync() {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    var icon = btn.querySelector('.icon');
+    if (icon) icon.textContent = dark ? '☀️' : '🌙';
+  }
+  btn.addEventListener('click', function () {
+    var el = document.documentElement;
+    var next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+    el.dataset.theme = next;
+    try { localStorage.setItem('tw-theme', next); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.side a[href^="#"]'));
+  var targets = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+  links.forEach(function (a, i) {
+    a.addEventListener('click', function (e) {
+      // scroll manual: navegar por hash puede recargar la página dentro de visores embebidos
+      e.preventDefault();
+      if (targets[i]) targets[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try { history.replaceState(null, '', a.getAttribute('href')); } catch (err) {}
+    });
+  });
+  function onScroll() {
+    var y = window.scrollY + 120, current = -1;
+    targets.forEach(function (t, i) {
+      if (t && t.getBoundingClientRect().top + window.scrollY <= y) current = i;
+    });
+    links.forEach(function (a, i) { a.classList.toggle('active', i === current); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+// stdQuiz([{q, opts:[...], correct:<índice>, exp}], 'quizWrap', 'quizScore')
+function stdQuiz(items, wrapId, scoreId) {
+  var wrap = document.getElementById(wrapId || 'quizWrap');
+  var scoreEl = document.getElementById(scoreId || 'quizScore');
+  if (!wrap) return;
+  function score() {
+    var c = 0, a = 0;
+    wrap.querySelectorAll('.quiz-item').forEach(function (div) {
+      if (div.dataset.answered) { a++; if (div.dataset.right === '1') c++; }
+    });
+    if (scoreEl) scoreEl.textContent = 'Puntaje: ' + c + ' / ' + a + ' respondidas (de ' + items.length + ' preguntas)';
+  }
+  items.forEach(function (item, qi) {
+    var div = document.createElement('div');
+    div.className = 'quiz-item';
+    div.innerHTML = '<p class="q">' + (qi + 1) + '. ' + item.q + '</p><div class="opts">'
+      + item.opts.map(function (o, oi) {
+        return '<label><input type="radio" name="' + wrap.id + '-q' + qi + '" value="' + oi + '"><span>' + o + '</span></label>';
+      }).join('') + '</div><div class="fb" aria-live="polite"></div>';
+    wrap.appendChild(div);
+    div.querySelectorAll('input').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        var right = parseInt(inp.value, 10) === item.correct;
+        div.dataset.answered = '1';
+        div.dataset.right = right ? '1' : '0';
+        var fb = div.querySelector('.fb');
+        fb.className = 'fb ' + (right ? 'ok' : 'bad');
+        fb.textContent = (right ? '✓ Correcto. ' : '✗ No es correcto. ') + item.exp;
+        score();
+      });
+    });
+  });
+  score();
+}
+/* ==== /STD:SCRIPT ==== */
+</script>
+<script>
+/* ==== PAGE:SCRIPT ==== un IIFE por widget, ids con el prefijo de su sección */
+(function () {
+function rendFmt(x, d) {
+  if (!isFinite(x)) return '∞';
+  return x.toLocaleString('es-AR', { maximumFractionDigits: d == null ? 2 : d, minimumFractionDigits: 0 });
+}
+
+/* ---- Potencia: escalar V, f y cantidad de bloques ---- */
+(function () {
+  var $ = function (id) { return document.getElementById('pot-' + id); };
+  if (!$('f')) return;
+  var mode = $('mode'), nSel = $('n'), fIn = $('f'), vIn = $('v');
+
+  function render() {
+    var tied = mode.value === 'tied';
+    if (tied) vIn.value = fIn.value;
+    vIn.disabled = tied;
+    var f = fIn.value / 100, v = vIn.value / 100, n = parseInt(nSel.value, 10);
+    $('f-out').textContent = rendFmt(f);
+    $('v-out').textContent = rendFmt(v);
+    var pBlk = v * v * f, pTot = n * pBlk, thr = n * f, area = n, dens = pTot / area, e = pTot / thr;
+    $('thr').textContent = rendFmt(thr, 3);
+    $('p').textContent = rendFmt(pTot, 3);
+    $('a').textContent = rendFmt(area);
+    $('d').textContent = rendFmt(dens, 3);
+    $('e').textContent = rendFmt(e, 3);
+    var html = '';
+    for (var i = 0; i < n; i++) html += '<span class="pot-blk">V×' + rendFmt(v) + ' · f×' + rendFmt(f) + ' · P=' + rendFmt(pBlk, 3) + '</span>';
+    $('blocks').innerHTML = html;
+    var msg;
+    if (n === 1 && f === 1 && v === 1) {
+      msg = 'Referencia: un bloque a tensión V y frecuencia f.';
+    } else if (tied) {
+      msg = 'Con V ∝ f, cada bloque consume f³ = ' + rendFmt(pBlk, 3) + ' de la referencia. ' +
+        (n > 1 ? n + ' bloques dan throughput ' + rendFmt(thr, 3) + ' con potencia total ' + rendFmt(pTot, 3) + ' y densidad ' + rendFmt(dens, 3) + '.' :
+          'El throughput es ' + rendFmt(thr, 3) + ' y la potencia ' + rendFmt(pTot, 3) + ': cada 1 % de frecuencia cuesta cerca de 3 % de potencia.');
+    } else {
+      msg = 'Con V independiente, P ∝ V²·f: la frecuencia pesa lineal y la tensión al cuadrado. Energía por operación = V² = ' + rendFmt(e, 3) + '.';
+    }
+    $('msg').textContent = msg;
+  }
+  function set(m, n, f, v) { mode.value = m; nSel.value = String(n); fIn.value = f; vIn.value = v; render(); }
+
+  [mode, nSel].forEach(function (el) { el.addEventListener('change', render); });
+  [fIn, vIn].forEach(function (el) { el.addEventListener('input', render); });
+  $('fig13').addEventListener('click', function () { set('tied', 2, 50, 50); });
+  $('up').addEventListener('click', function () { set('tied', 1, 125, 125); });
+  $('dvfs').addEventListener('click', function () { set('free', 1, 50, 100); });
+  $('reset').addEventListener('click', function () { set('tied', 1, 100, 100); });
+  render();
+})();
+
+/* ---- Calculadora de CPI, MIPS e IC ---- */
+(function () {
+  var $ = function (id) { return document.getElementById('cpi-' + id); };
+  if (!$('f')) return;
+  var names = ['ALU', 'Load', 'Store', 'Saltos'];
+  var inputs = [];
+  for (var i = 0; i < 4; i++) inputs.push($('p' + i), $('c' + i));
+  inputs.push($('f'), $('t'));
+
+  function num(el) { var x = parseFloat(el.value); return isFinite(x) ? x : 0; }
+  function render() {
+    var sum = 0, cpi = 0, parts = [];
+    for (var i = 0; i < 4; i++) {
+      var p = num($('p' + i)), c = num($('c' + i));
+      sum += p;
+      parts.push((p / 100) * c);
+      cpi += (p / 100) * c;
+      $('x' + i).textContent = rendFmt(p / 100) + ' × ' + rendFmt(c) + ' = ' + rendFmt((p / 100) * c, 3);
+    }
+    var bar = $('bar'), html = '';
+    parts.forEach(function (x, i) {
+      if (cpi > 0 && x > 0) html += '<span class="t' + i + '" style="flex:' + x + '">' + names[i] + '</span>';
+    });
+    bar.innerHTML = html;
+    var msg = $('msg');
+    if (Math.abs(sum - 100) > 0.001) {
+      ['cpi', 'mips', 'ic', 'ti'].forEach(function (k) { $(k).textContent = '–'; });
+      msg.className = 'msg err';
+      msg.textContent = 'Los porcentajes suman ' + rendFmt(sum) + ' %: tienen que sumar 100 % para que el CPI sea un promedio.';
+      return;
+    }
+    var f = num($('f')), t = num($('t'));
+    var mips = f / cpi, ic = t * f / cpi;   // f en MHz → IC en millones
+    $('cpi').textContent = rendFmt(cpi, 3);
+    $('mips').textContent = rendFmt(mips, 1);
+    $('ic').textContent = rendFmt(ic, 1);
+    $('ti').textContent = rendFmt(cpi * 1000 / f, 2);
+    var top = 0;
+    parts.forEach(function (x, i) { if (x > parts[top]) top = i; });
+    msg.className = 'msg ok';
+    msg.textContent = 'CPI = ' + rendFmt(cpi, 3) + '. MIPS = ' + rendFmt(f) + ' / ' + rendFmt(cpi, 3) + ' = ' + rendFmt(mips, 1) +
+      '; en ' + rendFmt(t) + ' s se ejecutan ' + rendFmt(ic, 1) + ' millones de instrucciones (y IC / (T·10⁶) da otra vez ' + rendFmt(ic / t, 1) +
+      ' MIPS). El tipo que más ciclos aporta es ' + names[top] + ' (' + rendFmt(parts[top] / cpi * 100, 0) + ' % del CPI): ahí conviene optimizar.';
+  }
+  function set(p, c, f, t) {
+    for (var i = 0; i < 4; i++) { $('p' + i).value = p[i]; $('c' + i).value = c[i]; }
+    if (f != null) $('f').value = f;
+    if (t != null) $('t').value = t;
+    render();
+  }
+  inputs.forEach(function (el) { el.addEventListener('input', render); });
+  $('ex1').addEventListener('click', function () { set([50, 20, 10, 20], [1, 2, 2, 2]); });
+  $('ex2').addEventListener('click', function () { set([43, 21, 12, 24], [1, 2, 2, 2], 160, 6); });
+  $('fast').addEventListener('click', function () { $('c3').value = 1; render(); });
+  render();
+})();
+
+/* ---- Ley de Amdahl ---- */
+(function () {
+  var $ = function (id) { return document.getElementById('amd-' + id); };
+  if (!$('fm')) return;
+  var NS = 'http://www.w3.org/2000/svg';
+  var W = 560, H = 260, L = 40, R = 14, T = 14, B = 34, NMAX = 128;
+  var svg = $('chart');
+
+  function sp(fm, n) { return 1 / ((1 - fm) + fm / n); }
+  function el(tag, attrs, text) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    svg.appendChild(e);
+    return e;
+  }
+  function draw(fm, n) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    W = Math.max(300, Math.min(560, svg.parentNode.clientWidth - 48 || 560));
+    H = W < 420 ? 240 : 260;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    var ymax = Math.min(NMAX, Math.max(4, fm < 1 ? 1 / (1 - fm) * 1.15 : NMAX));
+    var x = function (k) { return L + (Math.log(k) / Math.log(NMAX)) * (W - L - R); };
+    var y = function (s) { return H - B - (Math.min(s, ymax) / ymax) * (H - B - T); };
+    (W < 420 ? [1, 4, 16, 64, 128] : [1, 2, 4, 8, 16, 32, 64, 128]).forEach(function (k) {
+      el('line', { x1: x(k), x2: x(k), y1: T, y2: H - B, 'class': 'grid' });
+      el('text', { x: x(k), y: H - B + 16, 'text-anchor': 'middle', 'class': 'tick' }, String(k));
+    });
+    var step = ymax <= 6 ? 1 : ymax <= 12 ? 2 : ymax <= 30 ? 5 : ymax <= 60 ? 10 : 20;
+    for (var s = 0; s <= ymax + 0.001; s += step) {
+      el('line', { x1: L, x2: W - R, y1: y(s), y2: y(s), 'class': 'grid' });
+      el('text', { x: L - 6, y: y(s) + 4, 'text-anchor': 'end', 'class': 'tick' }, String(s));
+    }
+    el('line', { x1: L, x2: L, y1: T, y2: H - B, 'class': 'axis' });
+    el('line', { x1: L, x2: W - R, y1: H - B, y2: H - B, 'class': 'axis' });
+    el('text', { x: (L + W - R) / 2, y: H - 4, 'text-anchor': 'middle', 'class': 'tick' }, 'procesadores N');
+    var ideal = [], curve = [];
+    for (var k = 1; k <= NMAX; k *= 1.05) {
+      if (k <= ymax) ideal.push(x(k).toFixed(1) + ',' + y(k).toFixed(1));
+      curve.push(x(k).toFixed(1) + ',' + y(sp(fm, k)).toFixed(1));
+    }
+    curve.push(x(NMAX).toFixed(1) + ',' + y(sp(fm, NMAX)).toFixed(1));
+    if (ymax < NMAX) ideal.push(x(ymax).toFixed(1) + ',' + y(ymax).toFixed(1));
+    el('polyline', { points: ideal.join(' '), 'class': 'ideal' });
+    if (fm < 1) {
+      var lim = 1 / (1 - fm);
+      el('line', { x1: L, x2: W - R, y1: y(lim), y2: y(lim), 'class': 'limit' });
+      el('text', { x: W - R - 4, y: y(lim) - 6, 'text-anchor': 'end', 'class': 'lbl l' }, 'techo = ' + rendFmt(lim));
+    }
+    el('polyline', { points: curve.join(' '), 'class': 'curve' });
+    el('circle', { cx: x(n), cy: y(sp(fm, n)), r: 6, 'class': 'dot' });
+  }
+  function bar(id, serial, par, total) {
+    var b = $(id);
+    b.innerHTML = '';
+    var add = function (cls, v, txt) {
+      if (v <= 0) return;
+      var s = document.createElement('span');
+      s.className = cls;
+      s.style.width = (v / total * 100) + '%';
+      s.textContent = txt;
+      b.appendChild(s);
+    };
+    add('s', serial, serial / total >= 0.12 ? rendFmt(serial, 3) : '');
+    add('p', par, par / total >= 0.12 ? rendFmt(par, 3) : '');
+  }
+  window.addEventListener('resize', function () { render(); });
+  function render() {
+    var fm = $('fm').value / 100, n = parseInt($('n').value, 10);
+    $('fm-out').textContent = rendFmt(fm * 100, 0) + ' %';
+    $('n-out').textContent = String(n);
+    var s = sp(fm, n), lim = fm < 1 ? 1 / (1 - fm) : Infinity;
+    $('s').textContent = rendFmt(s);
+    $('lim').textContent = rendFmt(lim);
+    $('eff').textContent = rendFmt(s / n * 100, 0) + ' %';
+    bar('t0', 1 - fm, fm, 1);
+    bar('t1', 1 - fm, fm / n, 1);
+    $('t0-lbl').textContent = 'Tiempo original: serial ' + rendFmt(1 - fm, 3) + ' + paralela ' + rendFmt(fm, 3) + ' = 1';
+    $('t1-lbl').textContent = 'Con ' + n + ' procesador' + (n === 1 ? '' : 'es') + ': serial ' + rendFmt(1 - fm, 3) + ' + paralela ' + rendFmt(fm / n, 3) + ' = ' + rendFmt(1 / s, 3);
+    draw(fm, n);
+    var msg = 'Speedup = 1 / (' + rendFmt(1 - fm) + ' + ' + rendFmt(fm) + '/' + n + ') = ' + rendFmt(s) + '.';
+    if (fm < 1) msg += ' Aunque N fuera infinito, no pasaría de ' + rendFmt(lim) + ': la parte serial (' + rendFmt((1 - fm) * 100, 0) + ' %) ya ocupa ' + rendFmt((1 - fm) * s * 100, 0) + ' % del tiempo nuevo.';
+    else msg += ' Sin parte serial, el speedup es lineal: S = N.';
+    $('msg').textContent = msg;
+  }
+  function set(fm, n) { $('fm').value = fm; $('n').value = n; render(); }
+  $('fm').addEventListener('input', render);
+  $('n').addEventListener('input', render);
+  $('ex').addEventListener('click', function () { set(80, 10); });
+  $('tortuga').addEventListener('click', function () { set(50, 128); });
+  $('95').addEventListener('click', function () { set(95, 128); });
+  render();
+})();
+
+/* ---- Costo del circuito integrado ---- */
+(function () {
+  var $ = function (id) { return document.getElementById('cost-' + id); };
+  if (!$('wafer')) return;
+  var ids = ['wafer', 'dies', 'yield', 'test', 'pack', 'final'];
+  var defaults = { wafer: 5000, dies: 400, yield: 50, test: 5, pack: 5, final: 95 };
+  function num(id) { var x = parseFloat($(id).value); return isFinite(x) ? x : 0; }
+  function money(x) { return isFinite(x) ? '$' + rendFmt(x) : '–'; }
+  function render() {
+    var wafer = num('wafer'), dies = num('dies'), y = num('yield') / 100, fy = num('final') / 100;
+    var msg = $('msg');
+    if (dies <= 0 || y <= 0 || fy <= 0) {
+      $('die').textContent = '–'; $('ci').textContent = '–';
+      msg.className = 'msg err';
+      msg.textContent = 'Dies por wafer y los dos yields tienen que ser mayores que cero.';
+      return;
+    }
+    var die = wafer / (dies * y), ci = (die + num('test') + num('pack')) / fy;
+    var wrong = wafer / dies * y;
+    $('die').textContent = money(die);
+    $('ci').textContent = money(ci);
+    msg.className = 'msg';
+    msg.textContent = 'Por wafer salen ' + rendFmt(dies * y, 0) + ' dies buenos, que se reparten ' + money(wafer) + ': ' + money(die) +
+      ' cada uno. Con la fórmula mal escrita (× yield) daría ' + money(wrong) + ', más barato con peor yield, lo que no tiene sentido.';
+  }
+  ids.forEach(function (id) { $(id).addEventListener('input', render); });
+  $('big').addEventListener('click', function () {
+    // Doble de área: entran la mitad de dies y, con el modelo simple yield = (yield base)^(área relativa), el yield se eleva al cuadrado.
+    $('dies').value = Math.max(1, Math.round(num('dies') / 2));
+    $('yield').value = Math.max(1, Math.round(Math.pow(num('yield') / 100, 2) * 100));
+    render();
+  });
+  $('reset').addEventListener('click', function () {
+    ids.forEach(function (id) { $(id).value = defaults[id]; });
+    render();
+  });
+  render();
+})();
+
+stdQuiz([
+  { q: 'Un programa ejecuta 2·10⁹ instrucciones con CPI 1,5 en un procesador de 2 GHz. ¿Cuánto tarda?',
+    opts: ['1,5 s', '0,75 s', '3 s', '6 s'], correct: 0,
+    exp: 'T = IC × CPI / f = 2·10⁹ × 1,5 / 2·10⁹ = 1,5 s.' },
+  { q: 'Según el apunte, ¿qué factores determinan la cantidad de instrucciones (IC) de un programa?',
+    opts: ['La tecnología del hardware y la organización', 'La ISA y la tecnología de compiladores', 'Solo la frecuencia de reloj', 'El tamaño de la caché'], correct: 1,
+    exp: 'La frecuencia depende de la tecnología y la organización, el CPI de la organización y la ISA, y el IC de la ISA y del compilador.' },
+  { q: 'Una mezcla tiene 50 % ALU (1 ciclo) y 50 % loads (3 ciclos). ¿Cuál es el CPI?',
+    opts: ['2', '1,5', '3', '4'], correct: 0,
+    exp: 'CPI = 0,5 × 1 + 0,5 × 3 = 2. El CPI ponderado usa como pesos las fracciones de instrucciones, no los aportes.' },
+  { q: '¿Por qué MIPS no sirve para comparar dos máquinas con ISAs distintas?',
+    opts: ['Porque no tiene en cuenta la frecuencia', 'Porque una ISA con instrucciones más simples necesita más instrucciones: puede mostrar más MIPS y aun así tardar más', 'Porque solo mide operaciones de punto flotante', 'Porque depende del tamaño de la memoria'], correct: 1,
+    exp: 'MIPS = IC / (T × 10⁶): si IC cambia entre ISAs, los MIPS no reflejan el tiempo. La única medida confiable es el tiempo de ejecución.' },
+  { q: 'Un programa es 90 % paralelizable. Con infinitos procesadores, ¿cuál es el speedup máximo?',
+    opts: ['9', '90', 'Infinito', '10'], correct: 3,
+    exp: 'Por Amdahl, el techo es 1 / (1 − 0,9) = 10: la parte serial no se acelera.' },
+  { q: 'El Concorde hace el viaje en menos tiempo y el Boeing lleva más pasajeros por hora. ¿Qué mide cada uno?',
+    opts: ['El Concorde, throughput; el Boeing, latencia', 'El Concorde, tiempo de respuesta; el Boeing, throughput', 'Los dos miden lo mismo', 'El Concorde, MIPS; el Boeing, MFLOPS'], correct: 1,
+    exp: 'Tiempo de respuesta (latencia) es lo que tarda una tarea; throughput es cuántas tareas se completan por unidad de tiempo.' },
+  { q: 'Si la tensión acompaña a la frecuencia (V ∝ f) y se baja f a la mitad, ¿cuánto queda la potencia dinámica?',
+    opts: ['La mitad', 'Un cuarto', 'Un octavo', 'Igual'], correct: 2,
+    exp: 'P = C·V²·f; con V ∝ f queda P ∝ f³ y (1/2)³ = 1/8. Si V quedara fija, bajaría solo a la mitad.' },
+  { q: 'Un bloque se reemplaza por dos iguales a V/2 y f/2 (figura 13 del apunte). ¿Cómo queda la densidad de potencia respecto de la original?',
+    opts: ['1/4', '1/8', '1/16', 'Igual'], correct: 1,
+    exp: 'Cada bloque consume P/8, el total es P/4 y el área 2A: (P/4)/(2A) = P/(8A). El apunte dice 1/16 por dividir la potencia de un solo bloque por el área de los dos.' },
+  { q: 'Según la regla de Pollack, si se duplican los transistores de un núcleo, ¿qué pasa?',
+    opts: ['El rendimiento se duplica y la potencia también', 'El rendimiento se cuadruplica', 'El rendimiento mejora ≈ 1,41 veces y la potencia no cambia', 'El rendimiento mejora ≈ 1,41 veces y la potencia se duplica'], correct: 3,
+    exp: 'Perf ≈ √R, pero la potencia crece linealmente con la complejidad. Por eso conviene repartir el área en varios núcleos cuando hay paralelismo.' },
+  { q: 'Si el die yield baja del 80 % al 40 % (mismo wafer, mismos dies por wafer), ¿qué pasa con el costo de cada die?',
+    opts: ['Baja a la mitad', 'No cambia', 'Se duplica', 'Se cuadruplica'], correct: 2,
+    exp: 'Costo del die = costo del wafer / (dies por wafer × die yield): con la mitad de dies buenos, cada uno carga el doble del costo del wafer.' },
+]);
+})();
+</script>
+</body>
+</html>

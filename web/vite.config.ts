@@ -20,6 +20,7 @@ export default defineConfig({
         coherencia: resolve(root, 'coherencia.html'),
         pipeline: resolve(root, 'pipeline.html'),
         coloquio: resolve(root, 'coloquio.html'),
+        rendimiento: resolve(root, 'rendimiento.html'),
       },
     },
   },
