@@ -482,6 +482,7 @@
   .tf .tf-chart text{ font-size:12px; fill:var(--muted); }
   .tf .tf-chart .lbl{ fill:var(--text); font-weight:700; }
   .tf .tf-src{ font-size:13px; color:var(--muted); }
+  main .src{ font-size:13px; color:var(--muted); }
 </style>
 </head>
 <body>
@@ -567,9 +568,33 @@
           <p>Esto funciona gracias al <strong>principio de localidad</strong>:</p>
           <ul>
             <li><strong>Localidad temporal</strong>: un dato accedido recientemente tiene alta probabilidad de volver a accederse pronto.</li>
-            <li><strong>Localidad espacial / secuencial</strong>: si se accede a una dirección, es probable que se acceda pronto a direcciones cercanas, porque las instrucciones y los datos suelen usarse de forma contigua.</li>
+            <li><strong>Localidad espacial</strong>: si se accede a una dirección, es probable que se acceda pronto a direcciones cercanas.</li>
+            <li><strong>Localidad secuencial</strong>: las direcciones usadas suelen ser contiguas, porque las instrucciones se ejecutan una detrás de otra.</li>
           </ul>
+          <p class="note">Ojo: el apunte (p. 188) tiene invertidas las definiciones de localidad espacial y temporal (llama "espacial" a volver a usar la misma posición y "temporal" a usar las posiciones cercanas). Lo correcto es lo de arriba: <em>temporal</em> = la misma posición otra vez, pronto; <em>espacial</em> = posiciones vecinas.</p>
           <p>Además, la jerarquía respeta dos propiedades: <strong>inclusión</strong> (todo lo que está en un nivel rápido también existe en el nivel siguiente, más lento) y <strong>coherencia</strong> (las copias de un mismo dato en distintos niveles deben mantenerse consistentes, vía políticas como write-through o write-back).</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Los niveles de la jerarquía y quién gestiona cada uno</summary>
+        <div class="body">
+          <p>El problema de fondo es una brecha: según el apunte, hasta 1999 el ancho de banda de las memorias creció alrededor de un 9 % anual, mientras que la demanda de la CPU sobre la memoria creció cerca de un 50 % anual. Además, a menor tiempo de acceso y a mayor capacidad, mayor costo, y a mayor capacidad, menor velocidad.</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Nivel</th><th>Memoria</th><th>Quién la gestiona</th></tr></thead>
+              <tbody>
+                <tr><td>0</td><td>Registros de la CPU</td><td>El compilador, en tiempo de compilación</td></tr>
+                <tr><td>1</td><td>Caché</td><td>Hardware específico, en tiempo de ejecución (el apunte lo atribuye a la MMU)</td></tr>
+                <tr><td>2</td><td>Memoria principal</td><td>En tiempo de ejecución: con la caché por hardware y con el disco vía memoria virtual</td></tr>
+                <tr><td>3</td><td>Memoria secundaria (disco, con memoria virtual)</td><td>Memoria virtual: en parte el sistema operativo y en parte la MMU</td></tr>
+                <tr><td>4</td><td>Cintas magnéticas (y CD-ROM)</td><td>Copias de seguridad, fuera de la gestión dinámica</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>La gestión dinámica (en tiempo de ejecución) abarca solo la caché, la memoria principal y la memoria secundaria. El objetivo es crear la ilusión de una memoria con el tiempo de acceso del nivel más rápido y el costo por bit del más barato. El costo del sistema de memoria suele superar al de la CPU, así que optimizar su uso importa.</p>
+          <p class="note">Ojo: el apunte (p. 189) dice que la gestión dinámica abarca la caché (nivel 1), la principal (nivel 2) y la "memoria secundaria (nivel 4)". Según su propia lista de niveles, la memoria secundaria es el nivel 3; el nivel 4 son las cintas, que se usan para respaldo.</p>
+          <p class="src">Fuente: apuntes, secciones 5.0 a 5.1.4 (p. 187–189).</p>
         </div>
       </details>
 
@@ -613,6 +638,7 @@
         <summary>Ejemplo mínimo (memoria de 16 B, caché de 4 B)</summary>
         <div class="body">
           <p>Con bloques de 1 byte, una caché de 4 marcos solo puede contener 4 de los 16 bytes de memoria principal a la vez. El marco 0 de la caché termina representando a las posiciones de memoria 0, 4, 8 y 12 — todas comparten el mismo índice porque sus 2 bits menos significativos de dirección son iguales. Los bits altos de la dirección (el tag) son los que distinguen cuál de esas cuatro posiciones está realmente cargada en un momento dado.</p>
+          <p class="note">Ojo: el texto del apunte (p. 190) se contradice. Dice que "los dos bits más significativos indican el número de grupo, y los menos significativos ... el byte dentro del grupo", pero en la misma página pone "Dirección &lt;1:0&gt; ⇒ Índice de Caché" y la figura manda 0, 4, 8 y C al marco 0. Lo correcto es lo de la figura: con bloques de 1 byte, los 2 bits <em>menos</em> significativos son el índice y los 2 más significativos son el tag. En el ejemplo siguiente (1 KB) también mezcla "caché de 2<sup>N</sup> direcciones" con "dividida en N bloques": el tag son los 32 − N bits altos cuando la caché tiene 2<sup>N</sup> bytes.</p>
         </div>
       </details>
 
@@ -774,7 +800,7 @@
             <tr><td></td><td>Directorio grande, por etiquetas largas (tag = dirección completa)</td></tr>
             <tr><td></td><td>Requiere algoritmos de reemplazo, con su propia sobrecarga</td></tr>
           </table>
-          <p>Por su costo, se reserva para cachés muy pequeñas (4 u 8 entradas), como los TLB o las cachés víctima que se ven más adelante.</p>
+          <p>Por su costo, se reserva para cachés muy pequeñas (4 u 8 entradas), como las cachés víctima que se ven más adelante. (Las TLB suelen ser otro ejemplo, pero eso no lo dice el apunte.)</p>
         </div>
       </details>
 
@@ -821,7 +847,7 @@
             <tr>
               <td><strong>Tamaño de bloque</strong></td>
               <td class="hi">Mejor aprovechamiento de la localidad espacial — al traer más bytes vecinos de una sola vez, los próximos accesos cercanos ya vienen resueltos como hit</td>
-              <td>Bloques más grandes ⇒ menos bloques distintos entrando a la caché ⇒ menos conjuntos disponibles y más <strong>fallos por conflicto</strong>; además cada miss cuesta más (hay que transferir más bytes) y se puede desperdiciar espacio trayendo datos que nunca se usan</td>
+              <td>Bloques más grandes ⇒ entran menos bloques distintos en la caché ⇒ más <strong>fallos de capacidad</strong> (el gráfico del apunte, p. 197, marca que bajan los iniciales y suben los de capacidad); además cada miss cuesta más (hay que transferir más bytes) y se puede desperdiciar espacio trayendo datos que nunca se usan</td>
             </tr>
             <tr>
               <td><strong>Tamaño de caché</strong></td>
@@ -1009,6 +1035,7 @@
         <summary>Write Allocate vs. No Write Allocate</summary>
         <div class="body">
           <p>Ante un fallo de escritura (la dirección no está en caché), hay dos caminos: <strong>Write Allocate</strong> trae el bloque completo a caché y luego escribe ahí (típico de write-back, apostando a que se seguirá escribiendo/leyendo ese bloque); <strong>No Write Allocate</strong> escribe directo en memoria principal sin cargar el bloque (típico de write-through, donde cargarlo no aporta ninguna ventaja porque de todas formas cada escritura futura también iría a memoria).</p>
+          <p class="src">Fuente: apuntes, Unidad 6, políticas de asignación (p. 220). El apunte lo trata en la unidad de coherencia, no en la 5.</p>
         </div>
       </details>
     </section>
@@ -1056,12 +1083,47 @@
           <p>Subir la asociatividad baja los fallos por conflicto (con el costo visto en 5.3.1). Subir el tamaño de bloque aprovecha mejor la localidad espacial hasta cierto punto — bloques demasiado grandes traen datos que no se van a usar y desplazan otros bloques útiles, efecto que pega más fuerte en cachés chicas. Cambiar el algoritmo de reemplazo (LRU vs Random) importa más en cachés chicas; la diferencia se diluye a medida que la caché crece.</p>
         </div>
       </details>
+      <details class="card" id="s-mejoras-tamanio">
+        <summary>Asociatividad y tamaño de bloque según el tamaño de la caché</summary>
+        <div class="body">
+          <p>Las dos palancas pierden fuerza a medida que la caché crece, y eso cambia qué conviene en cada caso:</p>
+          <ul>
+            <li><strong>Asociatividad</strong>: subirla baja los fallos por conflicto, pero agrega entradas al multiplexor que elige el dato, así que suben el tiempo de acceso y el costo de hardware.</li>
+            <li>A medida que aumenta la capacidad, las tasas de fallos de 1-way, 2-way, 4-way, etc. <strong>convergen</strong>. En una caché grande no tiene sentido ir a totalmente asociativa; en una chica, subir la asociatividad sí mejora mucho.</li>
+            <li><strong>Tamaño de bloque</strong>: va de una palabra hasta toda la caché. Con bloques de pocas palabras hay muchos fallos, porque no se aprovecha la localidad espacial. Agrandarlo baja los fallos iniciales.</li>
+            <li>Si el bloque crece demasiado, entran menos bloques en la caché, suben los fallos de capacidad y también la penalización (hay que traer más datos). Hay un <strong>tamaño óptimo</strong>, y el efecto es mayor cuanto más chica es la caché.</li>
+          </ul>
+          <p class="note info">Los dos gráficos del apunte (p. 197) muestran esto con curvas: tasa de fallos por tipo (asociatividad, capacidad e iniciales) frente al tamaño de la caché, y tasa de fallos frente al tamaño de bloque para cachés de 1 KB a 256 KB.</p>
+          <p class="src">Fuente: apuntes, secciones 5.16.2 y 5.16.3 (p. 197).</p>
+        </div>
+      </details>
       <details class="card">
         <summary>Técnicas especiales: caché víctima, pseudo asociativa, prebúsqueda</summary>
         <div class="body">
-          <p><strong>Caché víctima</strong>: una pequeña caché totalmente asociativa al lado de la principal. Cuando hay un miss en la principal, se revisa primero la víctima antes de ir a memoria — muy efectiva en cachés directas chicas (puede evitar entre 20% y 95% de los fallos con solo 4 entradas extra). Podés activarla en el <a href="#s-simulador">simulador de la sección 5.3/5.4</a> (más arriba) y comparar la tasa de aciertos con y sin ella.</p>
+          <p><strong>Caché víctima</strong>: una pequeña caché totalmente asociativa al lado de la principal. Cuando hay un miss en la principal, se revisa primero la víctima antes de ir a memoria — muy efectiva en cachés directas chicas (según el apunte, en una caché de 4 KB con una víctima de 4 entradas se evita entre el 20 % y el 95 % de los fallos; cuanto más chica es la caché principal, más rinde la víctima). Podés activarla en el <a href="#s-simulador">simulador de la sección 5.3/5.4</a> (más arriba) y comparar la tasa de aciertos con y sin ella.</p>
           <p><strong>Pseudo asociativa</strong>: combina caché directa y totalmente asociativa. Ante un miss no va directo a memoria: primero prueba en el marco "hermano" (mismo índice con el bit más significativo invertido), simulando una asociatividad de 2 vías sin el costo de N comparadores en paralelo.</p>
           <p><strong>Prebúsqueda (prefetching)</strong>: anticipa el acceso a memoria antes de que el procesador lo pida, solapándolo con instrucciones independientes previas. Puede ser por <em>software</em> (el compilador inserta instrucciones de prebúsqueda, útil en bucles y arrays) o por <em>hardware</em> (secuencial, marcada, adaptativa o con "stride" arbitrario para patrones de salto).</p>
+        </div>
+      </details>
+      <details class="card" id="s-mejoras-prebusqueda">
+        <summary>Prebúsqueda por software y por hardware, en detalle</summary>
+        <div class="body">
+          <p>La prebúsqueda oculta la latencia de un fallo trayendo el dato antes de que el procesador lo pida, solapando el acceso con instrucciones independientes anteriores. Como no escribe registros, no genera riesgos, aunque puede hacer búsquedas innecesarias.</p>
+          <h3>Por software</h3>
+          <ul>
+            <li>El compilador inserta instrucciones especiales de prebúsqueda; el destino puede ser la caché o un buffer de prebúsqueda.</li>
+            <li>Las instrucciones de prebúsqueda <strong>no generan excepciones</strong> y son una forma de <strong>especulación</strong>.</li>
+            <li>Tienen costo: las instrucciones nuevas agregan overhead y cuantas más búsquedas se hacen, más se ocupa la memoria.</li>
+            <li>Funcionan bien en bucles, arrays simples y aplicaciones de cálculo; no rinden en código entero con mucho reuso de la caché.</li>
+          </ul>
+          <h3>Por hardware</h3>
+          <ul>
+            <li><strong>Sobre fallo</strong>: si el acceso al bloque b falla, se prebusca b + 1.</li>
+            <li><strong>Marcada</strong>: cada bloque lleva un tag; si un bloque marcado se busca o se prebusca, se prebusca el siguiente. Sigue bien la localidad espacial.</li>
+            <li><strong>Adaptativa</strong>: la cantidad de bloques prebuscados se ajusta según el comportamiento.</li>
+            <li><strong>Con "stride" arbitrario</strong>: prebusca siguiendo un paso fijo entre direcciones (por ejemplo, de a 2 o 3 bloques) cuando detecta un patrón regular.</li>
+          </ul>
+          <p class="src">Fuente: apuntes, sección 5.16.7 (p. 199–200).</p>
         </div>
       </details>
     </section>
@@ -1085,7 +1147,7 @@
           <div id="tf-out"></div>
           <svg id="tf-chart" class="tf-chart" viewBox="0 0 420 200" role="img" aria-label="Tasa de fallos según organización"></svg>
         </div>
-        <p class="tf-src">Clasificación de fallos: inicial si es el primer acceso al bloque; capacidad si también falla una caché totalmente asociativa LRU del mismo tamaño; conflicto si no (falla solo por el emplazamiento). Con la secuencia por defecto y caché directa, 0 y 8 (y también 1 y 9) compiten por el mismo marco: todo falla. Con 2 vías caben juntos y solo quedan los fallos iniciales. Agregá más bloques distintos para ver fallos de capacidad.</p>
+        <p class="tf-src">Clasificación de fallos: inicial si es el primer acceso al bloque; capacidad si también falla una caché totalmente asociativa LRU del mismo tamaño; conflicto si no (falla solo por el emplazamiento). Este criterio de clasificación es el de Hennessy-Patterson y no está en el apunte, que solo define los fallos de capacidad como los que se deben al tamaño limitado de la caché (p. 196). Con la secuencia por defecto y caché directa, 0 y 8 (y también 1 y 9) compiten por el mismo marco: todo falla. Con 2 vías caben juntos y solo quedan los fallos iniciales. Agregá más bloques distintos para ver fallos de capacidad.</p>
       </div>
       <p class="tf-src">Fuente: apuntes, secciones 5.2 a 5.16.1.</p>
     </section>
@@ -1100,10 +1162,53 @@
           <ul>
             <li><strong>Prioridad a lecturas sobre escrituras</strong>: en write-through con buffer de escritura, si una lectura no choca con lo que hay pendiente en el buffer, se la deja pasar directo en vez de esperar a que el buffer se vacíe.</li>
             <li><strong>Reemplazo de subbloques</strong>: en vez de descartar el bloque entero, se divide en subbloques y solo se reemplazan los necesarios — ahorra tags y aprovecha mejor la localidad.</li>
-            <li><strong>Envío directo de la palabra al procesador</strong>: no hay que esperar a que llegue el bloque completo; en cuanto llega la palabra pedida, se la entrega mientras el resto del bloque sigue llegando.</li>
+            <li><strong>Envío directo de la palabra al procesador</strong>: no hay que esperar a que llegue el bloque completo; en cuanto llega la palabra pedida, se la entrega mientras el resto del bloque sigue llegando (las dos variantes, más abajo).</li>
             <li><strong>Caché sin bloqueo (non-blocking)</strong>: permite seguir atendiendo accesos aunque haya un miss pendiente, en vez de detener todo el procesador.</li>
             <li><strong>Caché multinivel (L2, L3...)</strong>: agrega niveles intermedios para que el fallo de L1 no tenga que ir directo a memoria principal, mucho más lenta.</li>
           </ul>
+        </div>
+      </details>
+      <details class="card" id="s-penalizacion-lecturas-wb">
+        <summary>Prioridad a las lecturas también con post-escritura (write-back)</summary>
+        <div class="body">
+          <p>En write-back el problema aparece al reemplazar un bloque <strong>sucio</strong>: si hubiera que escribirlo en memoria antes de leer el bloque nuevo, la lectura (que es lo que frena al procesador) quedaría esperando a una escritura.</p>
+          <ul>
+            <li><strong>Buffer para bloques sucios</strong>: el bloque modificado que sale de la caché se guarda en un buffer intermedio en lugar de escribirse en memoria en ese mismo momento.</li>
+            <li>Ante un <strong>fallo de lectura</strong> que desaloja un bloque sucio, primero se lee de memoria principal el bloque pedido y recién después se escribe el bloque sucio.</li>
+            <li>La idea es la misma que en write-through: las lecturas no esperan a las escrituras, salvo que haya un conflicto directo con una escritura pendiente (la misma dirección).</li>
+          </ul>
+          <p class="src">Fuente: apuntes, sección 5.17.1 (p. 203).</p>
+        </div>
+      </details>
+      <details class="card" id="s-penalizacion-palabra">
+        <summary>Envío directo de la palabra: Early Restart y Critical Word First</summary>
+        <div class="body">
+          <p>Sin esta técnica, ante un fallo de lectura el procesador espera a que llegue el bloque <em>completo</em>, lo que cuesta mucho con bloques grandes. Hay dos formas de cortar esa espera:</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th></th><th>Carga anticipada (Early Restart)</th><th>Primero la palabra solicitada (Critical Word First)</th></tr></thead>
+              <tbody>
+                <tr><td>Orden de llegada</td><td>El bloque llega en su orden normal</td><td>La memoria manda primero la palabra pedida y el resto en los ciclos siguientes</td></tr>
+                <tr><td>Cuándo sigue el procesador</td><td>Apenas llega la palabra pedida</td><td>Apenas llega la primera palabra, que es justo la pedida</td></tr>
+                <tr><td>Qué pasa con el resto</td><td colspan="2">Se sigue cargando en paralelo con la ejecución</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>La ganancia depende del tamaño de bloque: es útil con bloques grandes y casi nula con bloques chicos, donde el bloque completo llega casi tan rápido como una palabra.</p>
+          <p class="note">Ojo: el apunte (p. 204) dice que, como solo se envía la palabra pedida, pedir enseguida la siguiente palabra obligaría a volver a acceder a memoria principal. Eso no cierra con su propia definición: el resto del bloque se sigue cargando en la caché en paralelo. Si la siguiente palabra se pide antes de que llegue, se espera a que termine esa transferencia, pero no hace falta otro acceso a memoria.</p>
+          <p class="src">Fuente: apuntes, sección 5.18 (p. 204).</p>
+        </div>
+      </details>
+      <details class="card" id="s-penalizacion-nobloqueo">
+        <summary>Caché sin bloqueo: cómo se apoya en la ejecución fuera de orden</summary>
+        <div class="body">
+          <p>Si el procesador ejecuta fuera de orden (como con <a href="tomasulo.html">Tomasulo</a>), un fallo de caché no tiene por qué detener todo: mientras se trae el dato, se siguen ejecutando otras instrucciones. Para eso la caché tiene que <strong>no bloquearse</strong> (non-blocking o lockup-free) y seguir atendiendo accesos con un fallo pendiente. Algunos diseños admiten varios fallos simultáneos.</p>
+          <ul>
+            <li>El beneficio depende de la planificación de las instrucciones: tiene que haber trabajo independiente para hacer mientras tanto.</li>
+            <li>Necesita una interfaz de memoria más compleja, que puede incluir varios bancos para traer a la vez datos de distintos bloques.</li>
+            <li>Por cada carga pendiente (por ejemplo <code>LD R1, dir</code>) hay que guardar la dirección del bloque que falló, la entrada de la caché para ese bloque, el ítem del bloque que se pidió y el registro destino del dato.</li>
+          </ul>
+          <p class="src">Fuente: apuntes, secciones 5.19 y 5.19.1 (p. 204–205).</p>
         </div>
       </details>
       <details class="card">
@@ -1117,9 +1222,9 @@
     <!-- ============ 5.19.4-7 VIRTUAL ============ -->
     <section class="block vm" id="s-virtual">
       <h2><span class="num">5.19.4–5.19.7</span> Caché y memoria virtual: física, parcial y total</h2>
-      <p class="sub">La memoria virtual y la caché cortan la misma dirección de formas distintas. Toda la sección se reduce a una pregunta: el índice y el tag de la caché, ¿salen de la dirección virtual o de la física?</p>
+      <p class="sub">La memoria virtual y la caché cortan la misma dirección de formas distintas. Para el apunte es una técnica para <b>reducir el tiempo de acierto</b>: evitar esperar a la TLB antes de buscar en la caché (p. 207). Toda la sección se reduce a una pregunta: el índice y el tag de la caché, ¿salen de la dirección virtual o de la física?</p>
 
-      <p class="vm-cap">Dirección virtual de 32 bits con páginas de 4 KB</p>
+      <p class="vm-cap">Dirección virtual de 32 bits con páginas de 4 KB (ejemplo propio; el apunte lo muestra en una figura sin números, p. 209)</p>
       <div class="vm-bar">
         <div class="c-page" style="width:62.5%"><b>Página virtual</b><span>20 bits, la TLB la traduce</span></div>
         <div class="c-off" style="width:37.5%"><b>Desplazamiento</b><span>12 bits, no cambia</span></div>
@@ -1216,6 +1321,8 @@
             <li><strong>Homónimos</strong> (misma dirección virtual, distinta física entre procesos): producen falsos aciertos. Se evitan vaciando la caché en cada cambio de contexto o agregando el PID al tag.</li>
             <li><strong>Sinónimos</strong> (distintas direcciones virtuales, misma física): generan copias duplicadas e incoherentes. El PID no los resuelve; hay que detectarlos.</li>
           </ul>
+          <p class="note info">Terminología: "homónimos" es el término de la bibliografía; el apunte no lo usa y habla de "falsos aciertos" al cambiar de contexto (p. 208). A los sinónimos los llama "problema de sinónimos <em>o alias</em>" (p. 209): no confundir ese "alias" con el aliasing de la caché directa (bloques que compiten por el mismo marco).</p>
+          <p class="note">Ojo: el apunte se contradice. En p. 208 dice que asignar un identificador de proceso a cada bloque soluciona tanto el cambio de contexto como los sinónimos; en p. 209 dice que la solución de los sinónimos es detectarlos. Lo correcto es lo de p. 209: el PID distingue procesos, pero dos direcciones virtuales del <em>mismo</em> dato físico siguen siendo dos líneas distintas, así que el PID no evita las copias duplicadas.</p>
           <p>Por ese costo se prefiere el solapamiento, que es casi igual de rápido.</p>
         </div>
       </details>
@@ -1244,9 +1351,31 @@
           <table class="cmp">
             <tr><th>DRAM</th><th>SRAM</th></tr>
             <tr><td>1 transistor por bit — alta densidad, bajo costo</td><td>Varios transistores por bit — más rápida, más cara, menos densa (se usa en la caché)</td></tr>
-            <tr><td>Lectura destructiva: hay que reescribir el bit tras leerlo</td><td>Lectura no destructiva</td></tr>
+            <tr><td>Lectura destructiva y necesita <strong>refresco</strong> periódico: por eso su tiempo de ciclo es mucho mayor que su tiempo de acceso</td><td>Sin refresco: tiempo de acceso muy cercano al de ciclo</td></tr>
           </table>
-          <p>El rendimiento de la memoria principal se mide en <strong>latencia</strong> (tiempo de acceso + tiempo de ciclo) y <strong>ancho de banda</strong> (datos transferibles por unidad de tiempo). El ancho de banda importa doblemente en sistemas con cachés L2/L3, porque de él depende la penalización de sus fallos — y de hecho, el tamaño de bloque de una caché se dimensiona en función del ancho de banda disponible hacia memoria principal. La <strong>memoria entrelazada</strong> reparte direcciones consecutivas entre varios bancos que pueden atenderse en paralelo, multiplicando el ancho de banda efectivo.</p>
+          <p>El rendimiento de la memoria principal se mide en <strong>latencia</strong> y <strong>ancho de banda</strong>. La latencia (lo que demora una operación, y lo que pesa en la penalización por fallo de la caché) se describe con dos tiempos: el <em>tiempo de acceso</em>, entre la petición y la llegada del dato, y el <em>tiempo de ciclo</em>, entre dos peticiones sucesivas. El <strong>ancho de banda</strong> es la cantidad máxima de datos que se pueden transferir por unidad de tiempo. Importa doblemente en sistemas con cachés L2/L3, porque de él depende la penalización de sus fallos — y de hecho, el tamaño de bloque de una caché se dimensiona en función del ancho de banda disponible hacia memoria principal. La <strong>memoria entrelazada</strong> reparte direcciones consecutivas entre varios bancos que pueden atenderse en paralelo, multiplicando el ancho de banda efectivo.</p>
+        </div>
+      </details>
+      <details class="card" id="s-principal-dram">
+        <summary>DRAM y SRAM en detalle: refresco, RAS/CAS y cifras</summary>
+        <div class="body">
+          <h3>DRAM</h3>
+          <ul>
+            <li>Usa <strong>un solo transistor por bit</strong> para ganar capacidad. Leer el bit destruye la información, así que hay que volver a escribirlo: eso es el <strong>refresco</strong>, y además la DRAM necesita refrescarse periódicamente.</li>
+            <li>El refresco es una de las razones por las que su <strong>tiempo de ciclo</strong> es mucho más largo que su <strong>tiempo de acceso</strong>.</li>
+            <li>Como tiene mucha capacidad, poner un pin por cada línea de dirección encarecería el encapsulado. Por eso la dirección se <strong>multiplexa</strong>: la memoria es una matriz, y la dirección se manda en dos mitades, una para la fila (<strong>RAS</strong>, Row Access Strobe) y otra para la columna (<strong>CAS</strong>, Column Access Strobe).</li>
+          </ul>
+          <h3>SRAM</h3>
+          <ul>
+            <li>Usa entre <strong>4 y 6 transistores por bit</strong> y no necesita refresco, así que su tiempo de acceso es muy cercano al de ciclo.</li>
+            <li>La SRAM se elige por velocidad (se usa en la caché); la DRAM, por costo por bit (memoria principal).</li>
+          </ul>
+          <div class="pill-row">
+            <span class="pill">DRAM: <b>4–8×</b> más capacidad</span>
+            <span class="pill">SRAM: hasta <b>16×</b> más rápida</span>
+            <span class="pill">SRAM: <b>8–16×</b> más cara</span>
+          </div>
+          <p class="src">Fuente: apuntes, secciones 5.20, 5.20.1 y 5.20.2 (p. 210–212).</p>
         </div>
       </details>
     </section>
@@ -1851,8 +1980,8 @@ const QUIZ = [
   {q:"En write-back, ¿para qué sirve el bit 'dirty' (D)?", opts:["Indica si el bloque es válido","Indica si el bloque fue modificado y debe escribirse en memoria antes de descartarlo","Cuenta cuántas veces se usó el bloque","Marca qué vía fue la última en escribir"], correct:1, exp:"Sin el bit dirty no se sabría si hace falta volcar el bloque a memoria principal antes de reemplazarlo."},
   {q:"¿Qué política de reemplazo necesita, en el caso general (más de 2 vías), contadores llamados 'registros de edad'?", opts:["FIFO","Aleatoria","LRU","Write-through"], correct:2, exp:"LRU es trivial con un bit en 2 vías, pero con más vías requiere contar antigüedad de uso por línea."},
   {q:"¿Por qué write-through suele usar 'no write allocate' ante un fallo de escritura?", opts:["Porque no existen los fallos de escritura en write-through","Porque de todas formas cada escritura futura también tendría que ir a memoria principal, así que cargar el bloque no aporta ventaja","Porque write-through no admite bloques","Porque siempre hay espacio libre en la caché"], correct:1, exp:"Como cada escritura ya se refleja en memoria principal, no hay beneficio en traer el bloque completo a la caché primero."},
-  {q:"Una caché víctima es...", opts:["Una caché totalmente asociativa grande que reemplaza a la L1","Una pequeña caché totalmente asociativa que revisa bloques recién desalojados antes de ir a memoria principal","Un algoritmo de reemplazo aleatorio","Un tipo de memoria DRAM"], correct:1, exp:"Es especialmente útil en cachés directas chicas, donde puede evitar entre 20% y 95% de los fallos con solo 4 entradas."},
-  {q:"¿Qué mide el 'ancho de banda' de la memoria principal, a diferencia de la latencia?", opts:["El tiempo entre pedido y llegada del primer dato","La cantidad máxima de datos transferibles por unidad de tiempo","El tamaño del tag","La cantidad de bits de índice"], correct:1, exp:"La latencia es tiempo de acceso + tiempo de ciclo; el ancho de banda es volumen de datos por segundo, clave para dimensionar el tamaño de bloque."},
+  {q:"Una caché víctima es...", opts:["Una caché totalmente asociativa grande que reemplaza a la L1","Una pequeña caché totalmente asociativa que revisa bloques recién desalojados antes de ir a memoria principal","Un algoritmo de reemplazo aleatorio","Un tipo de memoria DRAM"], correct:1, exp:"Es especialmente útil en cachés directas chicas: según el apunte, en una caché de 4 KB una víctima de 4 entradas evita entre el 20 % y el 95 % de los fallos."},
+  {q:"¿Qué mide el 'ancho de banda' de la memoria principal, a diferencia de la latencia?", opts:["El tiempo entre pedido y llegada del primer dato","La cantidad máxima de datos transferibles por unidad de tiempo","El tamaño del tag","La cantidad de bits de índice"], correct:1, exp:"La latencia se describe con el tiempo de acceso (petición → llegada del dato) y el tiempo de ciclo (entre peticiones sucesivas); el ancho de banda es la cantidad de datos por unidad de tiempo, clave para dimensionar el tamaño de bloque."},
 ];
 
 /* ---------- ↳ tipos de fallo ---------- */
