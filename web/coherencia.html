@@ -316,6 +316,15 @@
   .coh table.cmp td:first-child{ font-weight:750; font-size:16px; }
   .coh table.coh-cmp{ min-width:560px; }
   .coh table.coh-cmp td:first-child{ font-weight:600; font-size:13.5px; color:var(--muted); width:22%; }
+  .coh table.coh-ex{ min-width:520px; }
+  .coh table.coh-ex td:first-child{ font-weight:600; font-size:13.5px; }
+  .coh table.coh-ex td.c-M, .coh table.coh-ex td.c-E, .coh table.coh-ex td.c-S, .coh table.coh-ex td.c-I{ font-weight:800; }
+  .coh details.card .body h3{ font-size:15px; margin:16px 0 8px; }
+  .coh pre.coh-code{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin:8px 0 14px; overflow-x:auto; font:13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--text); }
+  .coh table.sy-table{ min-width:640px; }
+  .coh table.sy-table tbody tr.sy-cur td{ background:var(--bg-panel-2); box-shadow:inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent); }
+  .coh table.sy-table tbody tr.sy-done td{ color:var(--muted); }
+  .coh .cpu .sy-do{ font-size:13px; color:var(--text); margin-top:8px; min-height:2.6em; }
 
   /* Piezas comunes de los simuladores */
   .coh .src{ font-size:13px; color:var(--muted); }
@@ -411,7 +420,7 @@
   </div>
   <p class="kicker">Arquitectura de Computadoras — Unidad 6: Coherencia de caché</p>
   <h1>Coherencia de caché: snoopy y directorios</h1>
-  <p class="lede">Cómo varias cachés mantienen coherente un mismo dato: con un bus, todas lo espían y reaccionan a lo que hacen las demás; sin bus, un directorio sabe quién tiene cada bloque. Vas a poder hacer leer, escribir y reemplazar bloques en los protocolos de dos estados, MSI y MESI, ver el diagrama de estados encenderse con cada transición y seguir los mensajes de un directorio por la red.</p>
+  <p class="lede">Cómo varias cachés mantienen coherente un mismo dato: con un bus, todas lo espían y reaccionan a lo que hacen las demás; sin bus, un directorio sabe quién tiene cada bloque. Vas a poder hacer leer, escribir y reemplazar bloques en los protocolos de dos estados, MSI y MESI, ver el diagrama de estados encenderse con cada transición seguir los mensajes de un directorio por la red y ver cómo se comporta un cerrojo cuando varios procesadores compiten por él.</p>
   <div class="hero coh-hero">
     <svg viewBox="0 0 640 210" role="img" aria-label="Tres cachés conectadas a un bus compartido, que también conecta con la memoria">
       <rect class="box" x="40" y="10" width="140" height="62" rx="12"/><text class="lbl" x="110" y="38" text-anchor="middle">P1 + caché</text><text class="cap" x="110" y="58" text-anchor="middle">escucha el bus</text>
@@ -431,7 +440,7 @@
 <div class="shell">
 
   <nav class="side" id="sidenav" aria-label="Secciones de la guía">
-    <div class="brand">Coherencia de caché<small>Unidad 6 — snoopy, directorios y consistencia</small></div>
+    <div class="brand">Coherencia de caché<small>Unidad 6 — snoopy, directorios, consistencia y sincronización</small></div>
     <ol>
       <li class="grp">
         <p class="grp-title">El problema</p>
@@ -452,6 +461,7 @@
       <li class="grp">
         <p class="grp-title">Más allá de la coherencia</p>
         <a href="#s-consistencia">8 Consistencia de memoria</a>
+        <a href="#s-sincronizacion">9 Sincronización</a>
       </li>
       <li class="grp">
         <p class="grp-title">Autoevaluación</p>
@@ -469,6 +479,39 @@
       <p class="sub">Qué sale mal cuando cada procesador tiene su propia caché.</p>
       <p>En un multiprocesador de memoria compartida, cada procesador tiene su propia caché. Si P1 y P2 leen la variable X, cada uno se queda con una copia. Si después P1 escribe X, la copia de P2 queda vieja, y P2 sigue leyendo el valor anterior sin enterarse. Eso es el problema de <strong>coherencia de caché</strong>.</p>
       <div class="note info">Imaginá un documento original en un archivo central (la memoria) y varias personas con fotocopias en su escritorio (las cachés). Si alguien corrige su fotocopia, los demás siguen trabajando con una versión desactualizada. Hace falta alguna forma de avisarles.</div>
+
+      <details class="card">
+        <summary>Datos privados y compartidos: qué ganás al cachearlos (migración y replicación)</summary>
+        <div class="body">
+          <p>En memoria compartida conviven dos tipos de datos. Los <strong>privados</strong> los usa un solo procesador: cachearlos da los mismos beneficios que en un uniprocesador y no generan ningún problema, porque nadie más los mira. Los <strong>compartidos</strong> los usan varios procesadores, típicamente para sincronizarse.</p>
+          <p>Cachear también los compartidos vale la pena, y por eso no se los deja fuera de la caché:</p>
+          <ul>
+            <li><strong>Migración:</strong> el dato se mueve a la caché local del que lo usa y se trabaja ahí de forma transparente. Baja la latencia y el ancho de banda que se le pide a la memoria compartida.</li>
+            <li><strong>Replicación:</strong> varios procesadores leen el mismo dato a la vez, cada uno desde su copia local. Baja la latencia y la competencia por leer ese dato en memoria.</li>
+          </ul>
+          <p>El precio de esas copias es justamente el problema de coherencia: los protocolos de esta guía existen para quedarse con la migración y la replicación sin leer valores viejos.</p>
+          <p class="src">Fuente: apuntes, secciones 6.3 (p. 216–217) y 6.7.3 (p. 219).</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>¿Y en un uniprocesador? DMA y las soluciones de grano grueso</summary>
+        <div class="body">
+          <p>Con un solo procesador también puede haber incoherencia, porque la memoria la toca otro agente: el <strong>DMA</strong> de un dispositivo de E/S.</p>
+          <ul>
+            <li>Si el DMA <strong>escribe</strong> en memoria, el procesador puede seguir viendo en su caché el valor viejo.</li>
+            <li>Si el DMA <strong>lee</strong> memoria y la caché es write-back, puede llevarse un valor viejo, porque lo nuevo todavía está sucio en la caché.</li>
+          </ul>
+          <p>Como la E/S es mucho menos frecuente que los accesos a memoria, alcanzan soluciones de grano grueso:</p>
+          <ul>
+            <li>Marcar como <strong>no cacheables</strong> los segmentos que usa la E/S (o usar load/store no cacheables).</li>
+            <li>Que el sistema operativo haga <strong>flush</strong> de esas páginas antes de la E/S.</li>
+            <li>Hacer pasar la E/S <strong>por la caché</strong>: funciona, pero la ensucia con datos que no le interesan al procesador y la frena.</li>
+          </ul>
+          <p>En un multiprocesador ninguna sirve: leer y escribir variables compartidas es muy frecuente, así que no podés dejarlas fuera de la caché ni llamar al sistema operativo en cada acceso. Por eso los procesadores traen la coherencia resuelta en hardware.</p>
+          <p class="src">Fuente: apuntes, secciones 6.5.1 (p. 217) y 6.6 (p. 218).</p>
+        </div>
+      </details>
     </section>
 
     <!-- ============ 2 IDEA ============ -->
@@ -480,9 +523,28 @@
       <p>Cada bloque de cada caché tiene un <strong>estado</strong>, y no hay registro central. Los cambios de estado los disparan dos tipos de eventos: pedidos del propio procesador (<code>PrRd</code>, <code>PrWr</code>) y transacciones que se observan en el bus, generadas por otros.</p>
       <div class="props">
         <div class="panel"><strong>Propagación</strong><p>Todos escuchan el bus, así que toda escritura llega a todas las cachés.</p></div>
-        <div class="panel"><strong>Serialización</strong><p>El bus atiende una transacción por vez y el arbitraje fija el orden: todos ven las escrituras en la misma secuencia.</p></div>
+        <div class="panel"><strong>Serialización</strong><p>El arbitraje del bus fija el orden: todos ven las escrituras en la misma secuencia. En el modelo simple el bus atiende una transacción por vez; en un bus real no es tan así (ver «Carreras» en la sección 4).</p></div>
       </div>
       <p>Ante una escritura hay dos políticas: <strong>invalidar</strong> las otras copias («escribí, descarten las suyas») o <strong>actualizarlas</strong> («escribí, este es el valor nuevo»). Los tres protocolos de abajo usan invalidación.</p>
+
+      <details class="card">
+        <summary>Invalidación frente a actualización, en detalle</summary>
+        <div class="body">
+          <div class="table-scroll">
+            <table class="cmp coh-cmp">
+              <thead><tr><th></th><th>Invalidación en escritura</th><th>Actualización en escritura</th></tr></thead>
+              <tbody>
+                <tr><td>Al escribir</td><td>Se invalidan todas las demás copias: muchos lectores, un solo escritor.</td><td>Se actualizan todas las copias con el valor nuevo.</td></tr>
+                <tr><td>Escrituras seguidas</td><td>Las siguientes escrituras al mismo bloque (aunque sean a otras palabras) desde el mismo procesador son locales: una sola transacción alcanza.</td><td>Cada escritura, aunque sea a la misma palabra, genera otra actualización (write merge).</td></tr>
+                <tr><td>Fallo de lectura</td><td>Con write-through, se lee de memoria, que está al día. Con write-back, se hace snoop en las cachés remotas: la que tiene el valor más reciente se lo da al que pidió y a la memoria.</td><td>Se lee de memoria, que siempre está actualizada.</td></tr>
+                <tr><td>Uso típico</td><td>Cachés con post-escritura (MSI, MESI).</td><td>Escritura directa y pocos procesadores.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Si la red no permite un broadcast eficiente, la invalidación o la actualización se manda solo a las cachés que tienen copia: esa es la idea que lleva a los directorios.</p>
+          <p class="src">Fuente: apuntes, secciones 6.7.1 a 6.7.4 (p. 218–219) y 6.9 (p. 220).</p>
+        </div>
+      </details>
     </section>
 
     <!-- ============ 3 SNOOPY VS DIRECTORIOS ============ -->
@@ -490,6 +552,21 @@
       <h2><span class="num">3</span> Dos familias: snoopy y directorios</h2>
       <p class="sub">Qué hace falta para que haya coherencia y por qué la red de interconexión decide qué protocolo usar.</p>
       <p>Un sistema de memoria es coherente si cada lectura devuelve el último valor escrito en esa posición, sin importar qué procesador lo escribió. Para lograrlo se necesitan dos cosas: <strong>propagación</strong> (toda escritura termina siendo visible para todos) y <strong>serialización</strong> (todos ven las escrituras a una misma posición en el mismo orden).</p>
+
+      <details class="card">
+        <summary>Coherencia y consistencia: las definiciones de los apuntes</summary>
+        <div class="body">
+          <p>Los apuntes separan dos preguntas que suelen mezclarse:</p>
+          <ul>
+            <li><strong>Coherencia:</strong> <em>qué</em> valor tiene que devolver una lectura.</li>
+            <li><strong>Consistencia:</strong> <em>cuándo</em> un valor que escribió un procesador puede ser leído por él mismo o por los demás.</li>
+          </ul>
+          <p>La definición formal de coherencia es por posición: un sistema de memoria es coherente si, para cualquier ejecución y cualquier posición U, se puede armar un orden secuencial de las operaciones sobre U que sea consistente con los resultados. En ese orden, cada load devuelve lo que guardó el último store a U, sin importar qué procesador lo hizo.</p>
+          <p>De ahí salen los dos componentes: <strong>propagación</strong> (las escrituras se vuelven visibles para todos) y <strong>serialización de escrituras</strong> (todos observan las escrituras a U en el mismo orden).</p>
+          <p>La consistencia mira operaciones a posiciones <em>distintas</em> y por eso es más amplia: la consistencia incluye a la coherencia. Se ve en la sección 8.</p>
+          <p class="src">Fuente: apuntes, secciones 6.4 y 6.4.1 (p. 217) y 6.13 (p. 230).</p>
+        </div>
+      </details>
       <p>Hay dos familias de protocolos, y la diferencia entre ambas depende de la red de interconexión: si la red permite broadcast eficiente (un bus), se usa snoopy; si no (una red punto a punto, como en NUMA), se usa un directorio.</p>
       <div class="note info"><strong>En una frase:</strong> en snoopy el estado de cada bloque está distribuido en las cachés y todas espían el bus; en directorios hay un lugar (el nodo home) que sabe quién tiene cada bloque y se le envían mensajes solo a esos nodos.</div>
 
@@ -498,9 +575,9 @@
           <thead><tr><th></th><th>Snoopy (observación del bus)</th><th>Basado en directorio</th></tr></thead>
           <tbody>
             <tr><td>Dónde está el estado</td><td>Cada caché guarda el estado de sus bloques. No hay estado centralizado.</td><td>Un directorio con una entrada por bloque indica en qué cachés hay copia y en qué estado.</td></tr>
-            <tr><td>Interconexión</td><td>Bus o medio de broadcast. Todos los controladores observan todas las transacciones.</td><td>Red punto a punto. Los mensajes van al nodo home y de ahí solo a los nodos implicados.</td></tr>
-            <tr><td>Cómo se serializa</td><td>El arbitraje del bus impone un orden: una transacción a la vez, vista igual por todos.</td><td>El nodo home de cada bloque ordena las peticiones sobre ese bloque.</td></tr>
-            <tr><td>Hardware</td><td>Solo se amplía el controlador de caché. Memoria y cachés no cambian.</td><td>Memoria extra para el directorio (bits de presencia y estado) y controladores más complejos.</td></tr>
+            <tr><td>Interconexión</td><td>Bus o medio de broadcast. Todos los controladores observan todas las transacciones.</td><td>Red punto a punto. El que pide consulta al nodo home, que le dice qué nodos tienen copia; después los mensajes van solo a esos nodos.</td></tr>
+            <tr><td>Cómo se serializa</td><td>El arbitraje del bus impone un orden: una transacción a la vez, vista igual por todos.</td><td>Los apuntes no lo desarrollan. Complemento (no está en los apuntes): como toda petición sobre un bloque pasa por su home, es ahí donde se ordenan.</td></tr>
+            <tr><td>Hardware</td><td>Según los apuntes, solo se amplía el controlador de caché. En la práctica, además, se duplican los tags de la caché para que el espionaje no le robe accesos a la CPU (sección 4, «Carreras»).</td><td>Memoria extra para el directorio (bits de presencia y estado) y controladores más complejos.</td></tr>
             <tr><td>Escalabilidad</td><td>Limitada por el ancho de banda del bus.</td><td>Escala a muchos procesadores; el directorio se distribuye para no ser cuello de botella.</td></tr>
             <tr><td>Invalidar una escritura</td><td>Una sola transacción en el bus llega a todos.</td><td>Un mensaje por cada nodo que comparte el bloque (se pueden mandar en paralelo).</td></tr>
             <tr><td>Cuándo conviene</td><td>Pocos procesadores sobre un bus compartido: el broadcast y el orden global salen gratis, pero el bus se satura y no escala.</td><td>Muchos procesadores con memoria distribuida (NUMA) y red sin broadcast: los mensajes van solo a los nodos con copia, a cambio de memoria extra y más latencia por los saltos en la red.</td></tr>
@@ -552,10 +629,26 @@
           <p class="small"><b>T1a</b> V + PrRd: acierto, sin bus. <b>T1b</b> V + PrWr: escribe caché y memoria, BusWr. <b>T2</b> I + PrRd: fallo, trae de memoria, pasa a V, BusRd. <b>T3</b> I + PrWr: escribe solo en memoria (no allocate), sigue en I, BusWr. <b>T4</b> V + BusWr observado: otro escribió, pasa a I.</p>
         </div>
         <div class="panel"><h4>Por qué da coherencia</h4>
-          <p class="small">Propagación: todos espían el bus, así que ven todas las escrituras. Serialización: el bus es atómico y el arbitraje fija un único orden de escrituras. Entre dos escrituras, las lecturas de cada procesador siguen el orden de su programa.</p>
+          <p class="small">Propagación: todos espían el bus, así que ven todas las escrituras. Serialización: en este modelo el bus es atómico (una transacción por vez) y el arbitraje fija un único orden de escrituras. Entre dos escrituras, las lecturas de cada procesador siguen el orden de su programa.</p>
         </div>
       </div>
-      <p class="src">Fuente: apuntes, sección 6.9.1.</p>
+
+      <details class="card">
+        <summary>Carreras entre escrituras: el bus real no es atómico</summary>
+        <div class="body">
+          <p>El «bus atómico» de arriba es una simplificación. Los mismos apuntes, más adelante, aclaran que las transacciones sobre el bus <strong>no son atómicas</strong>: puede haber varias en marcha para el mismo bloque a la vez (transacciones partidas), y eso hay que resolverlo.</p>
+          <p>Una <strong>carrera</strong> aparece cuando dos procesadores quieren escribir la misma posición. Ninguno puede modificar su caché hasta tener el bus, porque otro podría ganarlo antes y escribir el mismo bloque. Por eso una escritura sigue dos pasos:</p>
+          <ul>
+            <li><strong>Arbitrar el bus:</strong> los procesadores compiten y el arbitraje decide quién lo usa.</li>
+            <li><strong>Poner el fallo en el bus y completar la operación:</strong> recién ahí se hace la transición, y se resuelven las transacciones partidas que haya en curso sobre ese bloque.</li>
+          </ul>
+          <p>En la práctica el bus funciona como un semáforo: serializa las escrituras y solo un procesador opera con memoria a la vez.</p>
+          <p>Otro detalle de hardware: comparar los tags con cada dirección que pasa por el bus compite con los accesos de la CPU a su propia caché. La solución es <strong>duplicar los tags</strong>, uno para la CPU y otro para el espionaje.</p>
+          <div class="note">Ojo: el apunte dice en 6.9 que para snoopy «no se debe realizar ninguna modificación en el hardware de la memoria ni de las cachés» y que el bus «es atómico», pero en 6.11 habla de transacciones no atómicas y de duplicar los tags. Las dos cosas valen en planos distintos: la primera describe el modelo simple; la segunda, lo que hace falta en un bus real.</div>
+          <p class="src">Fuente: apuntes, secciones 6.9 y 6.9.1 (p. 220–222) y 6.11 (p. 229–230).</p>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, sección 6.9.1 (p. 221–223).</p>
     </section>
 
     <!-- ============ 5 MSI / MESI ============ -->
@@ -595,9 +688,62 @@
         <p class="src" id="msi-chart-notes"></p>
       </div>
 
-      <div class="note"><strong>Detalle de los apuntes:</strong> la transición T10 (E + BusRd → S) indica un Flush. Como en E la memoria está actualizada, la caché no está obligada a proveer el dato (los mismos apuntes lo dicen en «sin pertenencia»). El simulador lo muestra como Flush opcional y no lo cuenta como transacción.</div>
-      <div class="note"><strong>Qué es Replace:</strong> el desalojo de un bloque de la caché para hacerle lugar a otro que viene de memoria. Aunque los apuntes lo listan junto a las transacciones del bus (<code>BusRdX, Replace</code>), es un evento <em>local</em>: lo provoca un fallo del propio procesador, no algo que se observa de los demás. Desde <b>M</b> pasa a <b>I</b> con <code>Flush</code>, porque el bloque está sucio y la memoria desactualizada; desde <b>S</b> (o <b>E</b> en MESI) pasa a <b>I</b> sin mensaje, porque la memoria ya está al día y alcanza con descartar la copia. Probalo con el botón «Reemplazar» del simulador.</div>
-      <p class="src">Fuente: apuntes, secciones 6.10 a 6.10.7.</p>
+      <div class="note"><strong>Ojo con T10 en el apunte:</strong> el texto y el diagrama de T10 (E + BusRd → S) dicen que se manda un Flush. Pero el mismo apunte dice que en E la caché no está obligada a proveer el bloque, porque la memoria tiene una copia válida («sin pertenencia», p. 226), y en el ejemplo MESI de la p. 229 (P3 lee U con P1 en E) el dato lo suministra la <em>memoria</em>, sin Flush. El simulador sigue esa lectura: muestra el Flush como opcional y no lo cuenta como transacción.</div>
+      <div class="note"><strong>Qué es Replace:</strong> el desalojo de un bloque de la caché para hacerle lugar a otro que viene de memoria. Aunque los apuntes lo listan junto a las transacciones del bus (<code>BusRdX, Replace</code>), es un evento <em>local</em>: lo provoca un fallo del propio procesador, no algo que se observa de los demás. Desde <b>M</b> pasa a <b>I</b> con <code>Flush</code>, porque el bloque está sucio y la memoria desactualizada; desde <b>S</b> pasa a <b>I</b> sin mensaje, porque la memoria ya está al día y alcanza con descartar la copia. Probalo con el botón «Reemplazar» del simulador.</div>
+      <div class="note"><strong>Replace en MESI (agregado de esta guía):</strong> el apunte solo dibuja Replace en MSI (T5 y T7). En MESI, el texto y el diagrama de T9, T12 y T13 mencionan únicamente <code>BusRdX</code>. El diagrama MESI de arriba marca con <b>Replace*</b> esas aristas porque el simulador permite reemplazar por analogía con MSI: desde M con Flush, y desde S o E sin mensaje (en E la memoria también está al día).</div>
+
+      <details class="card">
+        <summary>Las transacciones de bus según los apuntes</summary>
+        <div class="body">
+          <p>Los apuntes listan los eventos del bus de MSI así:</p>
+          <ul>
+            <li><strong>BusRd:</strong> el controlador pone la dirección en el bus y pide una copia que no piensa modificar. La genera un PrRd que falla. El dato lo da el sistema de memoria, o tal vez otra caché.</li>
+            <li><strong>BusRdX:</strong> lectura con exclusividad. La genera un PrWr sobre un bloque en I o en S. Pide una copia para modificarla; todas las demás cachés invalidan la suya y la escritura se hace en la caché recién cuando se tiene la copia exclusiva.</li>
+            <li><strong>BusWB:</strong> post-escritura, equivalente a Flush. Pone dirección y contenido del bloque en el bus y la memoria se actualiza.</li>
+            <li><strong>Replace:</strong> el bloque se va a sacar de la caché para traer otro (ver la nota de arriba: en realidad es un evento local).</li>
+          </ul>
+          <p>Y como nueva <em>respuesta</em> del controlador, <strong>Flush</strong>: volcar el bloque al bus. Con post-escritura, el controlador puede intervenir en una transacción y poner el bloque en el bus en lugar de dejar que responda la memoria.</p>
+          <p>En las tablas de ejemplo (p. 225) la escritura de P3 sobre un bloque que ya tenía en S figura como <code>BusRdX (BusUpg)</code>, con los datos de memoria «ignorados»: P3 ya tiene el dato y solo necesita la exclusividad. Ese <strong>BusUpg</strong> (upgrade) solo aparece en la figura; el texto siempre habla de BusRdX.</p>
+          <p class="src">Fuente: apuntes, sección 6.10 (p. 223–224) y figura de 6.10.2 (p. 225).</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Ejemplo paso a paso con tabla de estados (MSI y MESI)</summary>
+        <div class="body">
+          <p>Los apuntes resuelven una secuencia sobre una variable U (valor inicial 5 en memoria) con tres procesadores. P3 escribe 7. Cada fila dice el estado de U en cada caché, la transacción y quién suministra el dato. Podés reproducirla en el simulador: P0, P1 y P2 hacen de P1, P2 y P3.</p>
+          <h3>MSI</h3>
+          <div class="table-scroll">
+            <table class="cmp coh-ex">
+              <thead><tr><th>Operación</th><th>P1</th><th>P2</th><th>P3</th><th>Transacción</th><th>Datos de</th></tr></thead>
+              <tbody>
+                <tr><td>P1 lee U</td><td class="c-S">S</td><td>–</td><td>–</td><td>BusRd</td><td>Memoria</td></tr>
+                <tr><td>P3 lee U</td><td class="c-S">S</td><td>–</td><td class="c-S">S</td><td>BusRd</td><td>Memoria</td></tr>
+                <tr><td>P3 escribe U</td><td class="c-I">I</td><td>–</td><td class="c-M">M</td><td>BusRdX (BusUpg)</td><td>Memoria (ignorados)</td></tr>
+                <tr><td>P1 lee U</td><td class="c-S">S</td><td>–</td><td class="c-S">S</td><td>BusRd</td><td>Caché de P3 (Flush, la memoria pasa a 7)</td></tr>
+                <tr><td>P2 lee U *</td><td class="c-S">S</td><td class="c-S">S</td><td class="c-S">S</td><td>BusRd</td><td>Memoria</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>MESI</h3>
+          <div class="table-scroll">
+            <table class="cmp coh-ex">
+              <thead><tr><th>Operación</th><th>P1</th><th>P2</th><th>P3</th><th>Transacción</th><th>Datos de</th></tr></thead>
+              <tbody>
+                <tr><td>P1 lee U</td><td class="c-E">E</td><td>–</td><td>–</td><td>BusRd (nadie activa S)</td><td>Memoria</td></tr>
+                <tr><td>P3 lee U</td><td class="c-S">S</td><td>–</td><td class="c-S">S</td><td>BusRd (P1 activa S)</td><td>Memoria</td></tr>
+                <tr><td>P3 escribe U *</td><td class="c-I">I</td><td>–</td><td class="c-M">M</td><td>BusRdX</td><td>Memoria (ignorados)</td></tr>
+                <tr><td>P1 lee U *</td><td class="c-S">S</td><td>–</td><td class="c-S">S</td><td>BusRd</td><td>Caché de P3 (Flush)</td></tr>
+                <tr><td>P2 lee U *</td><td class="c-S">S</td><td class="c-S">S</td><td class="c-S">S</td><td>BusRd</td><td>Memoria</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>* Filas que en la figura de los apuntes quedan vacías, como ejercicio; esta es la respuesta que da el simulador.</p>
+          <p>Fijate en la segunda fila de MESI: P1 estaba en E y pasa a S, pero el dato lo da la memoria. La figura también aclara que la señal <strong>S</strong> es una línea <strong>OR-cableada</strong>: alcanza con que una caché con copia la active para que el que pide entre en S en lugar de E.</p>
+          <p class="src">Fuente: apuntes, figuras de 6.10.2 (p. 225) y del ejemplo MESI (p. 229).</p>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, secciones 6.10 a 6.10.7 (p. 223–228).</p>
     </section>
 
 
@@ -607,13 +753,27 @@
       <p class="sub">Qué sabe una caché sobre su copia en cada estado.</p>
       <div class="table-scroll">
         <table class="cmp">
-          <tr><th>Estado</th><th>¿Tengo copia?</th><th>¿Es la única?</th><th>¿Memoria actualizada?</th><th>¿Escribo sin avisar?</th></tr>
-          <tr><td class="c-M">M</td><td>Sí</td><td>Sí</td><td>No</td><td>Sí</td></tr>
-          <tr><td class="c-E">E</td><td>Sí</td><td>Sí</td><td>Sí</td><td>Sí, y paso a M</td></tr>
-          <tr><td class="c-S">S</td><td>Sí</td><td>No necesariamente</td><td>Sí</td><td>No, primero <code>BusRdX</code></td></tr>
-          <tr><td class="c-I">I</td><td>No</td><td>No aplica</td><td>No aplica</td><td>No</td></tr>
+          <tr><th>Estado</th><th>¿Tengo copia?</th><th>¿Es la única?</th><th>¿Memoria actualizada?</th><th>¿Escribo sin avisar?</th><th>¿Doy el dato ante un BusRd?</th></tr>
+          <tr><td class="c-M">M</td><td>Sí</td><td>Sí</td><td>No</td><td>Sí</td><td>Sí, con Flush, y paso a S</td></tr>
+          <tr><td class="c-E">E</td><td>Sí</td><td>Sí</td><td>Sí</td><td>Sí, y paso a M</td><td>No estoy obligada; paso a S</td></tr>
+          <tr><td class="c-S">S</td><td>Sí</td><td>No necesariamente</td><td>Sí</td><td>No, primero <code>BusRdX</code></td><td>No, responde la memoria</td></tr>
+          <tr><td class="c-I">I</td><td>No</td><td>No aplica</td><td>No aplica</td><td>No</td><td>No aplica</td></tr>
         </table>
       </div>
+
+      <details class="card">
+        <summary>¿Quién responde un BusRd? Pertenencia en M y en E</summary>
+        <div class="body">
+          <p>Con post-escritura la memoria puede estar vieja, así que ante un fallo de lectura no siempre responde ella. Lo que decide es si alguna caché es <strong>dueña</strong> del bloque:</p>
+          <ul>
+            <li><strong>M:</strong> la caché tiene la única copia válida y la memoria está desactualizada. Está obligada a intervenir: hace Flush, la memoria se actualiza y pasa a S (T6 en MSI, T11 en MESI).</li>
+            <li><strong>E:</strong> la copia es única pero limpia; la memoria también la tiene. Los apuntes lo llaman <strong>sin pertenencia</strong>: la caché no está obligada a dar el bloque, a diferencia de M. Pasa a S y el dato puede venir de memoria, como en el ejemplo de la p. 229.</li>
+            <li><strong>S:</strong> la memoria está al día y responde ella; la caché sigue en S (T8).</li>
+          </ul>
+          <p>Por eso E ahorra tráfico al escribir (E → M sin bus) sin agregar obligaciones al leer.</p>
+          <p class="src">Fuente: apuntes, secciones 6.10.4 (p. 226) y 6.10.7 (p. 228), y figura del ejemplo MESI (p. 229).</p>
+        </div>
+      </details>
     </section>
 
     <!-- ============ 7 DIRECTORIOS ============ -->
@@ -622,7 +782,8 @@
       <p class="sub">Qué pasa cuando no hay un bus que espiar: un nodo home lleva la cuenta de quién tiene cada bloque.</p>
       <p>En una máquina NUMA no hay bus que espiar. Cada bloque tiene un <strong>nodo home</strong> (fijado por la dirección del bloque) que guarda su entrada de directorio: un bit de presencia por procesador y un bit limpio/sucio. Los estados en cada caché siguen siendo <b class="c-M">M</b>, <b class="c-S">S</b> e <b class="c-I">I</b>, pero las transiciones se disparan con mensajes por la red.</p>
       <p>En cada transacción participan el nodo <b>peticionario</b> (local), el <b>home</b> y los <b>remotos</b> que tienen copia (si está en M, uno solo: el owner).</p>
-      <p><strong>Cómo se reparten los homes:</strong> cada bloque tiene un único home fijo, pero los homes están distribuidos entre todos los nodos, para que el directorio no sea un cuello de botella. El home se calcula a partir de la dirección física: por los bits altos (cada nodo es dueño de un rango contiguo de memoria) o por entrelazado (bloques consecutivos van a nodos distintos). El directorio centralizado de los primeros mainframes de IBM quedó en desuso justamente porque no escala.</p>
+      <p><strong>Cómo se reparten los homes:</strong> cada bloque tiene un único home fijo, que sale directamente de la dirección del bloque (los apuntes dicen <em>hashing</em>). Los homes están repartidos entre todos los nodos porque un directorio único podría ser un cuello de botella. Complemento (no está en los apuntes): una forma típica es que cada nodo sea dueño de un rango contiguo de memoria física, es decir, que el home salga de los bits altos de la dirección.</p>
+      <p><strong>Quién habla con quién:</strong> en las figuras de los apuntes el home solo <em>informa</em>. Si el bloque está limpio, responde con el dato y, en una escritura, con la lista de nodos que tienen copia. Si está sucio, responde con la identidad del owner. Después es el <b>peticionario</b> el que invalida a los que comparten o le pide el bloque al owner, y el owner le manda una revisión (Revision/WB) al home para que actualice el directorio.</p>
 
       <div class="sim">
         <div class="sim-top"><h4>Simulador: cuatro nodos, bloque X con home en P0</h4><button type="button" class="btn ghost" id="dir-reset">Reiniciar</button></div>
@@ -637,15 +798,36 @@
           </div>
         </div>
         <div class="log" id="dir-log" aria-live="polite"></div>
-        <div class="legend"><span><i class="k-act"></i>petición / datos</span><span><i class="k-snoop"></i>invalidación</span><span><i class="k-i"></i>ack</span></div>
+        <div class="legend"><span><i class="k-act"></i>petición, respuesta o datos</span><span><i class="k-snoop"></i>invalidación o intervención</span><span><i class="k-i"></i>ack o revisión al home</span></div>
+        <p class="src">Mensajes con los nombres de las figuras de los apuntes (p. 233–235). Un caso que las figuras no dibujan: si el owner es el propio home (P0 en M), el simulador hace que P0 resuelva la intervención localmente y responda con el dato.</p>
       </div>
+
+      <details class="card">
+        <summary>Los cuatro casos del directorio basado en memoria, mensaje por mensaje</summary>
+        <div class="body">
+          <p>Los apuntes los muestran en figuras. El paso 4 de cada caso con owner son dos mensajes en paralelo.</p>
+          <div class="table-scroll">
+            <table class="cmp coh-ex">
+              <thead><tr><th>Caso</th><th>Mensajes</th><th>Cómo queda</th></tr></thead>
+              <tbody>
+                <tr><td>Lectura, bit sucio en 0 (memoria del home al día)</td><td>1 Local → Home: <code>RdRequest</code>. 2 Home → Local: <code>RdReply</code> con el dato. Solo dos transacciones de red.</td><td>Local en S; su bit de presencia en 1.</td></tr>
+                <tr><td>Lectura, bit sucio en 1 (la copia buena la tiene el owner)</td><td>1 Local → Home: <code>RdReq</code>. 2 Home → Local: <code>Owner</code> (identidad del propietario). 3 Local → Owner: <code>Intervention</code> (downgrade, send me, WB). 4 Owner → Local: <code>Data</code>, y Owner → Home: <code>Revision</code> + WB.</td><td>Owner pasa de M a S, local en S; el bloque queda en los dos y limpio.</td></tr>
+                <tr><td>Escritura, bit sucio en 0 (puede haber varias copias limpias)</td><td>1 Local → Home: <code>RdXReq</code>. 2 Home → Local: <code>SharerList</code> (y el bloque, si el local no lo tiene). 3 Local → cada compartidor: <code>Invalidate</code>. 4 Cada compartidor → Local: <code>ack</code>.</td><td>Local en M, los demás en I; el directorio marca solo al local y sucio.</td></tr>
+                <tr><td>Escritura, bit sucio en 1</td><td>1 Local → Home: <code>RdXReq</code>. 2 Home → Local: <code>Owner</code>. 3 Local → Owner: <code>Transfer Owner</code>. 4 Owner → Local: <code>OwnerShip</code> con el dato, y Owner → Home: <code>Revision</code>.</td><td>Local en M, el viejo owner en I; el directorio cambia de dueño.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Fijate que en la escritura limpia las invalidaciones salen del peticionario, no del home: la nota de la figura de la p. 234 dice que el peticionario, cuando conoce la identidad de los que comparten, les manda los mensajes de invalidación, y los acks vuelven a él.</p>
+          <p class="src">Fuente: apuntes, figuras de 6.19.1 (p. 233–234) y de 6.22.1 (p. 235).</p>
+        </div>
+      </details>
 
       <div class="grid2">
         <div class="panel">
           <h4 id="s-directorio-mensajes">Mensajes por escritura según cantidad de copias</h4>
           <svg id="dir-msg-chart" class="chart" viewBox="0 0 420 240" role="img" aria-label="Mensajes y latencia según copias compartidas"></svg>
           <div class="legend"><span><i class="k-act"></i>mensajes totales</span><span><i class="k-s"></i>latencia, basado en memoria</span><span><i class="k-m"></i>latencia, basado en caché (lista)</span></div>
-          <p class="src">Modelo simplificado: petición + datos + una invalidación y un ack por copia. En el esquema basado en memoria el home conoce a todos y envía en paralelo; en el basado en caché (lista enlazada SCI) hay que recorrer la lista, así que la latencia también crece con las copias.</p>
+          <p class="src">Modelo simplificado de una escritura sobre un bloque limpio: petición, respuesta del home con la lista de compartidores, una invalidación y un ack por copia (2 + 2k mensajes). En el esquema basado en memoria el home conoce a todos y el peticionario invalida en paralelo: con cualquier cantidad de copias son 4 saltos en el camino crítico (petición, lista, invalidación, ack). En el basado en caché (lista enlazada SCI) hay que recorrer la lista, así que la latencia crece con las copias; la curva 2 + k es una aproximación propia de esta guía.</p>
         </div>
         <div class="panel">
           <h4 id="s-directorio-sobrecarga">Sobrecarga de almacenamiento del directorio</h4>
@@ -658,21 +840,59 @@
           <p class="small">Se paga sobre <b>toda la memoria principal</b> (hay una entrada por bloque de memoria, esté cacheado o no) y crece linealmente con los nodos, así que puede pasar del 100 %.</p>
           <div class="out" id="dir-ov-out">—</div>
           <svg id="dir-ov-chart" class="chart" viewBox="0 0 420 180" role="img" aria-label="Sobrecarga por cantidad de nodos"></svg>
-          <p class="src">Cálculo: N bits de presencia / bits de la línea (el bit sucio suma uno más, despreciable). Con línea de 64 B salen 64 nodos 12,5 %, 256 nodos 50 % y 1024 nodos 200 %, que son los valores de los apuntes. Ojo: los apuntes dicen «4 nodos», «25 nodos» y «línea de 4 bytes»; parecen erratas de 64, 256 y 64 bytes, porque con esos datos los números no cierran. Soluciones: un bit por nodo multiprocesador, punteros en lugar de bits (menos ancho) u organizar el directorio como caché (menos alto). Conviene verificar los datos de la sección 6.24 con las diapositivas de la cátedra.</p>
+          <p class="src">Cálculo: N bits de presencia / bits de la línea (el bit sucio suma uno más, despreciable). Con línea de 64 B salen 64 nodos 12,5 %, 256 nodos 50 % y 1024 nodos 200 %, que son los porcentajes de los apuntes. Soluciones: un bit por nodo multiprocesador, punteros en lugar de bits (menos ancho) u organizar el directorio como caché (menos alto).</p>
+          <div class="note">Ojo con la sección 6.24 del apunte: la fórmula figura como «número de entradas en el directorio / M × 100» (M = bloques de memoria), que así escrita no da ninguno de los porcentajes; lo que se compara son los bits de directorio contra los bits de datos, como en la fórmula de arriba. Los datos tienen erratas que siguen un patrón (se pierde un «6»): el apunte dice «4 nodos», «25 nodos» y «línea de 4 bytes», y lo que cierra es 64 nodos, 256 nodos y 64 bytes. El mismo patrón aparece en el ejemplo de las soluciones: dice «25 procesadores, 4 por nodo, línea de 128 B: 0,25 %»; con 256 procesadores son 64 nodos y 64 / (128 × 8) = <b>6,25 %</b>. Conviene confirmarlo con las diapositivas de la cátedra.</div>
         </div>
       </div>
 
+      <details class="card">
+        <summary>Directorio basado en caché: la lista enlazada de SCI</summary>
+        <div class="body">
+          <p>En el esquema basado en caché el home no guarda la lista completa de quién tiene el bloque. Su entrada tiene un <strong>puntero al nodo cabecera</strong> (el primero con copia) y bits de estado; el resto de los nodos con copia forman una <strong>lista doblemente enlazada</strong> distribuida en las cachés (Scalable Coherent Interface, SCI; el apunte cita «IEEE 159-1992», y el número del estándar es 1596-1992, dato que no está en los apuntes).</p>
+          <ul>
+            <li><strong>Fallo de lectura:</strong> el peticionario le pregunta al home quién es la cabecera, el home le responde y el peticionario le pide a la cabecera que lo inserte adelante, convirtiéndose en la nueva cabecera. Esto suma latencia. El dato lo manda el home si tiene copia válida o, si no, la cabecera, que siempre tiene la última.</li>
+            <li><strong>Reemplazo:</strong> sacar un nodo de la lista obliga a coordinarse con el anterior y el siguiente, que a su vez pueden estar reemplazando el mismo bloque. Le agrega bastante complejidad al protocolo.</li>
+            <li><strong>Escritura:</strong> el que escribe puede ya estar en la lista; se recorre el resto para invalidar las copias una por una, y los acks van al que escribe.</li>
+            <li><strong>Rendimiento:</strong> los mensajes son proporcionales a los nodos que comparten, como en el basado en memoria, pero la latencia también, porque los mensajes se serializan al recorrer la lista.</li>
+            <li><strong>Ventajas:</strong> menos sobrecarga (el puntero a la cabecera escala con los bloques de memoria, pero los punteros siguiente/anterior escalan con los bloques de caché, que son muchos menos), el trabajo de invalidar se reparte entre los nodos y la lista guarda el orden de los accesos.</li>
+          </ul>
+          <p class="src">Fuente: apuntes, sección 6.26 (p. 236–237).</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Organización del directorio y tipos de nodo</summary>
+        <div class="body">
+          <p>Los apuntes ordenan los esquemas en un árbol (figura de la p. 234):</p>
+          <ul>
+            <li><strong>Centralizado:</strong> los primeros esquemas, en mainframes de IBM. La memoria central guardaba una copia de los tags de cada caché. Al ser un solo lugar, puede convertirse en cuello de botella.</li>
+            <li><strong>Distribuido, plano:</strong> la información de un bloque está en un lugar fijo, su nodo home, que sale de la dirección. Ante un fallo se manda una transacción de red directo al home. Puede ser <em>basado en memoria</em> (todo en el home, lo que simula esta sección) o <em>basado en caché</em> (repartida en las cachés, como SCI).</li>
+            <li><strong>Distribuido, jerárquico:</strong> aparece en el árbol, pero los apuntes no lo desarrollan.</li>
+          </ul>
+          <p>Para el directorio plano basado en memoria, los apuntes definen estos nodos:</p>
+          <ul>
+            <li><strong>Peticionario (local):</strong> el que emite el pedido.</li>
+            <li><strong>Origen (home):</strong> en cuya memoria está el bloque; tiene el directorio.</li>
+            <li><strong>Sucio (dirty):</strong> tiene el bloque modificado en su caché.</li>
+            <li><strong>Exclusivo:</strong> tiene la única copia en caché y la memoria está al día.</li>
+            <li><strong>Propietario (owner):</strong> el que tiene hoy la copia válida y debe dar el dato; puede ser el nodo sucio o el propio home.</li>
+          </ul>
+          <p>Una alternativa que mencionan para NUMA, sin directorio: llevar a la caché solo datos locales (el ejemplo que dan es la T3E). El acceso local o remoto lo resuelve el <strong>asistente de comunicaciones</strong> del nodo, sin que el procesador ni el controlador de caché sepan si el fallo se resolvió en memoria local o en otro nodo.</p>
+          <p class="src">Fuente: apuntes, secciones 6.18 (p. 232) y 6.20 a 6.22 (p. 234–235).</p>
+        </div>
+      </details>
+
       <div class="panel">
         <h4>¿Y MESI con directorios?</h4>
-        <p class="small">Se puede: los estados de la caché son independientes del mecanismo que mantiene la coherencia. Lo que cambia respecto de snoopy:</p>
+        <p class="small">Los apuntes plantean el protocolo de directorio «por ejemplo con 3 estados: MSI» (p. 232), pero en las definiciones del directorio basado en memoria aparece también el <b>nodo exclusivo</b>, separado del nodo sucio (p. 235). O sea, el estado E tiene lugar. Lo que sigue es razonamiento propio, no está en los apuntes:</p>
         <ul class="small">
           <li><b>E o S lo decide el home</b>, mirando los bits de presencia, en lugar de la señal S del bus.</li>
-          <li><b>El directorio no distingue E de M</b>, porque el paso E → M es silencioso. Registra los dos como «dueño exclusivo» y, ante otro pedido, se lo reenvía al dueño.</li>
-          <li><b>Un Replace en E</b> se puede avisar al home o hacer en silencio. En el segundo caso, cuando el home le reenvía un pedido, el ex dueño responde que ya no tiene el bloque.</li>
+          <li>El paso E → M es silencioso, así que el home no se entera. Para él, un nodo en E es un posible dueño: ante otro pedido tiene que consultarlo, porque puede haber pasado a M.</li>
+          <li><b>Un Replace en E</b> se puede avisar al home o hacer en silencio. En el segundo caso, cuando lo consultan, el ex dueño responde que ya no tiene el bloque.</li>
         </ul>
-        <p class="small">En el examen, si piden el protocolo de directorio tal como lo dio la cátedra, respondé con <b>MSI</b>.</p>
+        <p class="small">En el examen, si te piden el protocolo de directorio, desarrollalo con <b>MSI</b>, que es el que usan los apuntes en todos los ejemplos, y mencioná que un nodo exclusivo (E) también es posible.</p>
       </div>
-      <p class="src">Fuente: apuntes, secciones 6.18 a 6.26.</p>
+      <p class="src">Fuente: apuntes, secciones 6.18 a 6.26 (p. 232–237).</p>
     </section>
 
     <!-- ============ 8 CONSISTENCIA ============ -->
@@ -680,7 +900,7 @@
       <h2><span class="num">8</span> Consistencia de memoria</h2>
       <p class="sub">Qué orden ven los procesadores entre escrituras a posiciones distintas, algo que la coherencia no garantiza.</p>
       <p>La <strong>coherencia</strong> garantiza que las escrituras a <em>una</em> posición se vean en el mismo orden por todos, pero no dice nada del orden entre escrituras a posiciones <em>distintas</em>. Eso lo define el <strong>modelo de consistencia</strong>: un contrato entre programador y diseñador que limita qué reordenamientos pueden hacer el hardware y el compilador.</p>
-      <p>Un multiprocesador es <strong>secuencialmente consistente</strong> si el resultado es el mismo que si las operaciones de todos se ejecutaran en algún orden secuencial, respetando el orden de programa de cada procesador. Requiere orden de programa y <strong>atomicidad de las escrituras</strong> (una escritura es visible para todos antes de que se vea la siguiente).</p>
+      <p>Un multiprocesador es <strong>secuencialmente consistente</strong> si el resultado es el mismo que si las operaciones de todos se ejecutaran en algún orden secuencial, respetando el orden de programa de cada procesador. Requiere dos cosas: <strong>orden de programa</strong> (las operaciones de cada proceso se hacen visibles, a él y a los demás, en el orden del programa) y <strong>atomicidad</strong> (antes de emitir la siguiente operación, la actual tiene que estar completa, visible para todos). La atomicidad de las escrituras es la clave: antes de que se vea un valor nuevo, la escritura anterior tiene que ser visible para todos los procesadores.</p>
       <div class="note info"><strong>En una frase:</strong> bajo consistencia secuencial, si P2 ve B = 2 entonces tiene que ver A = 1, porque P1 escribió A antes que B.</div>
 
       <div class="sim">
@@ -692,21 +912,131 @@
         <div class="cs-status" id="cs-status" aria-live="polite"></div>
         <p class="src">Valores iniciales A = B = 0. Se listan todos los órdenes globales posibles de las cuatro operaciones y el par (A, B) que imprime P2.</p>
       </div>
+      <div class="note info"><strong>Lo que importa es el resultado, no el orden real:</strong> los apuntes muestran que el orden 1b → 1a → 2b → 2a no respeta el orden de programa de P1, pero da (1, 2), que también se obtiene con consistencia secuencial. No importa en qué orden se emitan o completen de verdad las operaciones, sino que <em>parezcan</em> completarse en un orden que no viole la consistencia secuencial. En el modo «Escrituras reordenadas» el simulador distingue esos reordenamientos inocuos del que da (0, 2).</div>
       <div class="panel"><h4>Condiciones suficientes para consistencia secuencial</h4>
         <p class="small">Cada proceso emite sus accesos en orden de programa. Después de una escritura, espera a que se complete antes de emitir la siguiente operación. Después de una lectura, espera a que se complete la lectura y también la escritura que generó el valor leído, con respecto a todos los procesos.</p>
       </div>
-      <p class="src">Fuente: apuntes, secciones 6.12 a 6.17.</p>
+      <p class="src">Fuente: apuntes, secciones 6.12 a 6.17 (p. 230–232).</p>
+    </section>
+
+    <!-- ============ 9 SINCRONIZACIÓN ============ -->
+    <section class="block coh" id="s-sincronizacion">
+      <h2><span class="num">9</span> Sincronización: cerrojos y operaciones atómicas</h2>
+      <p class="sub">Cómo se construye un cerrojo cuando varios procesadores compiten por él, y qué tráfico de coherencia genera.</p>
+      <p>Para que un proceso acceda de forma segura a variables compartidas (exclusión mutua, secciones críticas) hace falta una <strong>primitiva de hardware</strong>: una instrucción no interrumpible que lea y actualice una posición de memoria, el <strong>cerrojo</strong>. Las rutinas de sincronización de software se arman sobre esa primitiva. El problema existe aun en un uniprocesador con multiprogramación; en un multiprocesador se agrava porque los que compiten corren de verdad al mismo tiempo, y en máquinas muy paralelas (MPP) la sincronización puede volverse el cuello de botella.</p>
+      <p>La coherencia cambia el costo de esperar: leer el cerrojo desde la caché local no genera tráfico, pero cada intento de <em>escribirlo</em> genera invalidaciones, aunque el intento falle porque otro ya lo tiene. Un procesador que gira intentando escribir llena el bus de tráfico inútil.</p>
+
+      <details class="card" open>
+        <summary>Primitivas: intercambio, test-and-set y fetch-and-increment</summary>
+        <div class="body">
+          <ul>
+            <li><strong>Intercambio atómico (EXCH):</strong> intercambia un registro con el cerrojo en memoria. Convención: 0 = libre, 1 = ocupado. Para tomarlo se intercambia un 1: si vuelve un 0, lo conseguiste. Si dos procesadores lo intentan a la vez, la serialización de escrituras garantiza que uno recibe el 0 y el otro el 1.</li>
+            <li><strong>Test-and-set:</strong> mira la variable y, si está en 0, la pone en 1.</li>
+            <li><strong>Fetch-and-increment:</strong> incrementa la variable en memoria (y devuelve el valor anterior).</li>
+          </ul>
+          <p>Todas leen y escriben en una sola instrucción no interrumpible, y eso complica la coherencia: el hardware no puede dejar que se meta otra operación entre la lectura y la escritura, y tiene que evitar el interbloqueo.</p>
+          <p class="src">Fuente: apuntes, «Sincronización: primitivas de hardware básicas» y «Operaciones atómicas en multiprocesadores» (p. 238–239).</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Load Linked / Store Conditional (LL/SC)</summary>
+        <div class="body">
+          <p>En lugar de una instrucción que lea y escriba, un <strong>par</strong> de instrucciones que juntas se comportan como atómicas:</p>
+          <ul>
+            <li><strong>LL</strong> lee una dirección y la guarda en un registro especial, el <em>link register</em>. Si hay una interrupción (cambio de contexto) o si una escritura invalida el bloque que contiene esa dirección, el link register se borra.</li>
+            <li><strong>SC</strong> guarda un registro R en la dirección solo si coincide con la del link register. Devuelve R = 1 si lo guardó y R = 0 si no. Mirando ese resultado sabés si el par se ejecutó como si fuera atómico.</li>
+          </ul>
+          <h3>Intercambio con LL/SC (corregido)</h3>
+<pre class="coh-code">try:  MOV   R3, R4      ; R3 = valor a intercambiar
+      LL    R2, 0(R1)   ; load linked
+      SC    R3, 0(R1)   ; store conditional
+      BEQZ  R3, try     ; si el SC falló, reintentar
+      MOV   R4, R2      ; éxito: R4 = valor que había en memoria</pre>
+          <div class="note">Ojo: el apunte etiqueta el bucle <code>tryExchange</code> pero salta a <code>try</code>, y nunca pone en R3 el valor a guardar. Como el SC pisa R3 con 1 o 0, el <code>MOV R3, R4</code> tiene que ir dentro del bucle, antes del SC, para que cada reintento vuelva a guardar el valor correcto. El código de arriba es la corrección de esta guía.</div>
+          <h3>Fetch-and-increment con LL/SC</h3>
+<pre class="coh-code">try:  LL     R2, 0(R1)   ; load linked
+      DADDUI R3, R2, 1   ; incrementar
+      SC     R3, 0(R1)   ; store conditional
+      BEQZ   R3, try     ; si el SC falló, reintentar</pre>
+          <p>El apunte agrega que entre LL y SC puede haber operaciones sobre registros, como el DADDUI de arriba. La frase que sigue en el apunte está incompleta; la lectura razonable es que meter ahí otras cosas (accesos a memoria, por ejemplo) puede hacer fallar el par.</p>
+          <p class="src">Fuente: apuntes, «Sincronización con un par de operaciones» e «Implementación de otras primitivas con LL+SC» (p. 239).</p>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Spin locks: con EXCH, test-and-exchange y LL/SC</summary>
+        <div class="body">
+          <p>Un <strong>spin lock</strong> es un bucle en el que el proceso sigue intentando tomar el cerrojo hasta que lo consigue. El cerrojo está en <code>0(R1)</code>.</p>
+          <h3>Versión simple con EXCH</h3>
+<pre class="coh-code">        DADDUI R2, R0, 1    ; R2 = 1
+lockit: EXCH   R2, 0(R1)    ; intercambio atómico
+        BNEZ   R2, lockit   ; ¿ya estaba ocupado? reintentar</pre>
+          <p>Sin coherencia, cada intento va a memoria por la red y, con varios procesadores compitiendo, eso es un cuello de botella. Con coherencia no mejora mucho: cada EXCH es una escritura, así que genera fallos de escritura e invalidaciones aunque el cerrojo siga ocupado.</p>
+          <h3>Test-and-exchange: primero leer, después intercambiar</h3>
+<pre class="coh-code">lockit: LD     R2, 0(R1)    ; lectura preliminar del cerrojo
+        BNEZ   R2, lockit   ; ocupado: seguir leyendo la copia local
+        DADDUI R2, R0, 1    ; R2 = 1
+        EXCH   R2, 0(R1)    ; intercambio atómico
+        BNEZ   R2, lockit   ; si no estaba en 0, volver a esperar</pre>
+          <p>Mientras el cerrojo está ocupado, cada procesador gira leyendo su copia local en S: no hay tráfico ni invalidaciones. Cuando el dueño lo libera (escribe un 0), las copias se invalidan, todos ven el 0 y compiten con EXCH. El ganador recibe un 0 en el registro y los demás un 1, y la carrera entre los perdedores arranca de nuevo cuando el cerrojo se vuelva a liberar.</p>
+          <h3>Spin lock con LL/SC</h3>
+<pre class="coh-code">lockit: LL     R2, 0(R1)    ; leer el cerrojo (sin tráfico si está en caché)
+        BNEZ   R2, lockit   ; ocupado: seguir girando
+        DADDUI R2, R0, 1    ; libre: R2 = 1
+        SC     R2, 0(R1)    ; intentar guardar el 1
+        BEQZ   R2, lockit   ; el SC falló: otro escribió en el medio, reintentar</pre>
+          <p>No usa ninguna instrucción atómica de lectura-modificación-escritura. El LL no genera tráfico mientras el cerrojo esté en la caché local, y el SC solo tiene éxito si nadie escribió el cerrojo entre el LL y el SC (por ejemplo, otro procesador que lo tomó antes o una interrupción).</p>
+          <p class="src">Fuente: apuntes, «Spin lock», «Implementación con coherencia de caché» e «Implementación de spin lock usando LL+SC» (p. 240–242).</p>
+        </div>
+      </details>
+
+      <h3 id="s-sincronizacion-ejemplo">Paso a paso: tres procesadores y un cerrojo</h3>
+      <p>Es el ejemplo de los apuntes con el código test-and-exchange: P0 tiene el cerrojo y P1 y P2 esperan. Avanzá paso a paso y mirá en qué estado queda el bloque del cerrojo en cada caché.</p>
+      <div class="sim">
+        <div class="sim-top">
+          <h4 id="sy-title">Antes de empezar</h4>
+          <div class="sim-ctl">
+            <button type="button" class="btn ghost" id="sy-prev">&larr; Anterior</button>
+            <button type="button" class="btn" id="sy-next">Siguiente &rarr;</button>
+            <button type="button" class="btn ghost" id="sy-reset">Reiniciar</button>
+          </div>
+        </div>
+        <div class="cpus" id="sy-cpus"></div>
+        <div class="memrow memrow-col">
+          <span>Cerrojo: <b class="mono" id="sy-lock"></b> · estado al final del paso: <b id="sy-glob"></b></span>
+          <span id="sy-bus"></span>
+        </div>
+        <div class="table-scroll">
+          <table class="cmp coh-ex sy-table" id="sy-table">
+            <thead><tr><th>Paso</th><th>P0</th><th>P1</th><th>P2</th><th>Estado del cerrojo</th><th>Actividad del bus / directorio</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Tiene el cerrojo</td><td>Empieza a girar: prueba si lock = 0</td><td>Empieza a girar: prueba si lock = 0</td><td>Compartido</td><td>Se atienden los fallos de P1 y P2, en cualquier orden. El cerrojo pasa a compartido.</td></tr>
+              <tr><td>2</td><td>Pone lock = 0</td><td>(recibe la invalidación)</td><td>(recibe la invalidación)</td><td>Exclusivo (P0)</td><td>Invalidación por la escritura de P0.</td></tr>
+              <tr><td>3</td><td></td><td>Fallo de caché</td><td>Fallo de caché</td><td>Compartido</td><td>Se atiende el fallo de P2; write-back desde P0; el cerrojo queda compartido.</td></tr>
+              <tr><td>4</td><td></td><td>(espera: bus/directorio ocupado)</td><td>Lee lock = 0: la prueba tiene éxito</td><td>Compartido</td><td>Se completa el fallo de P2.</td></tr>
+              <tr><td>5</td><td></td><td>Lee lock = 0</td><td>Ejecuta el intercambio: fallo de caché</td><td>Compartido</td><td>Se completa el fallo de P1.</td></tr>
+              <tr><td>6</td><td></td><td>Ejecuta el intercambio: fallo de caché</td><td>Completa el intercambio: recibe 0 y deja lock = 1</td><td>Exclusivo (P2)</td><td>Se atiende el fallo de P2 y se invalida: el cerrojo queda exclusivo.</td></tr>
+              <tr><td>7</td><td></td><td>Completa el intercambio: recibe 1 (y deja lock = 1)</td><td>Entra en la sección crítica</td><td>Exclusivo (P1)</td><td>Se atiende el fallo de P1: invalidación y write-back desde P2.</td></tr>
+              <tr><td>8</td><td></td><td>Gira probando si lock = 0</td><td></td><td></td><td>Ninguna.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="src">La tabla es la de los apuntes (figura de la p. 241, en inglés en el original). La figura solo da el estado global del cerrojo; los estados por caché (M, S, I) los deduce esta guía en términos de MSI, donde «exclusivo» equivale a M. También es un supuesto de la guía que, antes del paso 1, P0 tiene el cerrojo en M.</p>
+      </div>
+      <div class="note info"><strong>Fijate que:</strong> en el paso 7 P1 gana el acceso al bus después que P2, su intercambio devuelve 1 y vuelve a girar. Pero ahora gira sobre su copia en M y en el paso 8 no hay ninguna actividad en el bus: la espera ya no cuesta tráfico.</div>
+      <p class="src">Fuente: apuntes, «Sincronización» (p. 238–242).</p>
     </section>
 
     <!-- ============ QUIZ ============ -->
     <section class="block" id="s-quiz">
       <h2><span class="num">✓</span> Quiz de repaso</h2>
-      <p class="sub">Ocho preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
+      <p class="sub">Diez preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
       <div id="quizWrap"></div>
       <p class="quiz-score" id="quizScore"></p>
     </section>
 
-    <footer class="pagefoot">Basado en los apuntes de Arquitectura de Computadoras (UNC, FCEFyN), unidad 6: coherencia de caché en multiprocesadores (snoopy y directorios). Hecho como material de repaso: el contenido no está validado de punta a punta y puede tener errores, así que contrastalo con la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
+    <footer class="pagefoot">Basado en los apuntes de Arquitectura de Computadoras (UNC, FCEFyN), unidad 6: coherencia de caché en multiprocesadores (snoopy y directorios), consistencia y sincronización. Hecho como material de repaso: el contenido no está validado de punta a punta y puede tener errores, así que contrastalo con la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
   </main>
 </div>
 
@@ -959,6 +1289,7 @@ function stdQuiz(items, wrapId, scoreId) {
       if (c.s === "I") { out.msg = "P" + p + " no tiene X, no hay nada que reemplazar."; return out; }
       if (c.s === "M") { tx("Flush"); st.mem = c.v; out.msg = "P" + p + ' reemplaza X en M: <span class="tx">Flush</span> a memoria (X = ' + c.v + ") y pasa a I (" + t.repM + ")."; out.hot.push([t.repM, "hot"]); }
       else { var k = c.s === "E" ? t.repE : t.repS; out.msg = "P" + p + " reemplaza X en " + c.s + ": pasa a I (" + k + ") sin bus, la memoria ya está al día."; out.hot.push([k, "hot"]); }
+      if (proto === "MESI") out.msg += " (Replace* en MESI: agregado de esta guía por analogía con MSI.)";
       c.s = "I"; c.v = null; return out;
     }
   }
@@ -975,11 +1306,11 @@ function stdQuiz(items, wrapId, scoreId) {
       { id: "T8", from: "S", loop: 1, ang: 30, label: "PrRd, BusRd\n/ –", dx: -6, dy: 30 }]],
     MESI: [{ M: { x: 120, y: 95 }, E: { x: 420, y: 95 }, S: { x: 420, y: 345 }, I: { x: 120, y: 345 } }, [
       { id: "T3", from: "I", to: "M", c: 30, label: "PrWr\n/ BusRdX", dx: -34 },
-      { id: "T13", from: "M", to: "I", c: 30, label: "BusRdX, Replace\n/ Flush", t: .3, dx: 66 },
+      { id: "T13", from: "M", to: "I", c: 30, label: "BusRdX, Replace*\n/ Flush", t: .3, dx: 66 },
       { id: "T1", from: "I", to: "S", c: -28, label: "PrRd(S) / BusRd", dy: 28 },
-      { id: "T9", from: "S", to: "I", c: -28, label: "BusRdX, Replace / –", dy: -26 },
+      { id: "T9", from: "S", to: "I", c: -28, label: "BusRdX, Replace* / –", dy: -26 },
       { id: "T2", from: "I", to: "E", c: -34, label: "PrRd(¬S)\n/ BusRd", t: .22, dx: 30, dy: -6 },
-      { id: "T12", from: "E", to: "I", c: -34, label: "BusRdX,\nReplace / –", t: .22, dx: -28, dy: 8 },
+      { id: "T12", from: "E", to: "I", c: -34, label: "BusRdX,\nReplace* / –", t: .22, dx: -28, dy: 8 },
       { id: "T4", from: "S", to: "M", c: -34, label: "PrWr / BusRdX", t: .22, dx: -30, dy: -10 },
       { id: "T11", from: "M", to: "S", c: -34, label: "BusRd / Flush", t: .22, dx: 36, dy: 12 },
       { id: "T6", from: "E", to: "M", c: -24, label: "PrWr / –", dy: -12 },
@@ -1065,7 +1396,7 @@ function stdQuiz(items, wrapId, scoreId) {
       var ph = real[i++];
       var dots = ph.map(function (m) {
         var lab = m[2]; var g = S("g", {}, net);
-        var c = S("circle", { r: 9, fill: lab.indexOf("Inv") === 0 ? "var(--warn)" : lab.indexOf("Ack") === 0 ? "var(--i)" : "var(--act)" }, g);
+        var c = S("circle", { r: 9, fill: /^(Invalidate|Intervention|Transfer)/.test(lab) ? "var(--warn)" : /^(ack|Revision)/.test(lab) ? "var(--i)" : "var(--act)" }, g);
         return { g: g, c: c, a: POS[m[0]], b: POS[m[1]] };
       });
       var t0 = performance.now(), D = 750;
@@ -1085,28 +1416,49 @@ function stdQuiz(items, wrapId, scoreId) {
   }
   $("dir-cpus").addEventListener("click", function (e) {
     var b = e.target.closest("button"); if (!b || dir.busy) return; var p = +b.dataset.p, c = dir.c[p], H0 = 0; var phases = [], msg, o;
+    var who = function (o) { return p === H0 ? "P0 es el home: su directorio indica que el owner es P" + o : "El home responde con la identidad del owner (P" + o + ")"; };
+    var others = function () { return dir.pres.map(function (v, i) { return v && i !== p ? i : -1; }).filter(function (i) { return i >= 0; }); };
     if (b.dataset.o === "r") {
       if (c.s !== "I") { logLine($("dir-log"), "P" + p + " lee X = " + c.v + ": acierto, sin mensajes."); return; }
-      phases.push([[p, H0, "Petición de lectura"]]);
-      if (!dir.dirty) { phases.push([[H0, p, "Datos"]]); msg = "P" + p + " lee X: el directorio dice limpio, el home responde con el dato."; }
-      else {
-        o = dir.pres.indexOf(1); phases.push([[H0, o, "Reenvío al owner"]]); phases.push([[o, H0, "Datos (actualiza memoria)"], [o, p, "Datos"]]);
-        dir.mem = dir.c[o].v; dir.c[o].s = "S"; dir.dirty = false;
-        msg = "P" + p + " lee X: está sucio en P" + o + ". El home reenvía la petición, P" + o + " manda el dato al home y a P" + p + ", y pasa a S.";
+      phases.push([[p, H0, "RdReq"]]);
+      if (!dir.dirty) {
+        phases.push([[H0, p, "RdReply (dato)"]]);
+        msg = "P" + p + " lee X: bit sucio en 0, el home responde con el dato (RdReq + RdReply).";
+      } else {
+        o = dir.pres.indexOf(1); dir.mem = dir.c[o].v;
+        if (o === H0) {
+          phases.push([[H0, p, "Data"]]);
+          msg = "P" + p + " lee X: está sucio en P0, que es el propio home. P0 resuelve la intervención localmente (actualiza su memoria y pasa a S) y responde con el dato.";
+        } else {
+          phases.push([[H0, p, "Owner (P" + o + ")"]]);
+          phases.push([[p, o, "Intervention"]]);
+          phases.push([[o, p, "Data"], [o, H0, "Revision + WB"]]);
+          msg = "P" + p + " lee X: bit sucio en 1. " + who(o) + ", P" + p + " le manda una Intervention (downgrade, send me, WB) y P" + o + " le manda el dato a P" + p + " y una Revision con WB al home. P" + o + " pasa a S.";
+        }
+        dir.c[o].s = "S"; dir.dirty = false;
       }
       dir.pres[p] = 1; c.s = "S"; c.v = dir.mem;
     } else {
       if (c.s === "M") { c.v = dir.next++; logLine($("dir-log"), "P" + p + " escribe X = " + c.v + " en M: acierto, sin mensajes."); dRender(); return; }
-      phases.push([[p, H0, "Petición de escritura"]]);
+      phases.push([[p, H0, "RdXReq"]]);
       if (dir.dirty) {
-        o = dir.pres.indexOf(1); phases.push([[H0, o, "Reenvío + invalidar"]]); phases.push([[o, p, "Datos"]]); dir.c[o].s = "I"; dir.pres[o] = 0;
-        msg = "P" + p + " escribe X: estaba sucio en P" + o + ". El home reenvía, P" + o + " entrega el dato y se invalida.";
+        o = dir.pres.indexOf(1);
+        if (o === H0) {
+          phases.push([[H0, p, "OwnerShip (dato)"]]);
+          msg = "P" + p + " escribe X: está sucio en P0, que es el propio home. P0 se invalida localmente y le responde con OwnerShip y el dato.";
+        } else {
+          phases.push([[H0, p, "Owner (P" + o + ")"]]);
+          phases.push([[p, o, "Transfer Owner"]]);
+          phases.push([[o, p, "OwnerShip (dato)"], [o, H0, "Revision"]]);
+          msg = "P" + p + " escribe X: bit sucio en 1. " + who(o) + ", P" + p + " le manda Transfer Owner y P" + o + " le pasa el dato con OwnerShip, avisa al home con Revision y se invalida.";
+        }
+        dir.c[o].s = "I"; dir.pres[o] = 0;
       } else {
-        var sh = dir.pres.map(function (v, i) { return v && i !== p ? i : -1; }).filter(function (i) { return i >= 0; });
-        phases.push([[H0, p, c.s === "S" ? "Permiso + cantidad de acks" : "Datos + cantidad de acks"]].concat(sh.map(function (q) { return [H0, q, "Invalidación"]; })));
-        if (sh.length) phases.push(sh.map(function (q) { return [q, p, "Ack"]; }));
+        var sh = others();
+        phases.push([[H0, p, c.s === "S" ? "SharerList" : "SharerList + dato"]]);
+        if (sh.length) { phases.push(sh.map(function (q) { return [p, q, "Invalidate"]; })); phases.push(sh.map(function (q) { return [q, p, "ack"]; })); }
+        msg = "P" + p + " escribe X: bit sucio en 0. " + (p === H0 ? "P0 es el home: toma la lista de compartidores de su propio directorio" : "El home responde con la lista de compartidores" + (c.s === "S" ? "" : " y el dato")) + (sh.length ? "; P" + p + " invalida en paralelo a " + sh.map(function (q) { return "P" + q; }).join(", ") + " y espera sus acks" : "; no hay otras copias que invalidar") + ".";
         sh.forEach(function (q) { dir.c[q].s = "I"; dir.pres[q] = 0; });
-        msg = "P" + p + " escribe X: el home envía " + (sh.length ? "invalidaciones en paralelo a " + sh.map(function (q) { return "P" + q; }).join(", ") + ", que responden con ack a P" + p : "el dato; no hay otras copias que invalidar") + ".";
       }
       dir.pres = [0, 0, 0, 0]; dir.pres[p] = 1; dir.dirty = true; c.s = "M"; c.v = dir.next++; msg += " P" + p + " queda en M con X = " + c.v + ".";
     }
@@ -1123,7 +1475,7 @@ function stdQuiz(items, wrapId, scoreId) {
     var x = function (k) { return l + (W - l - 12) * k / (n - 1); }, max = 2 + 2 * (n - 1);
     var y = function (v) { return bt - (bt - top) * v / max; };
     for (var v = 0; v <= max; v += 4) { S("line", { x1: l, x2: W - 10, y1: y(v), y2: y(v), stroke: "var(--line)" }, svg); var t = S("text", { x: l - 6, y: y(v) + 4, "text-anchor": "end" }, svg); t.textContent = v; }
-    var series = [[function (k) { return 2 + 2 * k; }, "var(--act)"], [function (k) { return k ? 3 : 2; }, "var(--s)"], [function (k) { return 2 + k; }, "var(--m)"]];
+    var series = [[function (k) { return 2 + 2 * k; }, "var(--act)"], [function (k) { return k ? 4 : 2; }, "var(--s)"], [function (k) { return 2 + k; }, "var(--m)"]];
     series.forEach(function (sc) {
       var pts = []; for (var k = 0; k < n; k++) pts.push(x(k) + "," + y(sc[0](k)));
       S("polyline", { points: pts.join(" "), fill: "none", stroke: sc[1], "stroke-width": 3 }, svg);
@@ -1156,7 +1508,7 @@ function stdQuiz(items, wrapId, scoreId) {
     var res = all.map(function (p) { var A = 0, B = 0, pa, pb; p.forEach(function (o) { if (o === "1a") A = 1; if (o === "1b") B = 2; if (o === "2a") pb = B; if (o === "2b") pa = A; }); return { p: p, r: [pa, pb] }; });
     $("cs-list").innerHTML = res.map(function (x) {
       var bad = x.r[0] === 0 && x.r[1] === 2; var prog = x.p.indexOf("1a") < x.p.indexOf("1b");
-      return '<div class="cpu' + (bad ? " cs-bad" : "") + '"><div class="val cs-ord">' + x.p.map(function (o) { return o + " " + OPS[o]; }).join(" → ") + '</div><div class="name">(A, B) = (' + x.r[0] + ", " + x.r[1] + ")" + (bad ? '<span class="cs-tag">imposible en SC</span>' : "") + "</div>" + (prog ? "" : '<div class="src">P1 hizo visible B antes que A</div>') + "</div>";
+      return '<div class="cpu' + (bad ? " cs-bad" : "") + '"><div class="val cs-ord">' + x.p.map(function (o) { return o + " " + OPS[o]; }).join(" → ") + '</div><div class="name">(A, B) = (' + x.r[0] + ", " + x.r[1] + ")" + (bad ? '<span class="cs-tag">imposible en SC</span>' : "") + "</div>" + (prog ? "" : '<div class="src">P1 hizo visible B antes que A' + (bad ? ": resultado imposible en SC" : ", pero el resultado también sale en SC: no la viola") + '</div>') + "</div>";
     }).join("");
     var outs = res.map(function (x) { return "(" + x.r[0] + ", " + x.r[1] + ")"; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
     var st = $("cs-status"); st.className = "cs-status " + (csSC ? "good" : "bad");
@@ -1166,6 +1518,42 @@ function stdQuiz(items, wrapId, scoreId) {
   $("cs-sc").addEventListener("click", function () { csSC = true; $("cs-sc").setAttribute("aria-pressed", true); $("cs-no").setAttribute("aria-pressed", false); cs(); });
   $("cs-no").addEventListener("click", function () { csSC = false; $("cs-sc").setAttribute("aria-pressed", false); $("cs-no").setAttribute("aria-pressed", true); cs(); });
   cs();
+})();
+
+/* ---------- 9. sincronización: paso a paso del cerrojo ---------- */
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  if (!$("sy-cpus")) return;
+  var STEPS = [
+    { t: "Antes de empezar", st: ["M", "I", "I"], lock: 1, glob: "Exclusivo (P0)", bus: "P0 tiene el cerrojo en su caché; P1 y P2 todavía no lo leyeron (supuesto de la guía).", does: ["Tiene el cerrojo (lock = 1)", "Todavía no lo leyó", "Todavía no lo leyó"] },
+    { st: ["S", "S", "S"], lock: 1 }, { st: ["M", "I", "I"], lock: 0 }, { st: ["S", "I", "S"], lock: 0 }, { st: ["S", "I", "S"], lock: 0 },
+    { st: ["S", "S", "S"], lock: 0 }, { st: ["I", "I", "M"], lock: 1 }, { st: ["I", "M", "I"], lock: 1 }, { st: ["I", "M", "I"], lock: 1 }
+  ];
+  var rows = Array.prototype.slice.call($("sy-table").querySelectorAll("tbody tr"));
+  rows.forEach(function (tr, i) {
+    var td = tr.children, k = STEPS[i + 1];
+    k.t = "Paso " + (i + 1) + " de " + rows.length;
+    k.does = [td[1].textContent, td[2].textContent, td[3].textContent];
+    k.glob = td[4].textContent || "sin cambios";
+    k.bus = td[5].textContent;
+  });
+  var cur = 0;
+  function render() {
+    var k = STEPS[cur];
+    $("sy-title").textContent = k.t;
+    $("sy-cpus").innerHTML = k.st.map(function (s, i) {
+      return '<div class="cpu"><div class="name">P' + i + '<span class="badge ' + s + '">' + s + '</span></div><div class="sy-do">' + (k.does[i] || "—") + "</div></div>";
+    }).join("");
+    $("sy-lock").textContent = "lock = " + k.lock;
+    $("sy-glob").textContent = k.glob;
+    $("sy-bus").textContent = "Bus / directorio: " + k.bus;
+    rows.forEach(function (tr, i) { tr.classList.toggle("sy-cur", i + 1 === cur); tr.classList.toggle("sy-done", i + 1 < cur); });
+    $("sy-prev").disabled = cur === 0; $("sy-next").disabled = cur === STEPS.length - 1;
+  }
+  $("sy-prev").addEventListener("click", function () { if (cur > 0) { cur--; render(); } });
+  $("sy-next").addEventListener("click", function () { if (cur < STEPS.length - 1) { cur++; render(); } });
+  $("sy-reset").addEventListener("click", function () { cur = 0; render(); });
+  render();
 })();
 
 stdQuiz([
@@ -1181,18 +1569,24 @@ stdQuiz([
     {q:"¿Por qué el protocolo de dos estados escala mal?",
      opts:["Porque no garantiza la serialización","Porque cada escritura ocupa el bus","Porque necesita un bit dirty","Porque las lecturas nunca aciertan"],correct:1,
      exp:"Con write-through, cada store viaja a memoria por el bus. Con unos pocos procesadores el ancho de banda se agota."},
-    {q:"¿Qué garantiza que todas las cachés vean las escrituras en el mismo orden?",
-     opts:["El bit de validez","La señal S","Que el bus atiende una transacción por vez y el arbitraje fija el orden","El Flush"],correct:2,
-     exp:"Es la propiedad de serialización: el bus es atómico y todos observan sus transacciones en la misma secuencia."},
-    {q:"En un protocolo basado en directorio, ¿quién fija el orden de las peticiones sobre un bloque?",
-     opts:["El arbitraje del bus","El nodo home del bloque","La caché que tiene el bloque en S","El procesador que pidió primero"],correct:1,
-     exp:"No hay bus que serialice: cada bloque tiene un nodo home, fijado por su dirección, que guarda la entrada del directorio y ordena las peticiones sobre ese bloque."},
+    {q:"En un protocolo snoopy, ¿qué garantiza que todas las cachés vean las escrituras a una posición en el mismo orden?",
+     opts:["El bit de validez","La señal S","El arbitraje del bus, que decide quién escribe primero y lo hace visible a todos en esa secuencia","El Flush"],correct:2,
+     exp:"Es la serialización de escrituras. En el modelo simple el bus atiende una transacción por vez. En un bus real las transacciones no son atómicas y hay carreras, pero ninguna caché se modifica antes de ganar el bus, así que el arbitraje sigue fijando el orden."},
+    {q:"Directorio basado en memoria: P1 escribe un bloque limpio que P2 y P3 tienen en S. Según las figuras de los apuntes, ¿quién manda las invalidaciones?",
+     opts:["El home, en paralelo","P1, después de recibir del home la lista de compartidores","Nadie: P2 y P3 espían el bus","P2, que se la reenvía a P3"],correct:1,
+     exp:"P1 manda RdXReq al home, el home le responde con la lista de compartidores (SharerList) y P1 invalida a P2 y P3 en paralelo; los acks vuelven a P1. Son 4 saltos en el camino crítico."},
     {q:"Directorio con un bit de presencia por nodo, 256 nodos y línea de 64 B. ¿Cuánto ocupa respecto de los datos?",
      opts:["12,5 %","25 %","50 %","200 %"],correct:2,
      exp:"256 bits de presencia por cada línea de 64 B = 512 bits: 256 / 512 = 50 %. La sobrecarga crece con la cantidad de nodos; por eso se usan punteros o se organiza el directorio como caché."},
     {q:"P1 ejecuta A = 1; B = 2 y P2 ejecuta print B; print A (A y B arrancan en 0). ¿Qué resultado es imposible bajo consistencia secuencial?",
      opts:["(A, B) = (0, 0)","(A, B) = (1, 0)","(A, B) = (0, 2)","(A, B) = (1, 2)"],correct:2,
-     exp:"Si P2 ve B = 2, la escritura de B ya ocurrió y, por orden de programa, también la de A: no puede leer A = 0. Con escrituras reordenadas sí puede pasar, aunque las cachés sean coherentes."}
+     exp:"Si P2 ve B = 2, la escritura de B ya ocurrió y, por orden de programa, también la de A: no puede leer A = 0. Con escrituras reordenadas sí puede pasar, aunque las cachés sean coherentes."},
+    {q:"¿Por qué el spin lock test-and-exchange genera menos tráfico que hacer EXCH en un bucle?",
+     opts:["Porque EXCH no es atómico","Porque mientras el cerrojo está ocupado cada procesador gira leyendo su copia local, sin escribir ni invalidar","Porque el cerrojo nunca sale de memoria","Porque no hay fallos de caché al liberar el cerrojo"],correct:1,
+     exp:"Cada EXCH es una escritura: genera fallos de escritura e invalidaciones aunque el cerrojo siga ocupado. La lectura preliminar se resuelve en la caché local; solo cuando el cerrojo aparece libre se intenta el EXCH."},
+    {q:"En un spin lock con LL/SC, ¿cuándo falla el SC?",
+     opts:["Si el LL leyó un 1","Si entre el LL y el SC hubo una escritura al bloque o una interrupción, que borran el link register","Siempre en el primer intento","Si otro procesador leyó el cerrojo"],correct:1,
+     exp:"El SC solo guarda si la dirección sigue en el link register. Una escritura de otro procesador (que invalida el bloque) o un cambio de contexto lo borran; entonces el SC devuelve 0 y el bucle reintenta."}
   ]);
 </script>
 </body>
