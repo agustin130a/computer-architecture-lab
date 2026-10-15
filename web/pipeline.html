@@ -6,7 +6,7 @@
 <title>Procesador y paralelismo | Computer Architecture Lab</title>
 <meta
   name="description"
-  content="Unidades 2 a 4: pipeline, riesgos, loop unrolling y software pipelining, planificación estática y dinámica, excepciones precisas, Tomasulo, VLIW y multithreading, con simuladores ciclo a ciclo."
+  content="Unidades 2 a 4: pipeline, riesgos, loop unrolling y software pipelining, planificación estática y dinámica, excepciones precisas, Tomasulo, especulación con ROB, VLIW, multithreading y paralelismo de datos, con simuladores ciclo a ciclo."
 />
 <script>
   // Aplica el tema guardado/del sistema antes del render para evitar parpadeo.
@@ -403,22 +403,22 @@
       <span class="theme-label-dark">Modo claro</span>
     </button>
   </div>
-  <p class="kicker">Arquitectura de Computadoras — Unidades 2 a 4: procesador segmentado y paralelismo</p>
+  <p class="kicker">Arquitectura de Computadoras — Unidades 2 a 4 y anexo DLP: procesador segmentado y paralelismo</p>
   <h1>Procesador: pipeline, planificación y paralelismo</h1>
-  <p class="lede">Del monociclo al pipeline, los riesgos que lo frenan y cómo se los ataca: reordenando en el compilador (unrolling, software pipelining) o en el hardware (Tomasulo), manteniendo las excepciones precisas, y emitiendo varias instrucciones o varios hilos por ciclo. Cada tema trae un simulador para probar casos.</p>
+  <p class="lede">Del monociclo al pipeline, los riesgos que lo frenan y cómo se los ataca: reordenando en el compilador (unrolling, software pipelining) o en el hardware (Tomasulo), manteniendo las excepciones precisas y especulando con el ROB, emitiendo varias instrucciones o varios hilos por ciclo, y aplicando una misma instrucción a muchos datos (DLP). Cada tema trae un simulador para probar casos.</p>
 </header>
 
 <div class="shell">
 
   <nav class="side" id="sidenav" aria-label="Secciones de la guía">
-    <div class="brand">Procesador y paralelismo<small>Unidades 2 a 4</small></div>
+    <div class="brand">Procesador y paralelismo<small>Unidades 2 a 4 y anexo DLP</small></div>
     <ol>
       <li class="grp">
         <p class="grp-title">Segmentación</p>
         <a href="#s-ciclos">2.1 Monociclo y multiciclo</a>
         <a href="#s-ciclos-calc">↳ Calculadora de tiempo</a>
         <a href="#s-pipeline">2.2 Pipeline segmentado</a>
-        <a href="#s-riesgos">2.3.1 Riesgos</a>
+        <a href="#s-riesgos">2.4 Riesgos</a>
       </li>
       <li class="grp">
         <p class="grp-title">Planificación</p>
@@ -428,16 +428,17 @@
       <li class="grp">
         <p class="grp-title">Excepciones</p>
         <a href="#s-excepciones">2.5 Excepciones precisas</a>
-        <a href="#s-rob">3.4.2 Fuera de orden y ROB</a>
       </li>
       <li class="grp">
         <p class="grp-title">Planificación dinámica</p>
         <a href="#s-tomasulo">3.6 Tomasulo</a>
+        <a href="#s-rob">3.11 Especulación: Tomasulo con ROB</a>
       </li>
       <li class="grp">
-        <p class="grp-title">Lanzamiento múltiple</p>
+        <p class="grp-title">Más allá del ILP</p>
         <a href="#s-vliw">4.1 Superescalar y VLIW</a>
         <a href="#s-mt">4.5 Multithreading</a>
+        <a href="#s-dlp">7 Paralelismo de datos (DLP)</a>
       </li>
       <li class="grp">
         <p class="grp-title">Autoevaluación</p>
@@ -504,7 +505,7 @@
       <p class="sub">Cómo la segmentación mejora el throughput y por qué el speedup real queda por debajo de la cantidad de etapas.</p>
       <p>La segmentación aprovecha que, mientras una instrucción está en una etapa, el hardware de las otras cuatro queda ocioso. Se separan las etapas con <strong>registros de segmentación</strong> (IF/ID, ID/EX, EX/MEM, MEM/WB) que guardan al final de cada ciclo lo que produjo cada etapa, y así cada etapa trabaja en una instrucción distinta. Es invisible para el programador.</p>
       <p>No acorta el tiempo de una instrucción: mejora el <strong>throughput</strong>. En el caso ideal, con etapas balanceadas, el tiempo por instrucción se divide por la cantidad de etapas (100 ns con 5 etapas pasa a 20 ns) y el CPI tiende a 1 una vez lleno el pipeline.</p>
-      <p>Limitaciones prácticas: el ciclo dura lo que la etapa más lenta; los registros de segmentación agregan retardo; las instrucciones tipo R pasan por una etapa MEM vacía para que todas tengan la misma cantidad de etapas; y aparecen los <strong>riesgos</strong>, que impiden iniciar una instrucción por ciclo.</p>
+      <p>Limitaciones prácticas: el ciclo dura lo que la etapa más lenta; en ID y WB se desaprovecha medio ciclo, porque la lectura de registros y la escritura ocurren en flancos distintos del reloj; los registros de segmentación (latches) agregan retardo, que pesa más cuanto más corta es cada etapa; las instrucciones tipo R pasan por una etapa MEM vacía para que todas tengan la misma cantidad de etapas; y aparecen los <strong>riesgos</strong>, que impiden iniciar una instrucción por ciclo. Por eso agregar etapas sin fin no sirve: a partir de cierta profundidad pesan los latches y cada vaciado (por un salto o una excepción) tira más instrucciones.</p>
       <div class="note info"><strong>En una frase:</strong> el speedup ideal es igual a la cantidad de etapas, pero en la práctica baja por el desbalance entre etapas, el retardo de los registros de segmentación, el llenado del pipeline y los riesgos.</div>
 
       <div class="formula">speedup(N) = N × tiempo sin pipeline / ((N + etapas − 1) × ciclo)</div>
@@ -524,28 +525,88 @@
         </div>
         <p class="src">Con etapas desbalanceadas (200/100/200/200/100) el máximo es 4, no 5. Probá poner todas en 160 ps para ver el caso balanceado.</p>
       </div>
-      <p class="src">Fuente: apuntes, secciones 2.2, 2.3 y 2.3.1.</p>
+      <p class="src">Fuente: apuntes, secciones 2.2, 2.3 y 2.3.1 (p. 53–55); el retardo de los latches y la profundidad del pipeline, sección "Rendimiento del Pipeline" de la unidad 1 (p. 24).</p>
     </section>
 
-    <!-- ============ 2.3.1–2.4 RIESGOS ============ -->
+    <!-- ============ 2.4 RIESGOS ============ -->
     <section class="block pipe" id="s-riesgos">
-      <h2><span class="num">2.3.1–2.4</span> Riesgos en la segmentación</h2>
+      <h2><span class="num">2.4</span> Riesgos en la segmentación</h2>
       <p class="sub">Qué impide iniciar una instrucción por ciclo: recursos compartidos, datos que no están listos y saltos.</p>
       <details class="card" open>
         <summary>Estructurales</summary>
-        <div class="body"><p>Dos instrucciones quieren el mismo recurso en el mismo ciclo. Se resuelven por construcción: memoria de instrucciones separada de la de datos, banco de registros con dos puertos de lectura y escritura en la primera mitad del ciclo, y un sumador extra para el PC.</p></div>
+        <div class="body"><p>Dos instrucciones quieren el mismo recurso en el mismo ciclo. Se resuelven por construcción: memoria de instrucciones separada de la de datos, banco de registros con dos puertos de lectura y escritura en la primera mitad del ciclo (lectura en la segunda), y un sumador extra para el PC.</p>
+          <div class="note"><strong>Ojo:</strong> el texto del apunte (p. 57) dice que "la lectura ocurre en el flanco ascendente y la escritura en el flanco descendente", pero la Figura 39 de esa misma página dice lo contrario: escritura en la primera mitad del ciclo y lectura en la segunda. Lo correcto es lo de la figura, porque así una instrucción en ID puede leer el valor que otra escribe en WB en el mismo ciclo.</div></div>
       </details>
       <details class="card" open>
         <summary>De datos</summary>
-        <div class="body"><p>Una instrucción usa un dato que todavía no está listo. <strong>LDE (RAW)</strong> es el único que aparece en el pipeline en orden; EDL (WAR) y EDE (WAW) solo son problema con ejecución fuera de orden, porque WB siempre es la última etapa. LDE entre tipo R se resuelve con <strong>cortocircuito (forwarding)</strong>; el caso <strong>load-use</strong> no, porque el dato sale de MEM y la siguiente lo necesita en EX: la unidad de detección de riesgos, en ID, inserta una burbuja.</p></div>
+        <div class="body"><p>Una instrucción usa un dato que todavía no está listo. En el pipeline entero de 5 etapas, <strong>LDE (RAW)</strong> es el único que aparece: EDL (WAR) y EDE (WAW) no pueden darse porque todas las instrucciones escriben en WB, que es la última etapa, y lo hacen en orden. Con unidades de punto flotante multiciclo de distinta latencia, en cambio, las instrucciones pueden terminar fuera de orden aunque se emitan en orden, y ahí sí aparece EDE (por ejemplo, un <code>LD F2</code> que escribe antes que un <code>ADDD F2</code> anterior). LDE entre tipo R se resuelve con <strong>cortocircuito (forwarding)</strong>; el caso <strong>load-use</strong> no, porque el dato sale de MEM y la siguiente lo necesita en EX: la unidad de detección de riesgos, en ID, inserta una burbuja.</p></div>
       </details>
       <details class="card" open>
         <summary>De control</summary>
-        <div class="body"><p>Al buscar la instrucción siguiente a un salto no se sabe si el salto se toma ni su destino. Si se resuelve en MEM se pierden 3 ciclos; con comparador y sumador en ID, 1 ciclo; con salto retardado o predicción, menos (ver la <a href="predictores.html">guía de predicción de saltos</a>).</p></div>
+        <div class="body"><p>Al buscar la instrucción siguiente a un salto no se sabe si el salto se toma ni su destino. Si se resuelve en MEM se pierden 3 ciclos; con comparador y sumador en ID, 1 ciclo; con salto retardado o predicción, menos (ver la <a href="predictores.html">guía de predicción de saltos</a>).</p>
+          <div class="note"><strong>Ojo con el nombre:</strong> el apunte (p. 67–68) llama "OPCIÓN II (Branch Delay Slot)" a poner el comparador y el sumador en ID. Son dos cosas distintas: mover la resolución a ID baja la penalización a 1 ciclo, y el salto retardado (p. 69) es llenar ese ciclo con una instrucción útil.</div></div>
+      </details>
+
+      <details class="card">
+        <summary>Cortocircuito y unidad de detección de riesgos</summary>
+        <div class="body">
+          <p>El cortocircuito (<em>forwarding</em> o <em>bypassing</em>) lleva un resultado a la ALU apenas existe, sin esperar a que se escriba en el banco de registros. Para eso se agregan <strong>dos multiplexores</strong> en las entradas de la ALU, uno por operando, cada uno con tres entradas:</p>
+          <ul>
+            <li>el registro A (o B) que viene de ID, como siempre;</li>
+            <li>el resultado de la instrucción anterior, a la salida de la ALU (registro EX/MEM);</li>
+            <li>el resultado de la anterior a esa, a la salida de la memoria (registro MEM/WB).</li>
+          </ul>
+          <p>La <strong>unidad de cortocircuito</strong> elige la entrada. Necesita, guardado en los registros de segmentación hasta EX: el registro que escribe la instrucción anterior (rd en tipo R, rt en tipo I), los registros que lee la nueva (rs y rt) y la señal Write_Reg, que dice si la anterior escribe un registro.</p>
+          <h3>Load-use: hace falta detener</h3>
+          <p>El dato de un <code>lw</code> recién está al final de MEM, y la instrucción siguiente lo necesita al principio de su EX, en el mismo ciclo: la dependencia va "hacia atrás en el tiempo" y ningún cortocircuito la arregla. La <strong>unidad de detección de riesgos</strong>, en ID, detiene un ciclo si se cumple:</p>
+          <div class="formula">Mem_Read_EX &amp;&amp; (rt_EX == rs_ID || rt_EX == rt_ID)</div>
+          <p>Es decir: la instrucción en EX es un load (la única que lee memoria) y su destino coincide con algún fuente de la que está en ID. Para detener:</p>
+          <ul>
+            <li>no se actualizan el PC ni IF/ID, así que IF vuelve a buscar la misma instrucción e ID la vuelve a decodificar;</li>
+            <li>se ponen en cero los campos de control de EX, MEM y WB en ID/EX: hacia adelante viaja una instrucción que no escribe nada.</li>
+          </ul>
+          <p>Una <strong>burbuja no es un NOP</strong>: el NOP es una instrucción que recorre todas las etapas sin hacer nada; la burbuja es una etapa que no trabaja un ciclo para que otra instrucción llegue a tiempo. El compilador puede evitar la burbuja moviendo una instrucción independiente entre el load y su uso.</p>
+          <p class="src">Fuente: apuntes, sección 2.4.2 (p. 62–66).</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Riesgos de control: salto retardado, predicción estática y tipos de saltos</summary>
+        <div class="body">
+          <p>Para saltar hacen falta dos datos: si se cumple la condición y la dirección destino. En la ruta de datos básica los dos se calculan en EX y el PC se carga en MEM, así que detener el pipeline cuesta 3 ciclos por salto. Las alternativas de los apuntes:</p>
+          <h3>Salto retardado</h3>
+          <p>La instrucción que sigue al salto (el <em>delay slot</em>) se ejecuta siempre, se tome o no el salto. No tiene que depender del salto, y es el compilador quien la elige:</p>
+          <ol>
+            <li>una instrucción independiente de <strong>antes</strong> del salto (la mejor opción: siempre es útil);</li>
+            <li>una del <strong>destino</strong> del salto, suponiendo que se toma (sirve en bucles);</li>
+            <li>una de la <strong>continuación</strong>, suponiendo que no se toma (sirve en if-else).</li>
+          </ol>
+          <p>Si no encuentra ninguna, pone un NOP y se pierde 1 ciclo.</p>
+          <h3>Predicción estática</h3>
+          <ul>
+            <li><strong>Nunca tomado:</strong> se sigue buscando en secuencia. Si en ID resulta que el salto se tomaba, la instrucción buscada se convierte en NOP (flush) y se busca la del destino.</li>
+            <li><strong>Siempre tomado:</strong> en este pipeline no gana nada, porque la dirección destino recién se conoce en ID; es lo mismo que detener.</li>
+            <li>El compilador puede ayudar ordenando el código para que el caso más frecuente coincida con lo que predice el hardware.</li>
+          </ul>
+          <p>Un fallo de predicción vacía el cauce poniendo en cero las señales de control de IF, ID y EX. La predicción dinámica (con historia) está en la <a href="predictores.html">guía de predictores</a>.</p>
+          <h3>Tipos de saltos</h3>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th></th><th>Qué hay que predecir</th><th>Cuándo se conoce el destino</th><th>Si se predice mal</th></tr></thead>
+              <tbody>
+                <tr><td>Condicional directo (70 % de los saltos)</td><td>Decisión y destino</td><td>En decodificación (relativo al PC)</td><td>Vaciado total; es el caso más importante</td></tr>
+                <tr><td>Incondicional directo</td><td>Solo el destino</td><td>En decodificación</td><td>Vaciado parcial; poco importante</td></tr>
+                <tr><td>Incondicional indirecto (returns, algunas calls)</td><td>Solo el destino</td><td>En ejecución (sale de un registro)</td><td>Vaciado completo; poco frecuente</td></tr>
+                <tr><td>Condicional indirecto</td><td colspan="3">Muchas arquitecturas no los implementan.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="src">Fuente: apuntes, sección 2.4.3 (p. 66–71).</p>
+        </div>
       </details>
 
       <h3 id="s-riesgos-teorema">Teorema de riesgos: dominio y rango</h3>
       <p>Escribí dos instrucciones (i antes que j). El dominio D son los operandos que se leen y el rango R es el resultado.</p>
+      <div class="note"><strong>Ojo con las siglas del apunte:</strong> en el teorema (p. 61) etiqueta D(i) ∩ R(j) como "Lectura Después de Escritura (EDL) (WAR)"; lo correcto es <em>Escritura Después de Lectura</em>. En otras partes expande mal las siglas: "Load Data Execution (LDE)", "Execution Data Execution (EDE)" y "Execution Data Load (EDL)" (p. 108 y 125), o "EDE (Escritura después de Ejecución)" y "ELD" (p. 83–84). Las correctas son LDE = lectura después de escritura (RAW), EDL = escritura después de lectura (WAR) y EDE = escritura después de escritura (WAW).</div>
       <div class="sim">
         <div class="cfg">
           <div><label for="hz-i">Instrucción i</label><input type="text" id="hz-i" value="ADD r1,r2,r3"></div>
@@ -604,6 +665,30 @@
       <h2><span class="num">3.5</span> Loop unrolling y software pipelining</h2>
       <p class="sub">Dos técnicas del compilador para sacar paralelismo entre iteraciones de un bucle.</p>
       <p>Son técnicas estáticas: las hace el compilador. Las dos parten del mismo bucle, <code>x[i] = x[i] + s</code>, cuyo cuerpo tiene instrucciones muy dependientes entre sí (un bloque básico tiene en promedio unas cuatro instrucciones), así que hay que buscar paralelismo entre iteraciones.</p>
+      <details class="card">
+        <summary>Dependencias frente a riesgos: de datos, de nombre y de control</summary>
+        <div class="body">
+          <p>Una <strong>dependencia</strong> es propia del programa: fija el orden en que hay que calcular los resultados y pone un techo al paralelismo. Un <strong>riesgo</strong> es lo que esa dependencia provoca en un pipeline concreto: la misma dependencia puede frenar a un procesador y a otro no. El compilador razona sobre dependencias, no sobre los riesgos de un pipeline en particular.</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Tipo</th><th>Qué pasa</th><th>Ejemplo</th></tr></thead>
+              <tbody>
+                <tr><td>De datos (verdadera, LDE)</td><td>j necesita el resultado de i. No se puede eliminar, solo esperar o anticipar.</td><td class="mono">i: LD F0,0(R1) · j: ADDD F4,F0,F2</td></tr>
+                <tr><td>De nombre: antidependencia (EDL)</td><td>j escribe algo que i todavía tiene que leer.</td><td class="mono">i: ADDD F4,F0,F2 · j: LD F0,−8(R1)</td></tr>
+                <tr><td>De nombre: de salida (EDE)</td><td>i y j escriben el mismo registro o posición.</td><td class="mono">i: ADDD F4,F0,F2 · j: SUBD F4,F3,F2</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Las dependencias de nombre no transportan datos: aparecen porque se reutiliza un nombre. Se eliminan <strong>renombrando</strong>, con más registros (el compilador en el unrolling) o con etiquetas (el hardware en Tomasulo). Entre registros son fáciles de ver; en memoria no: el compilador puede no saber si <code>100(R4)</code> y <code>20(R6)</code> son la misma dirección, y sin saberlo no puede reordenar loads y stores.</p>
+          <h3>Dependencias de control</h3>
+          <p>Cada instrucción depende de los saltos que deciden si se ejecuta. Regla general: una instrucción que depende de un salto no puede moverse antes del salto, y una que no depende no puede moverse después. Se pueden violar solo si el resultado del programa no cambia, preservando dos cosas:</p>
+          <ul>
+            <li><strong>Las excepciones.</strong> En <code>DADDU R2,R3,R4 · BEQZ R2,L1 · LW R1,0(R2)</code>, subir el <code>LW</code> antes del <code>BEQZ</code> podría generar un fallo de página que el programa original nunca producía.</li>
+            <li><strong>El flujo de datos.</strong> En <code>DADDU R1,… · BEQZ R4,L1 · DSUBU R1,… · L1: OR R7,R1,R8</code>, el <code>OR</code> usa el R1 del <code>DADDU</code> o del <code>DSUBU</code> según el salto; el reordenamiento no puede cambiar cuál le llega.</li>
+          </ul>
+          <p class="src">Fuente: apuntes, secciones 3.4 a 3.5 (p. 94–96).</p>
+        </div>
+      </details>
       <details class="card" open>
         <summary>Loop unrolling</summary>
         <div class="body"><p>Se replica el cuerpo varias veces (con registros distintos) y se ajustan los desplazamientos. Elimina saltos y decrementos y, junto con la planificación, permite separar cada LD de su ADDD y cada ADDD de su SD. <strong>Costo:</strong> más registros y código más largo.</p></div>
@@ -628,7 +713,8 @@
             <svg id="lp-chart" class="chart" viewBox="0 0 520 230" role="img" aria-label="Ciclos por elemento según la versión"></svg>
           </div>
         </div>
-        <p class="src">Latencias usadas (ciclos de espera entre productora y consumidora, modelo clásico de Hennessy y Patterson): suma FP → suma FP 3; suma FP → store 2; load → suma FP 1; load → store 0; entera → salto 1. Salto retardado con un delay slot: si no hay una instrucción útil se pierde un ciclo. Con este modelo salen los mismos valores que en los apuntes: 10, 6 y 3,5 ciclos.</p>
+        <p class="src">Latencias usadas (ciclos de espera entre productora y consumidora, modelo clásico de Hennessy y Patterson): suma FP → suma FP 3; suma FP → store 2; load → suma FP 1; load → store 0; entera → salto 1. Salto retardado con un delay slot: si no hay una instrucción útil se pierde un ciclo. Con este modelo salen 10, 6 y 3,5 ciclos, los valores que dan los apuntes.</p>
+        <div class="note"><strong>Ojo:</strong> el apunte no es consistente con estas cifras. En p. 96 dice que el bucle original tarda 10 ciclos, "una instrucción cada dos ciclos, lo que implica un CPI = 0.5"; con 5 instrucciones en 10 ciclos el CPI es 2 (lo que vale 0,5 es el IPC). En p. 97 dice que la versión original "tardaba 9 ciclos" y en p. 98 que se pasa "de ∼8 ciclos por iteración a ∼3,5". Las cifras que cierran con su propia tabla de p. 96 son 10, 6 y 3,5.</div>
       </div>
 
       <div class="grid2">
@@ -653,6 +739,7 @@
           </div>
         </div>
       </div>
+      <div class="note"><strong>Ojo:</strong> la fila "Overhead" sigue a Hennessy y Patterson (no está así en los apuntes). El apunte (p. 101) lo pone al revés: le atribuye al unrolling "llenado y vaciado del pipeline solo una vez, al inicio y al final del bucle" y "menor tamaño del código", lo que contradice sus propias desventajas ("incremento en el tamaño del código"). Lo correcto es lo de la tabla: el bucle desenrollado arranca de nuevo en cada vuelta, así que paga el llenado y el vaciado cada vez que vuelve a entrar al cuerpo (con 100 iteraciones desenrolladas ×4, 25 veces); el software pipelining los paga una sola vez, en el prólogo y el epílogo.</div>
       <p class="src">Fuente: apuntes, secciones 3.1, 3.3.2 y 3.5 a 3.5.5.</p>
     </section>
 
@@ -680,7 +767,7 @@
         <div class="scroll"><svg id="sd-svg" class="wide" viewBox="0 0 760 230" role="img" aria-label="Diagrama de ejecución"></svg></div>
         <div class="legend"><span><i class="k-stage"></i>IF / ID</span><span><i class="k-stall"></i>esperando</span><span><i class="k-act"></i>ejecución</span><span><i class="k-ok"></i>WB</span></div>
         <div class="status" id="sd-status" aria-live="polite"></div>
-        <p class="src">Modelo: una instrucción emitida por ciclo, sin cortocircuito (el operando se lee cuando la productora hace WB), multiplicación de 5 ciclos y suma o resta de 2, unidades segmentadas. Reproduce los 13 ciclos de los apuntes.</p>
+        <p class="src">Modelo propio, simplificado: etapas IF, ID (o Issue), EX y WB, sin MEM; una instrucción emitida por ciclo; sin cortocircuito (el operando se lee cuando la productora hace WB); multiplicación de 5 ciclos y suma o resta de 2, unidades segmentadas. Sin planificación da 13 ciclos, igual que la figura del apunte (p. 103), pero por otro camino: la figura tiene etapa MEM y la i2 arranca su EX apenas termina el de la i1, es decir, con anticipación. Con planificación dinámica la figura da 12 ciclos (agrega una etapa de issue separada de ID, además de MEM) y este modelo da 11. Lo que importa es igual en los dos: i3 e i4 terminan antes que i2.</p>
       </div>
 
       <div class="table-scroll">
@@ -704,9 +791,73 @@
     <section class="block pipe" id="s-excepciones">
       <h2><span class="num">2.5</span> Excepciones precisas en el pipeline</h2>
       <p class="sub">Qué significa que una excepción sea precisa y cómo lo logra un pipeline en orden.</p>
+      <details class="card">
+        <summary>Excepciones e interrupciones en el MIPS-DLX (unidad 2)</summary>
+        <div class="body">
+          <p>Igual que los saltos, las excepciones y las interrupciones cortan el flujo normal de instrucciones, y son de las partes más difíciles del control. Si no se piensan desde el diseño de la unidad de control, agregarlas después en una implementación compleja baja bastante el rendimiento.</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <tr><th></th><th>Excepción (trampa)</th><th>Interrupción</th></tr>
+              <tr><td>Origen</td><td>Interno: la genera el propio programa o el procesador (desbordamiento, fallo de página, violación de protección).</td><td>Externo: la pide un dispositivo, por ejemplo de E/S.</td></tr>
+              <tr><td>Sincronía</td><td>Síncrona: se sabe en qué instrucción y en qué etapa ocurre.</td><td>Asíncrona: no se sabe cuándo va a llegar.</td></tr>
+              <tr><td>Dónde ocurre</td><td>Dentro de una instrucción, en medio de su ejecución.</td><td>Entre dos instrucciones.</td></tr>
+              <tr><td>Qué se guarda</td><td>El PC de la instrucción que falló, para reejecutarla.</td><td>El PC de la siguiente instrucción a ejecutar.</td></tr>
+            </table>
+          </div>
+          <p>En MIPS, "excepción" designa cualquier cambio inesperado del flujo de control, sin importar si la causa es interna o externa.</p>
+          <h3>Qué puede fallar en cada etapa</h3>
+          <div class="table-scroll">
+            <table class="cmp">
+              <tr><th>Etapa</th><th>Excepciones posibles</th></tr>
+              <tr><td>IF</td><td>Fallo de página de instrucción, acceso no alineado, violación de protección.</td></tr>
+              <tr><td>ID</td><td>Instrucción ilegal.</td></tr>
+              <tr><td>EX</td><td>Excepción aritmética.</td></tr>
+              <tr><td>MEM</td><td>Fallo de página de datos, acceso no alineado, violación de protección.</td></tr>
+              <tr><td>WB</td><td>Ninguna.</td></tr>
+            </table>
+          </div>
+          <h3>Cómo se atiende una excepción en el pipeline</h3>
+          <ol>
+            <li><strong>Detección:</strong> el pipeline identifica la instrucción que falló.</li>
+            <li><strong>Trap:</strong> se fuerza una instrucción de trap en la próxima IF.</li>
+            <li><strong>Bloqueo de escrituras:</strong> hasta que se toma el trap, se anulan las escrituras de la instrucción que falló y de todas las posteriores, poniendo en cero sus registros de segmentación.</li>
+            <li><strong>EPC:</strong> la dirección de la instrucción responsable se guarda en el <em>Exception Program Counter</em>.</li>
+            <li><strong>Salto al sistema operativo:</strong> el control pasa a la rutina de manejo de excepciones, que puede darle un servicio al programa, responder con una acción predefinida (por ejemplo, ante un desbordamiento), mostrar un error o terminar el programa.</li>
+            <li><strong>Retorno:</strong> si la excepción se puede resolver, se recupera el estado y se reanuda desde el EPC; si no, el programa termina.</li>
+          </ol>
+          <p>El fallo de página es el caso típico: ocurre en medio de una instrucción y la instrucción tiene que poder recomenzar desde cero una vez que el sistema operativo trae la página.</p>
+          <h3>Cómo sabe el sistema operativo la causa</h3>
+          <ul>
+            <li><strong>Registro de causa</strong> (lo que usa MIPS): hay un único punto de entrada y la rutina lee un campo del registro de estado que indica la razón.</li>
+            <li><strong>Interrupciones vectorizadas:</strong> la dirección a la que se salta depende de la causa, por ejemplo <code>8000 0000</code> hex para instrucción no definida y <code>8000 0180</code> hex para desbordamiento aritmético.</li>
+          </ul>
+          <div class="note"><strong>Ojo:</strong> el apunte (p. 77) agrega que las direcciones de los vectores "están separadas por 32 bytes (u 8 instrucciones)", pero sus propios ejemplos no cumplen eso: entre <code>8000 0000</code> y <code>8000 0180</code> hex hay 180 hex = 384 bytes (96 instrucciones). Con esos dos ejemplos la separación no puede ser de 32 bytes; lo que sí vale es la idea: cada causa tiene su propia dirección de entrada.</div>
+          <h3>Interrupción externa</h3>
+          <p>Se carga el PC con la dirección del <em>handler</em>, se vacía el pipeline metiendo <code>nop</code> y se guarda el PC de la siguiente instrucción para volver después. El vaciado importa porque las instrucciones que siguen en el pipeline podrían generar excepciones propias. Al retomar la ejecución, esas excepciones no figurarían en el estado recuperado y el estado quedaría inconsistente.</p>
+          <h3>Ejemplo: desbordamiento en <code>add r1, r2, r1</code></h3>
+          <p>Se trata como un riesgo de control, parecido a un salto tomado, pero además se apagan las señales de control de las instrucciones que entraron después:</p>
+          <ul>
+            <li>La instrucción en IF se convierte en <code>nop</code>.</li>
+            <li>En ID, la señal nueva <strong>ID.Flush</strong> reutiliza el multiplexor que ya pone en cero el control en los bloqueos.</li>
+            <li>En EX, <strong>EX.Flush</strong> activa multiplexores nuevos que ponen en cero las líneas de control. Eso también impide que el <code>add</code> escriba r1 en WB; si no, el valor viejo de r1 se perdería y el programador no podría verlo.</li>
+            <li>El multiplexor del PC suma una entrada con <code>8000 0180</code> hex para empezar a buscar la rutina.</li>
+            <li>El EPC guarda PC + 4 (en el ejemplo, 4C + 4 = 50 hex), así que la rutina le tiene que restar 4 antes de reanudar.</li>
+          </ul>
+          <p>El desbordamiento se detecta en EX en el ciclo 6. En el ciclo 7 el pipeline tiene burbujas en lugar de las instrucciones posteriores y se busca la primera instrucción de la rutina. Las instrucciones anteriores al <code>add</code> (<code>and</code>, <code>or</code>) terminan normalmente.</p>
+        </div>
+      </details>
       <p>Una excepción es <strong>precisa</strong> si, al atenderla, todas las instrucciones anteriores ya terminaron y modificaron el estado arquitectónico, y la instrucción que la causó y las siguientes se comportan como si no hubieran empezado. Así el sistema operativo puede resolverla y reanudar desde el EPC.</p>
       <p>El problema en un pipeline es que las excepciones pueden detectarse fuera de orden: una instrucción más nueva puede fallar en IF o ID antes de que una más vieja falle en MEM. Con ejecución fuera de orden es peor: una excepción es <strong>imprecisa</strong> si ya se completaron instrucciones posteriores o si todavía no se completaron anteriores.</p>
-      <div class="note info"><strong>En una frase:</strong> en el pipeline en orden se marca la excepción en un vector de estado y se atiende recién en WB, en orden de programa; fuera de orden, el ROB hace lo mismo al confirmar (commit) en orden.</div>
+      <div class="note info"><strong>En una frase:</strong> en el pipeline en orden se marca la excepción en un vector de estado y se atiende recién en WB, en orden de programa; fuera de orden, el <a href="#s-rob">ROB</a> hace lo mismo al confirmar (commit) en orden.</div>
+      <div class="panel">
+        <h3>Cómo funciona el vector de estado</h3>
+        <ul>
+          <li><strong>Un vector por instrucción, no una matriz central.</strong> Cada instrucción lleva sus 4 bits (IF, ID, EX, MEM) y el vector viaja con ella por los registros de segmentación, igual que sus señales de control. La tabla del simulador muestra el vector de cada fila, pero en el hardware cada uno está en el registro de segmentación de la etapa donde está su instrucción.</li>
+          <li><strong>El bloqueo de escrituras es inmediato.</strong> Apenas se marca un bit, se anulan las escrituras de esa instrucción (en registros y en memoria); lo que se posterga es <em>atender</em> la excepción.</li>
+          <li><strong>Se revisa al entrar a WB</strong> porque MEM es la última etapa que puede generar una excepción (WB no genera ninguna): al terminar MEM el vector ya está completo, y como las instrucciones llegan a WB en orden de programa, se atienden en ese orden.</li>
+          <li><strong>No hay dos excepciones en la misma etapa a la vez:</strong> en cada ciclo hay una sola instrucción por etapa. Sí puede haber varias excepciones en el mismo ciclo, en etapas distintas (en el ejemplo, i2 en ID e i3 en IF, en el ciclo 4). Siempre se atiende la de la instrucción más vieja.</li>
+        </ul>
+      </div>
 
       <div class="sim">
         <div class="sim-top">
@@ -715,28 +866,9 @@
         </div>
         <div class="scroll"><table class="ptab" id="ex-table"></table></div>
         <div class="status" id="ex-status" aria-live="polite"></div>
-        <p class="src">Excepciones posibles por etapa: IF fallo de página de instrucción; ID instrucción ilegal; EX aritmética; MEM fallo de página de datos. El vector tiene un bit por etapa (IF ID EX MEM) y se revisa al entrar a WB.</p>
+        <p class="src">Excepciones posibles por etapa: IF fallo de página de instrucción; ID instrucción ilegal; EX aritmética; MEM fallo de página de datos. Cada instrucción tiene su vector de un bit por etapa (IF ID EX MEM): el bit se marca, y las escrituras se anulan, en el ciclo en que se detecta la excepción; el vector se revisa al entrar a WB.</p>
       </div>
       <p class="src">Fuente: apuntes, secciones 2.5 y 2.5.1.</p>
-    </section>
-
-    <!-- ============ 3.4.2 FUERA DE ORDEN Y ROB ============ -->
-    <section class="block pipe" id="s-rob">
-      <h2><span class="num">3.4.2</span> Ejecución fuera de orden: con y sin ROB</h2>
-      <p class="sub">Por qué escribir los registros apenas termina cada instrucción produce excepciones imprecisas, y cómo lo evita el buffer de reordenamiento.</p>
-      <p>Con ejecución fuera de orden, las instrucciones terminan en cualquier orden según su latencia. Si cada una escribe su registro apenas termina, cuando una genera una excepción puede haber instrucciones posteriores que ya escribieron y anteriores que todavía no. Con el <strong>ROB</strong>, las instrucciones terminan fuera de orden pero solo escriben el banco de registros al llegar a la cabecera (commit en orden); la excepción se marca en la entrada del ROB y se reconoce recién cuando esa entrada llega a la cabecera.</p>
-
-      <div class="sim">
-        <div class="sim-top">
-          <div class="seg" role="group" aria-label="Modo"><button type="button" id="rob-no" aria-pressed="true">Sin ROB</button><button type="button" id="rob-yes" aria-pressed="false">Con ROB</button></div>
-          <label class="rob-cyc" for="rob-c">Ciclo <b id="rob-cv">1</b><input type="range" id="rob-c" min="1" max="13" value="1"></label>
-        </div>
-        <div class="scroll"><svg id="rob-svg" class="wide" viewBox="0 0 760 250" role="img" aria-label="Línea de tiempo de ejecución"></svg></div>
-        <div class="regs" id="rob-regs"></div>
-        <div class="status" id="rob-status" aria-live="polite"></div>
-        <div class="legend"><span><i class="k-act"></i>ejecución</span><span><i class="k-ok"></i>escribe registro / commit</span><span><i class="k-err"></i>excepción</span></div>
-      </div>
-      <p class="src">Fuente: apuntes, sección 3.4.2 y el apartado del ROB sobre saltos e interrupciones.</p>
     </section>
 
     <!-- ============ 3.6 TOMASULO ============ -->
@@ -760,18 +892,193 @@
         <h4 class="tbl-h">Estado de los registros (Qi)</h4>
         <div class="table-scroll"><table class="cmp tm" id="tm-reg"></table></div>
         <div class="status" id="tm-status" aria-live="polite"></div>
-        <p class="src">Latencias de los apuntes: load 2, suma y resta 2, multiplicación 10, división 40 ciclos. Estaciones: 3 de load, 3 de suma y 2 de multiplicación. Un resultado por ciclo en el CDB; una instrucción puede empezar a ejecutar el ciclo siguiente al que recibe su último operando.</p>
+        <p class="src">Latencias de los apuntes: load 2, suma y resta 2, multiplicación 10, división 40 ciclos. Estaciones: 3 de load, 3 de suma y 2 de multiplicación, la configuración de Hennessy y Patterson (no la de los apuntes: en p. 105 hablan de 6 de load, 3 de suma, 2 de multiplicación y 3 de store, y la figura de p. 111 muestra 3 de multiplicación). Con este programa no cambia nada: solo hay 2 loads y 2 instrucciones de multiplicación o división. Un resultado por ciclo en el CDB; una instrucción puede empezar a ejecutar el ciclo siguiente al que recibe su último operando.</p>
       </div>
       <div class="note"><strong>Para mirar:</strong> en el ciclo 6 la ADDD se emite para escribir F6, que la DIVD (emitida en el ciclo 5) todavía necesita. No hay riesgo EDL porque la DIVD ya copió el valor de F6 en su estación de reserva. Y la ADDD termina en el ciclo 11, mucho antes que la DIVD (57): terminación fuera de orden.</div>
       <div class="note info">El <a href="tomasulo.html">simulador completo de Tomasulo</a> corre este mismo programa (ejemplo «ejemplo_pdf») con las mismas latencias y da el mismo orden de emisión, ejecución y escritura. Los números de ciclo no coinciden exactamente porque cuenta los ciclos con otra convención: arranca en 0 y los loads ocupan un ciclo más.</div>
+      <details class="card">
+        <summary>Estructura y campos de cada componente</summary>
+        <div class="body">
+          <ul>
+            <li><strong>Cola de instrucciones</strong> de punto flotante, FIFO: entran y salen en orden. Salir de la cola es el <em>issue</em>.</li>
+            <li><strong>Registros</strong> de punto flotante, cada uno con su valor (V) y un campo Q (Qi): cero si el valor está disponible, o la etiqueta de la estación que lo va a producir.</li>
+            <li><strong>Unidades funcionales:</strong> un sumador (sumas y restas) y un multiplicador (multiplicaciones y divisiones). Cada una, con sus estaciones de reserva, forma una <em>unidad de ejecución</em>.</li>
+            <li><strong>Common Data Bus:</strong> lleva cada resultado, con su etiqueta, a las estaciones y registros que lo esperan.</li>
+          </ul>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Estructura</th><th>Campos</th><th>Para qué</th></tr></thead>
+              <tbody>
+                <tr><td>Estación de reserva (ADD, MULT)</td><td class="mono">Busy, Op, Vj, Vk, Qj, Qk</td><td>Op es la operación; Vj y Vk, los valores de los operandos; Qj y Qk, la etiqueta de quien los produce (cero si ya están). Ejecuta cuando Qj = Qk = 0.</td></tr>
+                <tr><td>Load buffer</td><td class="mono">Busy, Dir, Valor</td><td>Dirección a leer y, al terminar, el valor leído.</td></tr>
+                <tr><td>Store buffer</td><td class="mono">Busy, Dir, Qi, Vi</td><td>Dirección a escribir y el valor (Vi), o la etiqueta de quien lo produce (Qi).</td></tr>
+                <tr><td>Registro</td><td class="mono">Qi, Vi</td><td>Qi = 0 si el valor está; si no, la etiqueta de la estación que lo escribirá (renombrado).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>La nomenclatura del apunte: <code>ER(x)(Busy, OP, Qj, Vj, Qk, Vk)</code>, <code>Reg(x)(Qi, Vi)</code>, <code>LB(x)(Busy, Dir)</code> y <code>SB(x)(Busy, Dir, Qi, Vi)</code>, donde x es el nombre del resultado que esa estación va a generar.</p>
+          <h3>Ventajas y desventajas</h3>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Ventajas</th><th>Desventajas</th></tr></thead>
+              <tbody>
+                <tr><td>Los operandos se copian a las estaciones, así que los registros quedan libres: no son un cuello de botella.</td><td>Complejidad: cada estación compara etiquetas y lee y escribe en los mismos buses.</td></tr>
+                <tr><td>Elimina EDL y EDE por renombrado, sin ayuda del compilador.</td><td>Muchas cargas de registros.</td></tr>
+                <tr><td>Hace el desenrollado de bucles en hardware (ver el ejemplo 3).</td><td>El CDB es compartido y limita el rendimiento: un resultado por ciclo.</td></tr>
+                <tr><td>No se limita a un bloque básico.</td><td>Termina fuera de orden: excepciones imprecisas.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note"><strong>Ojo:</strong> en p. 104 el apunte lista el "Buffer de Reordenamiento" entre los mecanismos de Tomasulo, y en p. 107–108 le asigna al CDB también el envío de operandos desde el banco de registros y de direcciones de memoria. El Tomasulo original (y el que usa el resto del apunte, p. 125 y 149) no tiene ROB: el ROB se le agrega después para especular (ver <a href="#s-rob">3.11</a>). Por eso Tomasulo solo da excepciones imprecisas.</div>
+          <p class="src">Fuente: apuntes, secciones 3.6.1, 3.6.6 y 3.6.7 (p. 104–108, 122–125).</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Ejemplo 3 de los apuntes: renombrado dinámico en un bucle</summary>
+        <div class="body">
+          <p>El bucle <code>LD F0,0(R1) · MULTD F4,F0,F2 · SD F4,0(R1) · SUBI R1,R1,#8 · BNEZ R1,Loop</code> usa siempre F0 y F4. Con Tomasulo, dos iteraciones pueden estar en vuelo a la vez: cada una escribe "F0" y "F4", pero cada escritura queda asociada a una estación de reserva distinta. El resultado de la primera MULTD va directo a la estación del SD que lo espera, aunque la segunda iteración ya haya vuelto a apuntar F4 a otra estación. Es un desenrollado hecho por el hardware, sin más registros de arquitectura.</p>
+          <p>Supuestos: la multiplicación tarda 4 ciclos, el primer load falla en L1 (8 ciclos) y el segundo acierta. Ciclos de las dos primeras iteraciones (Comp = fin de ejecución, Result = escritura por el CDB):</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Iter.</th><th>Instrucción</th><th>Issue</th><th>Comp</th><th>Result</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td class="mono">LD F0,0(R1)</td><td>1</td><td>9</td><td>10</td></tr>
+                <tr><td>1</td><td class="mono">MULTD F4,F0,F2</td><td>2</td><td>14</td><td>15</td></tr>
+                <tr><td>1</td><td class="mono">SD F4,0(R1)</td><td>3</td><td>18</td><td>19</td></tr>
+                <tr><td>2</td><td class="mono">LD F0,0(R1)</td><td>6</td><td>10</td><td>11</td></tr>
+                <tr><td>2</td><td class="mono">MULTD F4,F0,F2</td><td>7</td><td>15</td><td>16</td></tr>
+                <tr><td>2</td><td class="mono">SD F4,0(R1)</td><td>8</td><td>19</td><td>20</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Fijate que la segunda iteración se emite (ciclo 6) antes de que la primera haya escrito nada (ciclo 10): las dos se solapan. En el apunte, las instrucciones enteras (SUBI, BNEZ) van adelantadas y no se muestran en la tabla.</p>
+          <p class="src">Fuente: apuntes, sección 3.6.5 (p. 115–122; la tabla es el cuadro 5, p. 122).</p>
+        </div>
+      </details>
       <p class="src">Fuente: apuntes, secciones 3.6.1 a 3.6.7.</p>
+    </section>
+
+    <!-- ============ 3.11 ESPECULACIÓN: TOMASULO CON ROB ============ -->
+    <section class="block pipe" id="s-rob">
+      <h2><span class="num">3.11</span> Especulación: Tomasulo con ROB</h2>
+      <p class="sub">Cómo ejecutar instrucciones que dependen de un salto todavía no resuelto, y deshacerlas si la predicción falla, sin perder las excepciones precisas.</p>
+
+      <details class="card" open>
+        <summary>Por qué Tomasulo solo no alcanza para especular</summary>
+        <div class="body">
+          <p>La predicción de saltos deja instrucciones que dependen de una apuesta: si la predicción falla, no tendrían que haberse ejecutado. Especular es ejecutarlas igual, de forma provisoria. Hay dos tipos de instrucciones: las <strong>independientes</strong> del salto, que se ejecutan siempre, y las <strong>dependientes</strong>, cuyo destino depende de acertar.</p>
+          <p>En el Tomasulo clásico, una instrucción escribe el banco de registros apenas difunde su resultado por el CDB. Si era especulativa y la predicción falla, ya modificó el estado y no hay forma de deshacerlo. Es el mismo problema que hace imprecisas las excepciones: terminar fuera de orden.</p>
+          <p>La solución es <strong>separar terminar de ejecutar y escribir el estado</strong>. Se agrega una etapa nueva, <strong>commit</strong>, y un <strong>buffer de reordenamiento (ROB)</strong>: los resultados quedan en el ROB hasta que la instrucción es la más vieja, y recién ahí se escriben en registros o en memoria, en orden de programa. Una instrucción termina de verdad cuando hace commit.</p>
+          <p class="src">Fuente: apuntes, secciones 3.11 y 3.11.1 (p. 148–149).</p>
+        </div>
+      </details>
+      <div class="note info"><strong>En una frase:</strong> con ROB se ejecuta fuera de orden pero se confirma en orden; mientras una instrucción no hizo commit, sus efectos se pueden tirar sin tocar el estado arquitectónico, y eso sirve tanto para un salto mal predicho como para una excepción.</div>
+
+      <h3 id="s-rob-campos">El ROB: entradas y funcionamiento</h3>
+      <p>El ROB es una cola FIFO: las instrucciones entran en orden de emisión por un puntero de escritura (la cola) y salen por un puntero de lectura (la cabecera, la más vieja). Cada entrada tiene cuatro campos:</p>
+      <div class="table-scroll">
+        <table class="cmp">
+          <thead><tr><th>Campo</th><th>Contenido</th></tr></thead>
+          <tbody>
+            <tr><td>Tipo</td><td>Salto (no tiene destino que escribir), store (el destino es memoria) o aritmética/load (el destino es un registro).</td></tr>
+            <tr><td>Destino</td><td>Número de registro, o dirección de memoria en un store.</td></tr>
+            <tr><td>Valor</td><td>El resultado, guardado hasta el commit.</td></tr>
+            <tr><td>Listo</td><td>Si la instrucción ya terminó de ejecutar y el valor está disponible.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>El renombrado ahora usa números de entrada del ROB en lugar de estaciones de reserva: el registro destino apunta a la entrada del ROB que lo va a escribir. Por ejemplo, si <code>LD F0,10(R2)</code> ocupa la entrada ROB1, F0 queda apuntando a ROB1 y un <code>ADDD F10,F4,F0</code> posterior espera "el valor de ROB1".</p>
+
+      <h3 id="s-rob-etapas">Las cuatro etapas</h3>
+      <div class="formula">Issue → Ejecución → Escritura (CDB → estaciones y ROB) → Commit (cabecera → registros o memoria)</div>
+      <div class="table-scroll">
+        <table class="cmp">
+          <thead><tr><th>Etapa</th><th>Qué pasa</th><th>Condición</th></tr></thead>
+          <tbody>
+            <tr><td>1. Issue</td><td>Se toma la instrucción de la cola, se le asigna una estación de reserva y una entrada del ROB, y se buscan los operandos.</td><td>Tiene que haber estación libre <strong>y</strong> entrada libre en el ROB; si no, se detiene la emisión.</td></tr>
+            <tr><td>2. Ejecución</td><td>Se ejecuta en su unidad funcional.</td><td>Todos los operandos disponibles.</td></tr>
+            <tr><td>3. Escritura</td><td>El resultado se difunde por el CDB hacia las estaciones que lo esperan y hacia su entrada del ROB (Listo = sí). <strong>No</strong> se escriben registros ni memoria.</td><td>Terminó de ejecutar.</td></tr>
+            <tr><td>4. Commit</td><td>El valor se escribe en el banco de registros o en memoria y la entrada sale del ROB.</td><td>Está en la cabecera <strong>y</strong> su resultado está listo.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Un operando puede venir de tres lugares:</p>
+      <div class="pill-row"><span class="pill"><b>Registros</b>: la productora ya hizo commit</span><span class="pill"><b>ROB</b>: ya ejecutó pero no hizo commit</span><span class="pill"><b>CDB</b>: está difundiendo el resultado en ese ciclo</span></div>
+
+      <h3 id="s-rob-ejemplo">Ejemplo de los apuntes: el ROB en el primer commit</h3>
+      <p>Secuencia: <code>LD F0,10(R2) · ADDD F10,F4,F0 · DIVD F2,F10,F6 · BNE F2,… · LD F4,0(R3) · ADDD F0,F4,F6 · ST 0(R3),F4</code>. Así está el ROB cuando hace commit el primer load:</p>
+      <div class="table-scroll">
+        <table class="cmp">
+          <thead><tr><th>Entrada</th><th>Instrucción</th><th>Destino</th><th>Valor</th><th>Listo</th></tr></thead>
+          <tbody>
+            <tr><td>1 (cabecera)</td><td class="mono">LD F0,10(R2)</td><td>F0</td><td class="mono">M[20]</td><td>Sí → hace commit</td></tr>
+            <tr><td>2</td><td class="mono">ADDD F10,F4,F0</td><td>F10</td><td class="mono">R(F4)+M[20]</td><td>Sí</td></tr>
+            <tr><td>3</td><td class="mono">DIVD F2,F10,F6</td><td>F2</td><td></td><td>No</td></tr>
+            <tr><td>4</td><td class="mono">BNE F2,…</td><td>—</td><td></td><td>No</td></tr>
+            <tr><td>5</td><td class="mono">LD F4,0(R3)</td><td>F4</td><td class="mono">M[10]</td><td>Sí</td></tr>
+            <tr><td>6</td><td class="mono">ADDD F0,F4,F6</td><td>F0</td><td class="mono">F4+F6</td><td>Sí</td></tr>
+            <tr><td>7 (cola)</td><td class="mono">ST 0(R3),F4</td><td>dirección 10</td><td class="mono">M[10]</td><td>Sí</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li>Las entradas 5 a 7 vienen <strong>después del salto</strong>: son especulativas. Ya ejecutaron, pero no pueden hacer commit hasta que salgan la DIVD (larga) y el BNE.</li>
+        <li>El commit de la entrada 1 escribe M[20] en F0, pero F0 sigue apuntando a ROB6, porque la <code>ADDD F0,F4,F6</code> es una escritura posterior del mismo registro. Las instrucciones nuevas que lean F0 van a esperar a ROB6.</li>
+        <li>El ST tampoco escribe memoria hasta su commit: si el BNE resulta mal predicho, la memoria queda intacta.</li>
+      </ul>
+      <p class="src">Fuente: apuntes, secciones 3.11.1 y 3.11.2 (p. 149–156; el estado del ROB sale de la figura de p. 156).</p>
+
+      <details class="card">
+        <summary>Salto mal predicho: cómo se recupera</summary>
+        <div class="body">
+          <p>El salto también ocupa una entrada del ROB y se resuelve recién al llegar a la cabecera:</p>
+          <ul>
+            <li><strong>Bien predicho:</strong> la entrada se saca de la cola y se sigue.</li>
+            <li><strong>Mal predicho:</strong> se borra todo el ROB (todo lo que hay detrás del salto es del camino equivocado), se borran las etiquetas de los registros que apuntaban a entradas del ROB, se limpian las estaciones de reserva y los buffers de load y store, y se busca la instrucción correcta, cuya dirección se había guardado.</li>
+          </ul>
+          <p>Para recuperarse rápido, el procesador guarda la dirección del camino que no eligió: si predijo "tomado", la siguiente en secuencia; si predijo "no tomado", calcula y guarda el destino. Puede incluso prebuscar las primeras instrucciones de ese camino, aunque eso puede provocar fallos de caché que agregan otro retardo.</p>
+          <p class="src">Fuente: apuntes, secciones 3.10.2, 3.10.3 y 3.11.3 (p. 146–147, 157–158).</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Riesgos a través de la memoria y ambigüedad</summary>
+        <div class="body">
+          <p>Con registros, el renombrado resuelve todo. Con memoria hay que mirar las direcciones:</p>
+          <ul>
+            <li><strong>EDE y EDL no aparecen:</strong> la memoria solo se escribe en commit, en orden, así que todo load y store anterior ya terminó cuando otro necesita esa posición.</li>
+            <li><strong>LDE sí puede aparecer:</strong> un load a la dirección A cuando en el ROB hay un store anterior a A que todavía no hizo commit. Leer memoria daría el valor viejo.</li>
+          </ul>
+          <p>Para evitarlo, un load no accede a memoria si:</p>
+          <ol>
+            <li>hay en el ROB un store anterior con la misma dirección efectiva, o</li>
+            <li>hay un store anterior cuya dirección efectiva todavía no se calculó (podría ser la misma).</li>
+          </ol>
+          <p>El segundo punto es la <strong>ambigüedad de memoria</strong>: combinaciones distintas de registro y desplazamiento pueden terminar en la misma dirección, y no se sabe hasta calcularla. Resolverla no es trivial; los procesadores que la atacan con hardware hacen <em>desambiguación dinámica de memoria</em> (ver la tabla de <a href="#s-planificacion">estática frente a dinámica</a>).</p>
+          <p class="src">Fuente: apuntes, sección 3.11.3 (p. 157); desambiguación dinámica, sección 3.3.1 (p. 92).</p>
+        </div>
+      </details>
+
+      <h3 id="s-rob-excepciones">Excepciones precisas con el ROB</h3>
+      <p>El mismo mecanismo resuelve las excepciones. Sin ROB, cada instrucción escribe su registro apenas termina: cuando una genera una excepción, puede haber posteriores que ya escribieron y anteriores que todavía no (las dos situaciones que definen una excepción <strong>imprecisa</strong>, p. 104). Con ROB, la excepción se marca con un flag en la entrada y se reconoce solo cuando esa entrada llega a la cabecera, y solo si la instrucción no era especulativa. En ese momento todas las anteriores ya hicieron commit y ninguna posterior lo hizo.</p>
+      <div class="sim">
+        <div class="sim-top">
+          <div class="seg" role="group" aria-label="Modo"><button type="button" id="rob-no" aria-pressed="true">Sin ROB</button><button type="button" id="rob-yes" aria-pressed="false">Con ROB</button></div>
+          <label class="rob-cyc" for="rob-c">Ciclo <b id="rob-cv">1</b><input type="range" id="rob-c" min="1" max="13" value="1"></label>
+        </div>
+        <div class="scroll"><svg id="rob-svg" class="wide" viewBox="0 0 760 250" role="img" aria-label="Línea de tiempo de ejecución"></svg></div>
+        <div class="regs" id="rob-regs"></div>
+        <div class="status" id="rob-status" aria-live="polite"></div>
+        <div class="legend"><span><i class="k-act"></i>ejecución</span><span><i class="k-ok"></i>escribe registro / commit</span><span><i class="k-err"></i>excepción</span></div>
+      </div>
+      <div class="note"><strong>Con varios hilos:</strong> los apuntes dan dos respuestas. En la unidad 3 (p. 158) dicen que un ROB por hilo desperdicia lugar cuando un hilo no ejecuta, y proponen un ROB compartido más grande con salidas hacia los bancos de registros de cada hilo. En la unidad 4 (p. 183) hablan de un ROB por hilo, que puede ser lógico (punteros de cabecera y cola por hilo dentro de una estructura compartida) o físico (un bit de hilo en cada entrada). Las dos ideas son compatibles: es una sola estructura compartida, con commit independiente por hilo.</div>
+      <p class="src">Fuente: apuntes, secciones 3.6 (excepciones imprecisas, p. 103–104) y 3.11 a 3.11.3 (p. 148–158).</p>
     </section>
 
     <!-- ============ 4.1–4.3 SUPERESCALAR / VLIW ============ -->
     <section class="block pipe" id="s-vliw">
       <h2><span class="num">4.1–4.3</span> Lanzamiento múltiple: superescalar y VLIW</h2>
       <p class="sub">Cómo bajar el CPI de 1: emitir varias instrucciones por ciclo, decidiendo en hardware o en el compilador.</p>
-      <p>Para bajar el CPI de 1 hay que emitir más de una instrucción por ciclo. Un <strong>superescalar</strong> duplica unidades funcionales, puertos del banco de registros, buses y control, y el hardware decide en cada ciclo cuántas instrucciones emitir (de 1 a 8); si no encuentra suficientes, emite menos. Puede ser estático (en orden) o dinámico con especulación.</p>
+      <p>Para bajar el CPI de 1 hay que emitir más de una instrucción por ciclo. Un <strong>superescalar</strong> duplica unidades funcionales, puertos del banco de registros, buses y control, y el hardware decide en cada ciclo cuántas instrucciones emitir; si no encuentra suficientes, emite menos. Con dos vías el CPI ideal sería 0,5, pero los saltos, los loads y las dependencias verdaderas lo impiden. Los apuntes distinguen tres variantes: estático (en orden), dinámico sin especulación y dinámico con especulación.</p>
       <p>Un <strong>VLIW</strong> deja todo en manos del compilador: cada instrucción larga tiene un campo por unidad funcional y todas sus operaciones se ejecutan juntas. Si no hay operaciones independientes para un campo, se rellena con NOP. El hardware es simple, pero el compilador es muy complejo, la densidad de código baja, es sensible a fallos de caché y los binarios no son compatibles entre implementaciones. EPIC (Itanium) es su evolución.</p>
       <div class="note info"><strong>En una frase:</strong> el superescalar encuentra el paralelismo en hardware y emite lo que puede; el VLIW lo encuentra en compilación y paga con NOP lo que no pudo llenar.</div>
 
@@ -785,21 +1092,61 @@
           <div class="cards2" id="vw-stats"></div>
           <svg id="vw-chart" class="chart" viewBox="0 0 420 200" role="img" aria-label="Ciclos por elemento según desenrollado"></svg>
         </div>
-        <p class="src">Instrucción VLIW de 5 campos: 2 accesos a memoria, 2 operaciones FP y 1 entera o salto. Latencias como en <a href="#s-loop">loop unrolling</a> (load → suma 1 ciclo de espera, suma → store 2). Con factor 7 sale el ejemplo clásico de Hennessy y Patterson: 9 ciclos para 7 elementos (1,29 por elemento) usando 23 de 45 campos.</p>
+        <p class="src">Instrucción VLIW de 5 campos: 2 accesos a memoria, 2 operaciones FP y 1 entera o salto. Ese formato es el de Hennessy y Patterson, que da los números del ejemplo de los apuntes (p. 167); en p. 165, en cambio, el apunte describe otro formato: 2 vías de punto flotante, 2 enteras y 1 de load/store. Latencias como en <a href="#s-loop">loop unrolling</a> (load → suma 1 ciclo de espera, suma → store 2). Con factor 7 sale el ejemplo clásico de Hennessy y Patterson: 9 ciclos para 7 elementos (1,29 por elemento) usando 23 de 45 campos.</p>
       </div>
 
       <div class="table-scroll">
         <table class="cmp">
-          <thead><tr><th></th><th>Superescalar estático</th><th>Superescalar dinámico</th><th>VLIW</th></tr></thead>
+          <thead><tr><th></th><th>Superescalar estático</th><th>Superescalar dinámico</th><th>Superescalar especulativo</th><th>VLIW</th></tr></thead>
           <tbody>
-            <tr><td>Emisión</td><td>Dinámica (hardware)</td><td>Dinámica (hardware)</td><td>Estática (software)</td></tr>
-            <tr><td>Detección de riesgos</td><td>Hardware</td><td>Hardware</td><td>Básicamente software</td></tr>
-            <tr><td>Planificación</td><td>Estática, en orden</td><td>Dinámica, fuera de orden, con especulación</td><td>Estática</td></tr>
-            <tr><td>Ejemplos</td><td>MIPS y ARM embebidos</td><td>Pentium 4, Core 2, Power5</td><td>TI C6x, Itanium</td></tr>
+            <tr><td>Emisión</td><td>Dinámica (hardware)</td><td>Dinámica (hardware)</td><td>Dinámica (hardware)</td><td>Estática (software)</td></tr>
+            <tr><td>Detección de riesgos</td><td>Hardware</td><td>Hardware</td><td>Hardware</td><td>Básicamente software</td></tr>
+            <tr><td>Planificación</td><td>Estática, en orden</td><td>Dinámica, fuera de orden</td><td>Dinámica, fuera de orden, con especulación</td><td>Estática</td></tr>
+            <tr><td>Ejemplos</td><td>MIPS y ARM embebidos</td><td>Ninguno</td><td>Pentium 4, Core 2, Power5, SPARC VI</td><td>TI C6x, Itanium</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="src">Fuente: apuntes, secciones 4.1 a 4.3.4. La tabla resume la de los apuntes.</p>
+      <div class="note"><strong>Ojo:</strong> en p. 161 el apunte dice que el superescalar dinámico con especulación "suele ser más teórico que real" por su complejidad, pero su propia tabla (p. 162) le pone como ejemplos Pentium 4, Core 2, Power5 y SPARC VI, y la sección 4.3.8 describe el Alpha EV7. Es la forma que usan los procesadores de propósito general.</div>
+      <details class="card">
+        <summary>Superescalar estático simple y superescalar dinámico</summary>
+        <div class="body">
+          <h3>Superescalar simple (estático, en orden)</h3>
+          <ul>
+            <li>Busca y decodifica dos instrucciones por ciclo; un detector de riesgos decide si la segunda puede salir junto con la primera.</li>
+            <li>Regla de emisión: en el mismo ciclo pueden salir una instrucción de punto flotante y una de cualquier otro tipo. Los loads son enteros, así que se mezclan con las ADDD sin conflicto.</li>
+            <li>El banco de registros necesita más puertos de lectura; para bajar la presión sobre memoria se puede limitar a un load por ciclo.</li>
+            <li>En el ejemplo de los apuntes (bucle desenrollado con 5 LD, 5 ADDD y 5 SD) una iteración pasa de unos 12 ciclos a unos 2,4.</li>
+            <li>A favor: los binarios siguen siendo compatibles y, al ejecutar en orden, no hay riesgos nuevos. En contra: el CPI 0,5 solo se alcanza con una mezcla 50 % punto flotante y 50 % enteras, hay bloqueos de emisión mientras se esperan operandos, la planificación es fija (no se adapta a un fallo de caché) y hay que replanificar el código para cada implementación nueva.</li>
+          </ul>
+          <h3>Superescalar con planificación dinámica y especulación</h3>
+          <p>Es el superescalar más Tomasulo con commit en orden (<a href="#s-rob">ROB</a>). El recorrido de una instrucción: búsqueda con predicción de saltos → decodificación y renombrado → estación de reserva → ejecución → ROB → commit en orden. Detalles de los apuntes:</p>
+          <ul>
+            <li>Estaciones de reserva separadas para enteros y punto flotante; dos instrucciones emitidas por ciclo, partiendo el ciclo de emisión en dos subciclos.</li>
+            <li>Solo los loads de punto flotante crean dependencias entre la parte entera y la de punto flotante.</li>
+            <li>Los accesos a memoria van por colas: un load compara su dirección con la cola de escrituras (evita LDE) y un store, con la cola de lecturas (evita EDL).</li>
+            <li>Es compatible con los binarios existentes, aunque recompilar mejora el rendimiento; el costo es una complejidad de hardware muy alta.</li>
+          </ul>
+          <p>Ejemplo real, el <strong>Alpha 21364 (EV7, 2003)</strong>: emite hasta 4 instrucciones por ciclo; renombra con mapas separados para enteros y punto flotante; colas de emisión (estaciones de reserva) de 20 entradas enteras y 15 de punto flotante; 80 registros enteros y 72 de punto flotante; hasta 80 instrucciones en vuelo, más 32 loads y 32 stores.</p>
+          <p class="src">Fuente: apuntes, secciones 4.2 a 4.2.2 y 4.3.5 a 4.3.8 (p. 161–165, 170–173).</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>VLIW: más desventajas y su evolución, EPIC (Itanium)</summary>
+        <div class="body">
+          <p>Además de lo que dice arriba, los apuntes le anotan al VLIW: necesita un desenrollado muy agresivo; el banco de registros es complejo (muchos puertos, más área y tiempo de acceso); la caché de instrucciones necesita más capacidad y ancho de banda; y todas las operaciones de una instrucción avanzan juntas, de forma síncrona. A favor: hardware y lógica de emisión simples, y puede explotar paralelismo en todo el programa.</p>
+          <h3>EPIC: Explicitly Parallel Instruction Computing</h3>
+          <p>Desarrollada por Intel y HP para el IA-64 (Itanium). Mantiene la idea del VLIW, el compilador encuentra el paralelismo, pero agrega mecanismos para flexibilizarla:</p>
+          <ul>
+            <li><strong>Paquetes de 128 bits</strong> con hasta 3 operaciones de 41 bits y un campo <em>template</em>, que dice cómo están organizadas y marca con <strong>stop bits</strong> los límites entre grupos de instrucciones independientes.</li>
+            <li>Cada operación tiene código de operación, tres registros y un <strong>predicado</strong> que decide si se ejecuta.</li>
+            <li>Muchos registros: 128 enteros de 64 bits, 128 de punto flotante de 82 bits y 64 registros de predicado de 1 bit, para ejecutar condicionalmente sin saltos.</li>
+            <li><strong>Cargas especulativas</strong>, que adelantan un acceso a memoria antes de saber si hace falta, más instrucciones que verifican después si fueron correctas, y hardware que detecta dependencias de memoria.</li>
+            <li>Itanium (2001): 6 operaciones por ciclo, 10 etapas, 800 MHz. Itanium 2 (2005): 6 operaciones por ciclo, 8 etapas, hasta 1,66 GHz.</li>
+          </ul>
+          <p class="src">Fuente: apuntes, secciones 4.3.3 y 4.3.4 (p. 168–170).</p>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, secciones 4.1 a 4.3.8. La tabla es la de los apuntes (p. 162).</p>
     </section>
 
     <!-- ============ 4.5–4.14 MULTITHREADING ============ -->
@@ -813,7 +1160,7 @@
           <tbody>
             <tr><td>Grano fino</td><td>En cada ciclo (round-robin, salteando los bloqueados)</td><td>Paradas cortas y largas, pero retrasa a cada hilo</td></tr>
             <tr><td>Grano grueso</td><td>Solo ante paradas largas, como un fallo de L2</td><td>Paradas largas; no las cortas, y al cambiar vacía y llena el pipeline</td></tr>
-            <tr><td>SMT</td><td>Mezcla instrucciones de varios hilos en el mismo ciclo (superescalar fuera de orden, con renombrado y un ROB por hilo)</td><td>Ciclos vacíos y también vías vacías dentro de un ciclo</td></tr>
+            <tr><td>SMT</td><td>Mezcla instrucciones de varios hilos en el mismo ciclo (superescalar fuera de orden, con renombrado y commit independiente por hilo: un ROB por hilo, lógico o físico)</td><td>Ciclos vacíos y también vías vacías dentro de un ciclo</td></tr>
           </tbody>
         </table>
       </div>
@@ -825,18 +1172,141 @@
         <div class="legend"><span><i class="k-ok"></i>hilo 1</span><span><i class="k-err"></i>hilo 2</span><span><i class="k-warn"></i>hilo 3</span><span><i class="k-empty"></i>vía desaprovechada</span><span><i class="k-flush"></i>vaciado por cambio de hilo</span></div>
         <p class="src">Cada hilo tiene ráfagas de 1 a 3 instrucciones independientes y paradas cortas (1 ciclo) y largas (fallos de caché). Grano grueso cambia de hilo solo ante paradas largas y pierde un ciclo en el cambio. En multiprocesamiento, dos núcleos de 2 vías corren los hilos 1 y 2.</p>
       </div>
+      <div class="note">"Desperdicio vertical" y "horizontal" son nombres de Hennessy y Patterson, no de los apuntes; los apuntes hablan de ciclos perdidos y de vías (slots) desaprovechadas.</div>
+      <details class="card">
+        <summary>Límites del ILP: el procesador ideal y lo que cuesta acercarse</summary>
+        <div class="body">
+          <p>Desde mediados de los 90 el ancho de emisión de los superescalares casi no creció, y la distancia entre el rendimiento teórico y el real aumentó. Para medir cuánto ILP tienen los programas, los apuntes parten de un procesador ideal, fuera de orden y con especulación, sin ningún límite:</p>
+          <ul>
+            <li>registros de renombrado infinitos;</li>
+            <li>predicción de saltos perfecta;</li>
+            <li>cachés perfectas, sin fallos;</li>
+            <li>emisión de instrucciones sin límite;</li>
+            <li>desambiguación de memoria perfecta (sabe siempre si dos accesos van a la misma dirección).</li>
+          </ul>
+          <p>Después se mide cuánto IPC se pierde al limitar, uno por uno, la cantidad de instrucciones emitidas por ciclo, la ventana de instrucciones (cuántas puede manejar a la vez), los registros de renombrado, el predictor, la caché y el análisis de alias de memoria. La configuración "realizable" que proponen:</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Característica</th><th>Valor</th></tr></thead>
+              <tbody>
+                <tr><td>Instrucciones emitidas por ciclo</td><td>64, sin restricciones</td></tr>
+                <tr><td>Ventana de instrucciones</td><td>Infinita frente a 256, 128, 32 o 16</td></tr>
+                <tr><td>Registros de renombrado</td><td>64 enteros + 64 de punto flotante</td></tr>
+                <tr><td>Predicción de saltos</td><td>1K entradas de 2 bits</td></tr>
+                <tr><td>Caché</td><td>Perfecta</td></tr>
+                <tr><td>Alias de memoria</td><td>Desambiguación por hardware</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>Conclusiones</h3>
+          <ul>
+            <li>Duplicar el ancho de emisión obliga a más accesos a la caché de datos, mejor predicción y resolución de saltos, renombrar más registros y buscar más instrucciones por ciclo: mucha más complejidad y consumo.</li>
+            <li>Una técnica es eficiente en energía solo si el rendimiento sube más que el consumo; la emisión múltiple, en general, no lo es.</li>
+            <li>Por eso el diseño se desplaza al paralelismo entre hilos (TLP): el ILP aprovecha el paralelismo implícito de un tramo de código o un bucle; el TLP, el de varios hilos que ya son paralelos, y puede salir más barato.</li>
+          </ul>
+          <p class="src">Fuente: apuntes, secciones 4.5 a 4.9 y 4.14 (p. 175–179, 184–185).</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Qué necesita el hardware para hacer SMT</summary>
+        <div class="body">
+          <p>SMT aprovecha que un superescalar fuera de orden tiene más unidades funcionales de las que un hilo llena. Como la planificación dinámica y el renombrado ya separan las instrucciones de sus nombres de registro, mezclar hilos cuesta relativamente poco:</p>
+          <ul>
+            <li><strong>Muchos registros físicos</strong>, para mapear los registros de arquitectura de todos los hilos.</li>
+            <li><strong>Renombrado:</strong> cada operando recibe un identificador único, así que las instrucciones de hilos distintos no se confunden. Por hilo solo hace falta una tabla de renombrado y un PC.</li>
+            <li><strong>Commit independiente por hilo</strong>, con un ROB por hilo: lógico (punteros de cabecera y cola por hilo, como listas enlazadas dentro de un mismo ROB) o físico (un bit en cada entrada que indica el hilo).</li>
+            <li>Puede hacer falta una <strong>TLB por hilo</strong> para que no choquen sus traducciones de memoria.</li>
+            <li>El sistema operativo ve el procesador como un multiprocesador simétrico (SMP) y le reparte hilos como si fueran varios procesadores.</li>
+          </ul>
+          <p>Límite del multithreading en general: sube el trabajo total por unidad de tiempo, pero un programa individual puede tardar más que si corriera solo.</p>
+          <p class="src">Fuente: apuntes, secciones 4.11, 4.12 y 4.13.3 (p. 180, 183–184).</p>
+        </div>
+      </details>
       <p class="src">Fuente: apuntes, secciones 4.5 a 4.14.</p>
+    </section>
+
+    <!-- ============ ANEXO 7: DLP ============ -->
+    <section class="block pipe" id="s-dlp">
+      <h2><span class="num">7</span> Paralelismo de datos (DLP)</h2>
+      <p class="sub">Qué hacer cuando el paralelismo no está entre instrucciones ni entre hilos, sino en aplicar la misma operación a muchos datos.</p>
+      <p>Cuando un problema trabaja con grandes volúmenes de datos homogéneos (señales, imágenes, audio, simulaciones), la misma operación se repite sobre cada elemento. El <strong>paralelismo a nivel de datos</strong> aprovecha eso con una sola instrucción que opera sobre muchos datos a la vez. Complementa al ILP, limitado por las dependencias, y al TLP, limitado por la cantidad de hilos.</p>
+
+      <details class="card" open>
+        <summary>Taxonomía de Flynn y las tres formas de SIMD</summary>
+        <div class="body">
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Clase (Flynn, 1966)</th><th>Qué es</th><th>Ejemplo</th></tr></thead>
+              <tbody>
+                <tr><td>SISD</td><td>Una instrucción, un dato</td><td>Procesador escalar tradicional</td></tr>
+                <tr><td class="hi">SIMD</td><td class="hi">Una instrucción aplicada a muchos datos</td><td class="hi">Vectoriales, extensiones multimedia, GPU</td></tr>
+                <tr><td>MISD</td><td>Varias instrucciones sobre un mismo dato</td><td>Caso casi teórico (algunos algoritmos de criptografía)</td></tr>
+                <tr><td>MIMD</td><td>Varias instrucciones sobre varios datos</td><td>Multiprocesadores actuales</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>SIMD aparece de tres formas: <strong>procesadores vectoriales</strong>, <strong>extensiones multimedia</strong> agregadas a un procesador escalar (MMX, SSE, AVX en Intel; NEON en ARM) y <strong>GPU</strong>.</p>
+          <p class="src">Fuente: apuntes, anexo, secciones 7.1 a 7.3 (p. 243–244).</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>Vectorial frente a extensiones multimedia</summary>
+        <div class="body">
+          <p>Un <strong>procesador vectorial</strong> carga un vector entero en un registro vectorial (mucho más grande que uno escalar), aplica la operación a todos sus elementos con una sola instrucción y lo guarda de vuelta en memoria. <code>Y = a·X + Y</code>, que en RISC-V escalar es un bucle de 8 instrucciones por elemento, en RV64V queda sin bucle: <code>vld</code> de X, <code>vmul</code> por el escalar, <code>vld</code> de Y, <code>vadd</code> y <code>vst</code>.</p>
+          <p>Las <strong>extensiones multimedia</strong> nacen de que audio, video e imagen trabajan con datos chicos (8 o 16 bits): en lugar de sumar dos registros de 64 bits como un todo, los parten en subcampos y operan en paralelo (por ejemplo, 8 sumas de 8 bits o 4 de 16 bits en un registro de 64).</p>
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th>Extensión</th><th>Registros</th><th>Operaciones en paralelo</th></tr></thead>
+              <tbody>
+                <tr><td>MMX (1996)</td><td>64 bits</td><td>8 de 8 bits o 4 de 16 bits</td></tr>
+                <tr><td>SSE</td><td>XMM, 128 bits</td><td>16 de 8 bits, 8 de 16 o 4 de 32</td></tr>
+                <tr><td>AVX</td><td>YMM, 256 bits</td><td>32 de 8 bits, 16 de 16 u 8 de 32</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Frente a un vectorial, son más simples y baratas pero más limitadas: registros más chicos y subdivididos, sin registro de longitud de vector (el ancho es fijo), sin accesos con <em>stride</em> ni <em>gather/scatter</em> (datos dispersos en memoria) y sin registros de máscara para operar condicionalmente elemento por elemento.</p>
+          <p class="src">Fuente: apuntes, anexo, secciones 7.4 a 7.6.1 (p. 244–248).</p>
+        </div>
+      </details>
+      <details class="card">
+        <summary>GPU frente a CPU, y el modelo de CUDA</summary>
+        <div class="body">
+          <div class="table-scroll">
+            <table class="cmp">
+              <thead><tr><th></th><th>CPU</th><th>GPU</th></tr></thead>
+              <tbody>
+                <tr><td>Objetivo</td><td>Baja latencia: un hilo lo más rápido posible</td><td>Alto throughput: miles de hilos</td></tr>
+                <tr><td>Núcleos</td><td>Pocos y complejos</td><td>Cientos o miles de ALUs simples</td></tr>
+                <tr><td>Control</td><td>Complejo: fuera de orden, especulación</td><td>Mínimo</td></tr>
+                <tr><td>Memoria</td><td>Jerarquía profunda (L1, L2, L3)</td><td>L2 compartida, mucha dependencia de la DRAM; la latencia se oculta con paralelismo masivo</td></tr>
+                <tr><td>Transistores</td><td>Sobre todo en control y cachés</td><td>Sobre todo en ALUs</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>CUDA</h3>
+          <p>Es la plataforma y el modelo de programación de NVIDIA. Un programa CUDA es heterogéneo: código de <strong>host</strong> (CPU) y de <strong>device</strong> (GPU). <code>nvcc</code> separa las dos partes: el host se compila con un compilador de C común y el device pasa a PTX, que se traduce en tiempo de ejecución para la GPU instalada.</p>
+          <ul>
+            <li>Funciones: <code>__global__</code> (los kernels: corren en la GPU y se llaman desde la CPU), <code>__device__</code> (GPU, llamadas desde la GPU) y <code>__host__</code> (CPU).</li>
+            <li>La CPU reserva memoria en la GPU (<code>cudaMalloc</code>), copia los datos (<code>cudaMemcpy</code>), lanza el kernel con <code>kernel&lt;&lt;&lt;dimGrid, dimBlock&gt;&gt;&gt;(…)</code> y trae los resultados.</li>
+            <li>Jerarquía: un <strong>grid</strong> de <strong>bloques</strong> de <strong>threads</strong>, cada nivel en 1D, 2D o 3D (un píxel por thread en una imagen). Cada thread calcula su índice con <code>i = blockIdx.x × blockDim.x + threadIdx.x</code> y procesa un elemento: el bucle desaparece.</li>
+            <li>Los bloques se reparten entre los Streaming Multiprocessors (SM), que los ejecutan en <strong>warps</strong> de 32 threads. Hay un máximo típico de 1024 threads por bloque: para N grande se usan varios bloques, ⌈N / tamaño de bloque⌉.</li>
+            <li>Memorias: global (todos los threads, lenta), compartida (por bloque, rápida, la gestiona el programador), registros (por thread) y constante (solo lectura).</li>
+          </ul>
+          <p class="src">Fuente: apuntes, anexo, secciones 7.7 a 7.13 (p. 248–258).</p>
+        </div>
+      </details>
+      <p class="src">Fuente: apuntes, anexo 7, "Paralelismo a Nivel de Datos" (p. 243–258); también se menciona en la unidad 4 (p. 176 y 179).</p>
     </section>
 
     <!-- ============ QUIZ ============ -->
     <section class="block" id="s-quiz">
       <h2><span class="num">✓</span> Quiz de repaso</h2>
-      <p class="sub">Doce preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
+      <p class="sub">Catorce preguntas sobre toda la guía. Elegí una opción por pregunta.</p>
       <div id="quizWrap"></div>
       <p class="quiz-score" id="quizScore"></p>
     </section>
 
-    <footer class="pagefoot">Basado en los apuntes teóricos no oficiales de Arquitectura de Computadoras (FCEFyN, UNC), unidades 2 a 4. Las simulaciones son modelos didácticos simplificados. Hecho como material de repaso: el contenido no está validado de punta a punta y puede tener errores, así que contrastalo con la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
+    <footer class="pagefoot">Basado en los apuntes teóricos no oficiales de Arquitectura de Computadoras (FCEFyN, UNC), unidades 2 a 4 y el anexo de paralelismo de datos. Las simulaciones son modelos didácticos simplificados. Hecho como material de repaso: el contenido no está validado de punta a punta y puede tener errores, así que contrastalo con la bibliografía de cátedra. Parte del <a href="index.html">Computer Architecture Lab</a>.</footer>
   </main>
 </div>
 
@@ -1033,19 +1503,37 @@ function stdQuiz(items, wrapId, scoreId) {
       h += '<td class="vec">' + r.vec[i].join("") + "</td></tr>";
     });
     $("table").innerHTML = h; var st = $("status"); st.className = "status";
-    if (cyc === 0) { st.innerHTML = "Avanzá ciclo a ciclo. i1 va a fallar en MEM (ciclo 5), pero i2 e i3, más nuevas, fallan antes: en el ciclo 4."; return; }
+    if (cyc === 0) {
+      var fails = []; PI.forEach(function (ins, i) { if (ins.exc) fails.push("i" + i + " en " + SN[ins.exc.st] + " (ciclo " + (i + 1 + ins.exc.st) + ")"); });
+      st.innerHTML = "Avanzá ciclo a ciclo. Van a fallar " + fails.join(", ") + ": las más nuevas detectan su excepción antes que la más vieja."; return;
+    }
     if (!r.handled) {
       var m = "Ciclo " + cyc + ".";
       if (mode === "vec") {
         var marked = r.vec.map(function (v, i) { return v.some(function (x) { return x; }) ? "i" + i : null; }).filter(Boolean);
-        if (marked.length) m += " Excepciones marcadas en el vector de " + marked.join(", ") + ": se anulan sus escrituras pero no se atienden todavía. Se espera a que la más vieja llegue a WB.";
+        if (marked.length) m += " Excepciones marcadas en el vector de " + marked.join(", ") + ": sus escrituras ya quedan anuladas desde que se marcó el bit, pero no se atienden todavía. Cada una se revisa al entrar a WB, cuando su vector ya está completo (MEM es la última etapa que puede fallar), y las instrucciones llegan a WB en orden de programa.";
         else m += " Sin excepciones detectadas.";
       } else m += " Sin excepciones detectadas.";
       st.innerHTML = m; return;
     }
     var hi = r.handled.i;
-    if (mode === "vec") { st.classList.add("good"); st.innerHTML = "<b>Ciclo " + r.handled.t + ": i" + hi + " entra a WB con vector " + r.vec[hi].join("") + "</b> (bit de " + SN[PI[hi].exc.st] + "): se atiende " + PI[hi].exc.why + ". EPC = PC de i" + hi + ". i0 ya terminó; i" + hi + " y las siguientes se vacían (como si no hubieran empezado). <b>Excepción precisa.</b> Las excepciones de i2 e i3 se van a volver a producir al reejecutarlas, si corresponde."; }
-    else { st.classList.add("bad"); st.innerHTML = "<b>Ciclo " + r.handled.t + ": se atiende la excepción de i" + hi + " (" + PI[hi].exc.why + ") apenas se detecta.</b> Pero i1, que es anterior, todavía no terminó y además tiene su propia excepción pendiente en MEM. El orden de atención no coincide con el orden del programa: <b>excepción imprecisa</b>."; }
+    var ht = r.handled.t;
+    if (mode === "vec") {
+      var done = [], others = [];
+      for (var j = 0; j < hi; j++) if (ht - 1 - j > 4) done.push("i" + j);
+      r.vec.forEach(function (v, j) { if (j > hi && v.some(function (x) { return x; })) others.push("i" + j); });
+      st.classList.add("good");
+      st.innerHTML = "<b>Ciclo " + ht + ": i" + hi + " entra a WB con vector " + r.vec[hi].join("") + "</b> (bit de " + SN[PI[hi].exc.st] + "): se atiende " + PI[hi].exc.why + ". EPC = PC de i" + hi + ". " + (done.length ? done.join(", ") + (done.length > 1 ? " ya terminaron" : " ya terminó") + "; " : "") + "i" + hi + " y las siguientes se vacían (como si no hubieran empezado). <b>Excepción precisa.</b>" + (others.length ? " Las excepciones marcadas en " + others.join(" e ") + " se descartan con ellas; si corresponde, se van a volver a producir al reejecutarlas." : "");
+    } else {
+      var olders = [], pend = [];
+      for (var k = 0; k < hi; k++) {
+        var sk = ht - 1 - k; if (sk > 4) continue;
+        olders.push("i" + k + " está en " + SN[sk] + " (vector " + r.vec[k].join("") + ")");
+        if (PI[k].exc && PI[k].exc.st > sk) pend.push("i" + k + " todavía no detectó su " + PI[k].exc.why + ": recién aparecería en " + SN[PI[k].exc.st] + ", en el ciclo " + (k + 1 + PI[k].exc.st));
+      }
+      st.classList.add("bad");
+      st.innerHTML = "<b>Ciclo " + ht + ": se atiende la excepción de i" + hi + " (" + PI[hi].exc.why + ") apenas se detecta.</b> " + (olders.length ? "Pero hay instrucciones anteriores sin terminar: " + olders.join("; ") + ". " : "") + (pend.length ? pend.join("; ") + ", y como es anterior, era la que había que atender primero. " : "") + "El orden de atención no coincide con el orden del programa: <b>excepción imprecisa</b>.";
+    }
   }
   function setMode(m) { mode = m; $("vec").setAttribute("aria-pressed", m === "vec"); $("imm").setAttribute("aria-pressed", m === "imm"); render(); }
   $("vec").addEventListener("click", function () { setMode("vec"); });
@@ -1056,7 +1544,7 @@ function stdQuiz(items, wrapId, scoreId) {
   render();
 })();
 
-/* ---------- 3.4.2 ROB ---------- */
+/* ---------- 3.11 ROB y excepciones ---------- */
 (function () {
   var $ = function (id) { return document.getElementById("rob-" + id); };
   if (!$("svg")) return;
@@ -1519,7 +2007,13 @@ stdQuiz([
     exp: "Todo el paralelismo lo encuentra el compilador. Los campos que no puede llenar quedan con NOP: el código ocupa más y el hardware sigue siendo simple." },
   { q: "¿Qué modelo de multithreading llena también las vías vacías dentro de un mismo ciclo?",
     opts: ["Grano fino", "Grano grueso", "SMT", "Ninguno"], correct: 2,
-    exp: "Grano fino y grueso eliminan ciclos vacíos completos (desperdicio vertical). SMT mezcla instrucciones de varios hilos en el mismo ciclo y ataca también el desperdicio horizontal." }
+    exp: "Grano fino y grueso eliminan ciclos vacíos completos (desperdicio vertical). SMT mezcla instrucciones de varios hilos en el mismo ciclo y ataca también el desperdicio horizontal." },
+  { q: "En Tomasulo con ROB, un salto mal predicho llega a la cabecera del ROB. Detrás hay instrucciones que ya terminaron de ejecutar. ¿Qué pasa con ellas?",
+    opts: ["Hacen commit igual, porque ya terminaron", "Se borran del ROB junto con las etiquetas, las estaciones y los buffers, sin haber tocado registros ni memoria", "Hay que restaurar los registros que escribieron", "Se reejecutan por el camino correcto sin vaciar nada"], correct: 1,
+    exp: "En la etapa de escritura los resultados van al ROB, no al banco de registros: solo el commit, en orden, modifica el estado. Todo lo que está detrás del salto es del camino equivocado y se descarta sin dejar rastro." },
+  { q: "¿Cuántas operaciones de 16 bits hace en paralelo una instrucción SSE?",
+    opts: ["4", "8", "16", "32"], correct: 1,
+    exp: "SSE usa registros XMM de 128 bits: 128 / 16 = 8 operaciones de 16 bits (o 16 de 8 bits, o 4 de 32). Las extensiones multimedia parten un registro en subcampos y operan sobre todos con una sola instrucción." }
 ]);
 </script>
 </body>
