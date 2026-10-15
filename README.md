@@ -9,10 +9,11 @@ estudiar tocando: todo corre en el navegador y se despliega en **GitHub Pages**.
 | --- | --- |
 | [Inicio](web/index.html) | Índice del sitio: una tarjeta por página con enlaces directos a cada sección. |
 | [Coloquio](web/coloquio.html) | Modalidad del coloquio y una lista de posibles temas recopilada, no oficial (marcando los que más salen), cada uno con resumen y enlace a la sección donde se desarrolla. |
-| [Procesador y paralelismo](web/pipeline.html) | Unidades 2 a 4: monociclo y multiciclo, pipeline y speedup, riesgos (simulador de pipeline), loop unrolling y software pipelining, planificación estática y dinámica, excepciones precisas con vector de estado y ROB, Tomasulo ciclo a ciclo, superescalar/VLIW y multithreading, con quiz. |
+| [Rendimiento y consumo](web/rendimiento.html) | Unidad 1: escalado tecnológico, potencia y energía (power wall, técnicas power aware), tiempo de CPU, CPI y MIPS, benchmarks, ley de Amdahl, multicore heterogéneo y costo del chip, con calculadoras y quiz. |
+| [Procesador y paralelismo](web/pipeline.html) | Unidades 2 a 4: monociclo y multiciclo, pipeline y speedup, riesgos (simulador de pipeline), loop unrolling y software pipelining, planificación estática y dinámica, excepciones precisas con vector de estado, Tomasulo ciclo a ciclo, especulación con ROB, superescalar/VLIW, límites del ILP, multithreading y un panorama de paralelismo de datos (SIMD, vectoriales, GPU), con quiz. |
 | [Simulador de Tomasulo](web/tomasulo.html) | Planificación dinámica fuera de orden, ciclo a ciclo (Issue → Execute → Write Back). |
-| [Predicción de saltos](web/predictores.html) | Contador saturado de 2 bits, 1 bit vs. 2 bits con BTAC/BTB, predictor local, global, comparación lado a lado, híbrido (juez) y quiz. |
-| [Coherencia de caché](web/coherencia.html) | Unidad 6: snoopy (dos estados, MSI, MESI, con diagrama de estados y saturación del bus) y coherencia con directorio (red de cuatro nodos, mensajes y sobrecarga), más consistencia de memoria, con simuladores y quiz. |
+| [Predicción de saltos](web/predictores.html) | Predicción estática, contador saturado de 2 bits, 1 bit vs. 2 bits con BTAC/BTB, predictor local, global (m,n), comparación lado a lado, híbrido (juez) y quiz. |
+| [Coherencia de caché](web/coherencia.html) | Unidad 6: snoopy (dos estados, MSI, MESI, con diagrama de estados y saturación del bus) y coherencia con directorio (red de cuatro nodos, mensajes y sobrecarga), más consistencia de memoria y sincronización (primitivas atómicas, LL/SC, spin locks), con simuladores y quiz. |
 | [Jerarquía de memoria y caché](web/cache.html) | Unidad 5 completa: emplazamiento directo / N-way / totalmente asociativo, simulador de caché con caché de víctima, simulador de tipos de fallo (las 3 C), políticas, rendimiento, caché y memoria virtual (física, parcial y total) y memoria principal, con quiz. |
 
 ## Simulador de Tomasulo
@@ -49,7 +50,7 @@ temporización (que es lo relevante para Tomasulo).
 
 ## Guías interactivas
 
-`coloquio.html`, `pipeline.html`, `predictores.html`, `cache.html` y `coherencia.html` son páginas HTML **autocontenidas** (CSS y JS
+`coloquio.html`, `pipeline.html`, `predictores.html`, `cache.html`, `coherencia.html` y `rendimiento.html` son páginas HTML **autocontenidas** (CSS y JS
 inline, sin dependencias externas): se pueden abrir directamente sin compilar.
 Comparten con el resto del sitio el tema claro/oscuro (`localStorage['tw-theme']`).
 
@@ -75,6 +76,7 @@ web/                 # sitio (TypeScript + Vite, multi-page)
   cache.html         # guía interactiva de jerarquía de memoria y caché (standalone)
   coherencia.html    # guía interactiva de coherencia de caché: snoopy y directorios (standalone)
   pipeline.html      # guía interactiva del procesador: pipeline, planificación, excepciones, Tomasulo, VLIW (standalone)
+  rendimiento.html   # guía interactiva de rendimiento, potencia y costo: unidad 1 (standalone)
   coloquio.html      # modalidad del coloquio y temas frecuentes, con enlaces a cada guía (standalone)
   src/engine/        # port del motor (mainLogic.ts, parseFile.ts)
   src/               # UI del simulador: main.ts, diagram.ts, examples.ts, style.css
