@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "repeating-stripes-gradient",
+        "value": "*",
+        "files": [
+          "web/pipeline.html"
+        ],
+        "createdAt": "2026-10-15T03:46:33.241Z",
+        "reason": "Claude: el rayado marca burbujas, stalls y vaciados en los diagramas de pipeline (convención de los apuntes, con leyenda); no es decorativo"
+      }
+    ]
+  }
+}
