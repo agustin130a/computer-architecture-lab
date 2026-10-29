@@ -394,6 +394,18 @@
   .coh .cs-status.good{ background:var(--ok-soft); border-color:var(--ok); }
   .coh .cs-status.bad{ background:var(--err-soft); border-color:var(--err); }
 
+  /* De dos estados a MSI y broadcast contra directorio */
+  .coh .k-bus{ background:var(--bus); } .coh .k-loc{ background:var(--bg-panel-2); border:1px solid var(--line); } .coh .k-rd{ background:var(--act); } .coh .k-err{ background:var(--err); }
+  .coh .wb-rows{ display:grid; gap:10px; margin:6px 0 4px; }
+  .coh .wb-row{ display:grid; grid-template-columns:96px minmax(0,1fr); gap:10px; align-items:center; }
+  .coh .wb-lbl{ font-weight:700; font-size:14px; }
+  .coh .wb-cells{ display:flex; flex-wrap:wrap; gap:4px; }
+  .coh .wb-cells i{ width:16px; height:16px; border-radius:4px; background:var(--bg-panel-2); border:1px solid var(--line); }
+  .coh .wb-cells i.bus{ background:var(--bus); border-color:var(--bus); }
+  .coh .wb-cells i.rd{ border:3px solid var(--act); }
+  .coh .wb-outs{ margin-top:14px; }
+  .coh .wb-verdict{ margin:0 0 8px; padding:10px 14px; border-radius:10px; background:var(--bg-panel-2); font-size:14px; }
+
   @media (max-width:520px){
     .coh .cpus-2{ grid-template-columns:minmax(0,1fr); }
     .coh .sim-fields{ grid-template-columns:minmax(0,1fr); }
@@ -650,6 +662,37 @@
           <p class="src">Fuente: apuntes, secciones 6.9 y 6.9.1 (p. 220–222) y 6.11 (p. 229–230).</p>
         </div>
       </details>
+      <h3 id="s-vi-msi">Por qué pasar a MSI: write-through contra write-back</h3>
+      <p>El defecto de este protocolo no es la coherencia, sino el <strong>tráfico</strong>. Con escritura directa, <em>cada</em> store sale al bus. El bus es un solo medio compartido que atiende una transacción por vez, así que su ancho de banda total se reparte entre todos los procesadores. Con el ejemplo de los apuntes (2000 MHz, CPI 1, 15 % de stores de 8 B), cada procesador genera 300 millones de stores por segundo, o sea, 2400 MB/s de escrituras. Un bus de 10 GB/s se llena con 4 procesadores (calculadora de la <a href="#s-familias-bus">sección 3</a>). Con el quinto se piden 12 GB/s y los procesadores tienen que esperar turno para usar el bus.</p>
+      <p>La salida es la <strong>post-escritura</strong> (write-back): escribir en la caché y mandar el bloque a memoria recién cuando hace falta. Pero con solo V/I no se puede. Una copia «válida» no dice si es la única ni si la memoria está al día. Si la caché escribiera sin avisar, las otras copias V quedarían viejas y nadie sabría quién tiene que entregar el dato bueno. Hacen falta dos estados distintos donde antes había uno:</p>
+      <ul>
+        <li><b class="c-M">M</b>: «soy la única copia y está sucia». Puedo escribir sin usar el bus y, si otro pide el bloque, lo entrego yo (Flush).</li>
+        <li><b class="c-S">S</b>: «copia limpia, puede haber otras». Para escribir primero tengo que invalidar al resto (BusRdX).</li>
+      </ul>
+      <p>Así, la primera escritura sobre un bloque paga una transacción y las siguientes son locales. Probalo: P0 escribe N veces el mismo bloque X y después P1 lo lee.</p>
+      <div class="sim wb">
+        <div class="sim-top">
+          <h3>Simulador: dos estados contra MSI</h3>
+          <div class="sim-ctl">
+            <div class="seg" role="group" aria-label="Tamaño de bloque"><button type="button" id="wb-b32" aria-pressed="false">32 B</button><button type="button" id="wb-b64" aria-pressed="true">64 B</button><button type="button" id="wb-b128" aria-pressed="false">128 B</button></div>
+          </div>
+        </div>
+        <div class="sim-fields">
+          <label>Escrituras de P0 al bloque X antes de que P1 lo lea: <b id="wb-nv">16</b><input type="range" id="wb-n" min="1" max="64" value="16"></label>
+        </div>
+        <div class="wb-rows">
+          <div class="wb-row"><span class="wb-lbl">Dos estados</span><div class="wb-cells" id="wb-vi"></div></div>
+          <div class="wb-row"><span class="wb-lbl">MSI</span><div class="wb-cells" id="wb-msi"></div></div>
+        </div>
+        <div class="legend"><span><i class="k-bus"></i>usa el bus</span><span><i class="k-loc"></i>queda en la caché</span><span><i class="k-rd"></i>lectura de P1</span></div>
+        <div class="grid2 wb-outs">
+          <div class="out" id="wb-out-vi">—</div>
+          <div class="out" id="wb-out-msi">—</div>
+        </div>
+        <p class="wb-verdict" id="wb-verdict"></p>
+        <p class="src">Modelo simplificado propio, con stores de 8 B. Dos estados: cada escritura es un <code>BusWr</code> de 8 B, y la lectura de P1 es un <code>BusRd</code> que trae el bloque de memoria. MSI: la primera escritura es un <code>BusRdX</code> que trae el bloque (write-allocate), las demás son locales, y la lectura de P1 es un <code>BusRd</code> que P0 responde con <code>Flush</code> (se cuentan por separado, como en la sección 5). El tráfico por procesador reparte los bytes totales (incluida la lectura de P1) entre los N stores y los multiplica por los 300 millones de stores/s del ejemplo; con N grande, dos estados tiende a los 8 B por store de la diapositiva.</p>
+      </div>
+      <div class="note info"><strong>En una frase:</strong> write-back cambia «una transacción por store» por «una transacción por bloque». Gana mientras cada bloque reciba varias escrituras antes de cambiar de dueño. Para eso hace falta saber quién tiene la única copia, y de ahí sale el estado M.</div>
       <p class="src">Fuente: apuntes, sección 6.9.1 (p. 221–223).</p>
     </section>
 
@@ -782,6 +825,34 @@
     <section class="block coh" id="s-directorio">
       <h2><span class="num">7</span> Coherencia basada en directorios</h2>
       <p class="sub">Qué pasa cuando no hay un bus que espiar: un nodo home lleva la cuenta de quién tiene cada bloque.</p>
+
+      <h3 id="s-directorio-porque">Por qué no alcanza con broadcast</h3>
+      <p>Snoopy funciona porque el bus es un <strong>medio de broadcast</strong>: un mensaje puesto en el bus lo ven todos a la vez y sin costo extra. Pero esa misma propiedad es su límite. Hay un solo medio, y el que escribe ocupa el bus para todos. Su ancho de banda total es fijo y no crece al sumar procesadores (sección 3). MSI y MESI alivian el problema, pero no lo eliminan: con 16, 64 o 256 procesadores, la suma de fallos supera lo que puede transferir un único bus.</p>
+      <p>Para escalar se reemplaza el bus por una <strong>red punto a punto</strong> (como en NUMA, donde cada nodo tiene su memoria). Una red tiene muchos enlaces que transmiten en paralelo, así que el ancho de banda total crece con los nodos. A cambio, no hay ningún medio que todos escuchen: cada mensaje va de un nodo a otro. «Hacer broadcast» en una red significa mandar una copia del mensaje a cada nodo.</p>
+      <p>¿Y si igual se hiciera snoopy sobre la red, mandándole todo a todos?</p>
+      <ul>
+        <li><strong>Cada escritura cuesta N − 1 invalidaciones</strong>, y además N − 1 acks: sin bus no hay un momento en que «todos lo vieron», así que el que escribe tiene que esperar las confirmaciones. Si todos los nodos escriben, el tráfico total crece como N², mientras que la red crece como N.</li>
+        <li><strong>Cada nodo tiene que procesar los fallos de todos los demás</strong>: su controlador revisa sus tags por cada mensaje, aunque casi nunca tenga el bloque.</li>
+        <li><strong>Se pierde el orden gratis</strong>: en el bus el arbitraje serializa las escrituras; en la red los mensajes pueden llegar en distinto orden a distintos nodos.</li>
+      </ul>
+      <p>Lo que se desperdicia es que casi todos esos mensajes son inútiles: un bloque suele estar en pocas cachés. El <strong>directorio</strong> anota quiénes tienen cada bloque y los mensajes van solo a esos k nodos. Además, como todo pedido sobre un bloque pasa por su home, el home también ordena las escrituras. El precio es la memoria del directorio y un salto extra hasta el home.</p>
+      <div class="sim bc">
+        <div class="sim-top"><h3>Mensajes por escritura: broadcast contra directorio</h3></div>
+        <div class="sim-fields">
+          <label>Nodos: <b id="bc-nv">64</b><input type="range" id="bc-n" min="2" max="8" value="6"></label>
+          <label>Otras copias del bloque (k): <b id="bc-kv">2</b><input type="range" id="bc-k" min="0" max="8" value="2"></label>
+        </div>
+        <div class="grid2">
+          <div><div class="out" id="bc-out1">—</div><div class="out" id="bc-out2">—</div></div>
+          <svg id="bc-chart" class="chart" viewBox="0 0 460 220" role="img" aria-label="Mensajes por escritura según la cantidad de nodos"></svg>
+        </div>
+        <div class="legend"><span><i class="k-err"></i>broadcast por la red</span><span><i class="k-act"></i>directorio</span></div>
+        <p class="src">Modelo simplificado propio de una escritura sobre un bloque limpio. Broadcast: una invalidación y un ack por cada uno de los otros N − 1 nodos. Directorio: petición al home, respuesta con la lista y una invalidación y un ack por cada una de las k copias (2 + 2k, como en el gráfico de más abajo). Escala logarítmica.</p>
+      </div>
+      <div class="note info"><strong>En una frase:</strong> el bus no escala porque su ancho de banda es uno solo para todos; la red sí escala, pero no tiene broadcast barato. Hacerlo a mano cuesta N mensajes por escritura, casi todos inútiles. El directorio recuerda quién tiene copia para avisarles solo a ellos.</div>
+      <p class="src">Fuente: apuntes, «Protocolos según la red de interconexión» (p. 219) y sección 6.18 (p. 232). El N² del tráfico, la pérdida del orden y el costo de procesar snoops en cada nodo son un desarrollo propio de esta guía.</p>
+
+      <h3>Cómo funciona</h3>
       <p>En una máquina NUMA no hay bus que espiar. Cada bloque tiene un <strong>nodo home</strong> (fijado por la dirección del bloque) que guarda su entrada de directorio: un bit de presencia por procesador y un bit limpio/sucio. Los estados en cada caché siguen siendo <b class="c-M">M</b>, <b class="c-S">S</b> e <b class="c-I">I</b>, pero las transiciones se disparan con mensajes por la red.</p>
       <p>En cada transacción participan el nodo <b>peticionario</b> (local), el <b>home</b> y los <b>remotos</b> que tienen copia (si está en M, uno solo: el owner).</p>
       <p><strong>Cómo se reparten los homes:</strong> cada bloque tiene un único home fijo, que sale directamente de la dirección del bloque (los apuntes dicen <em>hashing</em>). Los homes están repartidos entre todos los nodos porque un directorio único podría ser un cuello de botella. Complemento (no está en los apuntes): una forma típica es que cada nodo sea dueño de un rango contiguo de memoria física, es decir, que el home salga de los bits altos de la dirección.</p>
@@ -1214,6 +1285,39 @@ function stdQuiz(items, wrapId, scoreId) {
   }
   ["bw-f", "bw-c", "bw-p", "bw-b", "bw-bus"].forEach(function (s) { $(s).addEventListener("input", bw); }); bw();
 
+  /* ---------- 4b. dos estados contra MSI ---------- */
+  (function () {
+    var B = 64, STORES = 300e6, W = 8;
+    var fmt = function (v) { return v.toLocaleString("es-AR", { maximumFractionDigits: 1 }); };
+    function cells(box, n, busAt) {
+      box.innerHTML = "";
+      for (var i = 1; i <= n; i++) box.appendChild(H("i", { "class": busAt(i) ? "bus" : "", title: "Escritura " + i + " de P0" }));
+      box.appendChild(H("i", { "class": "bus rd", title: "Lectura de P1" }));
+    }
+    function wb() {
+      var n = +$("wb-n").value; $("wb-nv").textContent = n;
+      cells($("wb-vi"), n, function () { return true; });
+      cells($("wb-msi"), n, function (i) { return i === 1; });
+      var viB = W * n + B, msiB = 2 * B;
+      var viS = viB / n, msiS = msiB / n;
+      var viMB = STORES * viS / 1e6, msiMB = STORES * msiS / 1e6;
+      $("wb-out-vi").innerHTML = "Dos estados: " + (n + 1) + " transacciones, " + viB + " B<small>" + n + " BusWr de 8 B + 1 BusRd del bloque · " + fmt(viS) + " B por store → " + fmt(viMB) + " MB/s por procesador → el bus de 10 GB/s soporta " + Math.floor(10000 / viMB) + "</small>";
+      $("wb-out-msi").innerHTML = "MSI: 3 transacciones, " + msiB + " B<small>BusRdX + BusRd + Flush, sin importar N · " + fmt(msiS) + " B por store → " + fmt(msiMB) + " MB/s por procesador → el bus de 10 GB/s soporta " + Math.floor(10000 / msiMB) + "</small>";
+      var be = B / W;
+      $("wb-verdict").innerHTML = n > be
+        ? "Con " + n + " escrituras por bloque, MSI mueve " + fmt(viB / msiB) + " veces menos bytes. Cuantas más escrituras reciba el bloque antes de cambiar de dueño, mayor es la ventaja."
+        : n === be
+          ? "Empate en bytes: con bloques de " + B + " B, MSI empieza a ganar en bytes a partir de " + (be + 1) + " escrituras por bloque. Igual hace menos transacciones."
+          : "Con pocas escrituras por bloque, MSI hace menos transacciones pero mueve más bytes, porque trae y devuelve el bloque entero (" + B + " B) para escribir solo " + n * W + " B. Write-back gana cuando hay localidad: más de " + be + " escrituras por bloque de " + B + " B.";
+    }
+    [32, 64, 128].forEach(function (b) {
+      $("wb-b" + b).addEventListener("click", function () {
+        B = b; [32, 64, 128].forEach(function (o) { $("wb-b" + o).setAttribute("aria-pressed", o === b ? "true" : "false"); }); wb();
+      });
+    });
+    $("wb-n").addEventListener("input", wb); wb();
+  })();
+
   /* ---------- 4. protocolo de dos estados ---------- */
   var vi = { c: [], mem: 10, next: 11, rd: 0, wr: 0 };
   var viF = drawFSM($("vi-fsm"), "coh-vi", { I: { x: 120, y: 150 }, V: { x: 340, y: 150, col: "S" } }, [
@@ -1363,6 +1467,31 @@ function stdQuiz(items, wrapId, scoreId) {
       SCEN[i].n.split("\n").forEach(function (ln, k) { var tn = S("text", { x: l + i * gw + gw / 2, y: bt + 18 + k * 15, "text-anchor": "middle" }, svg); tn.textContent = ln; });
     });
     $("msi-chart-notes").textContent = "MESI solo ahorra cuando quien lee es el único que tiene el bloque. En el dato migratorio ahorra únicamente la primera transacción: después el bloque ya está en otra caché y entra en S, igual que en MSI. Con datos realmente compartidos (productor-consumidor) no hay diferencia.";
+  })();
+
+  /* ---------- 7a. broadcast contra directorio ---------- */
+  (function () {
+    var Ns = [4, 8, 16, 32, 64, 128, 256];
+    function bc() {
+      var N = Math.pow(2, +$("bc-n").value), kIn = $("bc-k");
+      kIn.max = Math.min(8, N - 1); var k = Math.min(+kIn.value, N - 1); kIn.value = k;
+      $("bc-nv").textContent = N; $("bc-kv").textContent = k;
+      var bro = 2 * (N - 1), dir = 2 + 2 * k;
+      $("bc-out1").innerHTML = bro + " mensajes<small>con broadcast: " + (N - 1) + " invalidaciones y " + (N - 1) + " acks; " + (N - 1 - k) + " de esas invalidaciones van a nodos sin copia</small>";
+      $("bc-out2").innerHTML = dir + " mensajes<small>con directorio: petición, lista y " + k + " invalidaciones con su ack. Si escriben los " + N + " nodos: " + (N * bro).toLocaleString("es-AR") + " contra " + (N * dir).toLocaleString("es-AR") + "</small>";
+      var svg = $("bc-chart"); svg.innerHTML = ""; var W = 460, l = 34, top = 14, bt = 180, gw = (W - l - 8) / Ns.length;
+      var mx = Math.log10(2 * 255 + 1) * 1.08, y = function (v) { return bt - (bt - top) * Math.log10(1 + v) / mx; };
+      [1, 10, 100, 500].forEach(function (v) { S("line", { x1: l, x2: W - 8, y1: y(v), y2: y(v), stroke: "var(--line)" }, svg); var t = S("text", { x: l - 6, y: y(v) + 4, "text-anchor": "end" }, svg); t.textContent = v; });
+      Ns.forEach(function (n, i) {
+        var kk = Math.min(k, n - 1), vals = [[2 * (n - 1), "var(--err)"], [2 + 2 * kk, "var(--act)"]], x0 = l + i * gw + 6, bw = (gw - 12) / 2;
+        vals.forEach(function (vc, j) {
+          S("rect", { x: x0 + j * bw, y: y(vc[0]), width: bw - 2, height: bt - y(vc[0]), rx: 3, fill: vc[1], opacity: n === N ? 1 : .45 }, svg);
+        });
+        var t = S("text", { x: l + (i + .5) * gw, y: bt + 16, "text-anchor": "middle", "class": n === N ? "lbl" : "" }, svg); t.textContent = n;
+      });
+      var tt = S("text", { x: (W + l) / 2, y: bt + 34, "text-anchor": "middle" }, svg); tt.textContent = "nodos";
+    }
+    ["bc-n", "bc-k"].forEach(function (s) { $(s).addEventListener("input", bc); }); bc();
   })();
 
   /* ---------- 7. directorio ---------- */
@@ -1571,6 +1700,12 @@ stdQuiz([
     {q:"¿Por qué el protocolo de dos estados escala mal?",
      opts:["Porque no garantiza la serialización","Porque cada escritura ocupa el bus","Porque necesita un bit dirty","Porque las lecturas nunca aciertan"],correct:1,
      exp:"Con write-through, cada store viaja a memoria por el bus. Con unos pocos procesadores el ancho de banda se agota."},
+    {q:"¿Por qué el protocolo de dos estados no puede usar post-escritura (write-back) tal cual?",
+     opts:["Porque el bus no admite bloques enteros","Porque con solo V/I la caché no sabe si su copia es la única ni si la memoria está al día, y no sabría quién entrega el dato bueno","Porque write-back no permite invalidar","Porque necesitaría un directorio"],correct:1,
+     exp:"Write-back necesita distinguir «única y sucia» (M) de «limpia y quizás compartida» (S): desde M se escribe sin bus y se responde con Flush; desde S hay que invalidar primero."},
+    {q:"¿Por qué en una red punto a punto no se usa snoopy mandando cada invalidación a todos los nodos?",
+     opts:["Porque la red no puede transportar invalidaciones","Porque cada escritura costaría N − 1 mensajes (más los acks), casi todos a nodos sin copia, y el tráfico crecería como N² mientras la red crece como N","Porque los nodos NUMA no tienen caché","Porque el directorio es más rápido que el bus"],correct:1,
+     exp:"La red no tiene broadcast: hay que copiar el mensaje a cada nodo. El directorio sabe qué k nodos tienen el bloque y les avisa solo a ellos (2 + 2k mensajes)."},
     {q:"En un protocolo snoopy, ¿qué garantiza que todas las cachés vean las escrituras a una posición en el mismo orden?",
      opts:["El bit de validez","La señal S","El arbitraje del bus, que decide quién escribe primero y lo hace visible a todos en esa secuencia","El Flush"],correct:2,
      exp:"Es la serialización de escrituras. En el modelo simple el bus atiende una transacción por vez. En un bus real las transacciones no son atómicas y hay carreras, pero ninguna caché se modifica antes de ganar el bus, así que el arbitraje sigue fijando el orden."},
